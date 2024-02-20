@@ -37,12 +37,11 @@ const Part_one_hermite_base = defs.Part_one_hermite_base =
         const tex_phong = new defs.Textured_Phong();
         this.materials = {};
         this.materials.plastic = { shader: phong, ambient: .2, diffusivity: 1, specularity: .5, color: color( .9,.5,.9,1 ) }
+        this.materials.shiny = { shader: phong, ambient: .2, diffusivity: 1, specularity: .9, color: color( .9,.5,.9,1 ) }
         this.materials.metal   = { shader: phong, ambient: .2, diffusivity: 1, specularity:  1, color: color( .9,.5,.9,1 ) }
-        this.materials.rgb = { shader: tex_phong, ambient: .5, texture: new Texture( "assets/rgb.jpg" ) }
+        this.materials.rgb = { shader: tex_phong, ambient: .5}
 
-        this.ball_location = vec3(1, 1, 1);
-        this.ball_radius = 0.25;
-
+        
         // TODO: you should create a Spline class instance
       }
 
@@ -72,6 +71,8 @@ const Part_one_hermite_base = defs.Part_one_hermite_base =
         // *** Lights: *** Values of vector or point lights.  They'll be consulted by
         // the shader when coloring shapes.  See Light's class definition for inputs.
         const t = this.t = this.uniforms.animation_time/1000;
+        const dt = this.dt = this.uniforms.animation_delta_time/1000;
+
         const angle = Math.sin( t );
 
         // const light_position = Mat4.rotation( angle,   1,0,0 ).times( vec4( 0,-1,1,0 ) ); !!!
@@ -80,7 +81,7 @@ const Part_one_hermite_base = defs.Part_one_hermite_base =
         this.uniforms.lights = [ defs.Phong_Shader.light_source( light_position, color( 1,1,1,1 ), 1000000 ) ];
 
         // draw axis arrows.
-        this.shapes.axis.draw(caller, this.uniforms, Mat4.identity(), this.materials.rgb);
+        this.shapes.axis.draw(caller, this.uniforms, Mat4.identity().times(Mat4.scale(0.5,0.5,0.5)), this.materials.rgb);
       }
     }
 
@@ -119,18 +120,13 @@ export class Part_one_hermite extends Part_one_hermite_base
         // translation(), scale(), and rotation() to generate matrices, and the
         // function times(), which generates products of matrices.
 
-    const blue = color( 0,0,1,1 ), yellow = color( 1,0.7,0,1 );
+    const sea_blue = color( 0,0.62,0.77,1 ), yellow = color( 1,0.7,0,1 );
 
     const t = this.t = this.uniforms.animation_time/1000;
 
     // !!! Draw ground
     let floor_transform = Mat4.translation(0, 0, 0).times(Mat4.scale(10, 0.01, 10));
-    this.shapes.box.draw( caller, this.uniforms, floor_transform, { ...this.materials.plastic, color: yellow } );
-
-    // !!! Draw ball (for reference)
-    let ball_transform = Mat4.translation(this.ball_location[0], this.ball_location[1], this.ball_location[2])
-        .times(Mat4.scale(this.ball_radius, this.ball_radius, this.ball_radius));
-    this.shapes.ball.draw( caller, this.uniforms, ball_transform, { ...this.materials.metal, color: blue } );
+    this.shapes.box.draw( caller, this.uniforms, floor_transform, { ...this.materials.shiny, color: sea_blue } );
 
     // TODO: you should draw spline here.
   }
