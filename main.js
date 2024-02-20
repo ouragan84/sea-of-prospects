@@ -69,7 +69,7 @@ export class Part_one_hermite extends Part_one_hermite_base
   {                           
     // Call the setup code that we left inside the base class:
     super.render_animation( caller );
-    const sea_blue = color( 0,0.62,0.77,1 ), yellow = color( 1,0.7,0,1 );
+    const sea_blue = color( 0,0.62,0.77,1 ), whiteish = color( .9,.9,1,1 );
     const t = this.t = this.uniforms.animation_time/1000;
 
     // !!! Draw ground
@@ -77,6 +77,9 @@ export class Part_one_hermite extends Part_one_hermite_base
     this.shapes.box.draw( caller, this.uniforms, floor_transform, { ...this.materials.shiny, color: sea_blue } );
 
     // TODO: you should draw
+    console.log(this.dt)
+    this.cloth.simulate(this.dt)
+    this.cloth.show(this.shapes, caller, this.uniforms);
     
   }
 
