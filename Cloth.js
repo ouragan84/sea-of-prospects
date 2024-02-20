@@ -81,7 +81,7 @@ const Cloth = defs.Part_one_hermite_base =
 class Cloth {
     constructor(initialPos) {
         this.pos = initialPos;
-        this.density = 5
+        this.density = 4
         this.spacing = 2 / this.density
         // set up cloth
         this.points = []
@@ -90,7 +90,7 @@ class Cloth {
         // initialize points
         for (let i = -1; i <= 1; i+=this.spacing){
             for (let j = -1; j <= 1; j += this.spacing){
-                this.points.push(new Point(vec3(i,0,j).plus(this.pos)))
+                this.points.push(new Point(vec3(i,j,0).plus(this.pos)))
             }
         }
         // initialize segments
@@ -119,20 +119,23 @@ class Cloth {
 
         this.points[0].locked = true;
         this.points[gridSize-1].locked = true;
-        this.points[this.points.length - gridSize].locked = true;
-        this.points[this.points.length - 1].locked = true;
+        // this.points[this.points.length - gridSize].locked = true;
+        // this.points[this.points.length - 1].locked = true;
         
     }
 
-    simulate(dt) {
-        const numOfIterations = 1
+    simulate(t, dt) {
+        const numOfIterations = 5
         const gravity = 9.8
-        const points = shuffle(this.points);
+        // const points = shuffle(this.points);
+        const points = this.points
         for(let i = 0; i < points.length; i++){
           if(!points[i].locked){
             let initPos = points[i].pos;
             points[i].pos = points[i].pos.plus(points[i].pos.minus(points[i].prevPos));
             points[i].pos = points[i].pos.plus(vec3(0,-gravity * dt * dt, 0));
+            points[i].pos = points[i].pos.plus(vec3(-100 * (Math.random()-0.2) * dt * dt,0, Math.sin(t) * 0.005));
+
             points[i].prevPos = initPos;
           }
         }
@@ -147,6 +150,22 @@ class Cloth {
               this.segments[i].b.pos = segmentCenter.minus(segmentDir.times(this.segments[i].length/2));
             }
           }
+        }
+
+    }
+
+    updatePosition(newPos) {
+        // Calculate the difference between the new position and the old position
+        let offset = newPos.minus(this.pos);
+        
+        // Update the current position to the new position
+        this.pos = newPos;
+        
+        // Update all points with the new offset
+        for (let point of this.points) {
+            if(!point.locked){
+                point.pos = point.pos.plus(offset);
+            }
         }
     }
 
@@ -192,3 +211,44 @@ function shuffle(array) {
   
     return array;
   }
+
+const perm = [...Array(256).keys()].map(() => Math.floor(Math.random() * 256));
+for (let i=0; i < 256 ; i++) perm.push(perm[i]);
+
+function fade(t) {
+    // Fade function as defined by Ken Perlin. This eases coordinate values
+    // so that they will ease towards integral values. This smooths the final output.
+    return t * t * t * (t * (t * 6 - 15) + 10);
+}
+
+function lerp(a, b, t) {
+    // Linear interpolate between a and b
+    return (1 - t) * a + t * b;
+}
+
+function grad(hash, x) {
+    // This will hash the input value x, and produce a gradient from the hashed value.
+    const h = hash & 15;
+    const grad = 1 + (h & 7); // Gradient value is one of 1, 2, ..., 8
+    return (h & 8 ? -grad : grad) * x; // and a random direction
+}
+
+// The main Perlin noise function
+function perlin(x) {
+    // Calculate the "unit cube" that the point asked will be located in
+    // The left bound is ( |_x_| ) and the right bound is ( |_x_|+1 )
+    const xi = Math.floor(x) & 255; // Calculate the "left" vector
+    const xf = x - Math.floor(x); // Calculate the "right" vector
+
+    // Compute fade curves for each of xi
+    const u = fade(xf);
+
+    // Hash coordinates of the cube corners
+    const a = perm[xi];
+    const b = perm[xi + 1];
+
+    // And add blended results from the corners of the cube
+    const x1 = lerp(grad(a, xf), grad(b, xf - 1), u);
+
+    return x1 * 0.5 + 0.5; // We bind it to 0 - 1 (theoretical min/max before is -1 - 1)
+}

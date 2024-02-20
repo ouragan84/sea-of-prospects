@@ -3,6 +3,7 @@ import {tiny, defs} from './examples/common.js';
 
 const { vec3, vec4, color, Mat4, Shape, Material, Shader, Texture, Component } = tiny;
 
+const gravity = 9.8
 
 export
 const Part_one_hermite_base = defs.Part_one_hermite_base =
@@ -29,11 +30,7 @@ const Part_one_hermite_base = defs.Part_one_hermite_base =
 
         
         // TODO: you should create a poop class instance
-        let p0 = vec3(0,2,0)
-        let p1 = vec3(0,5,0)
-        let p2 = vec3(2,2,0)
-        let p3 = vec3(2,5,0)
-        this.cloth = new Cloth(p0, p1, p2, p3, 5)
+        this.cloth = new Cloth(vec3(0,2,0))
       }
 
       render_animation( caller )
@@ -48,7 +45,7 @@ const Part_one_hermite_base = defs.Part_one_hermite_base =
         this.uniforms.projection_transform = Mat4.perspective( Math.PI/4, caller.width/caller.height, 1, 100 );
 
         const t = this.t = this.uniforms.animation_time/1000;
-        const dt = this.dt = this.uniforms.animation_delta_time/1000;
+        const dt = this.dt = 0.02
 
         const angle = Math.sin( t );
 
@@ -78,8 +75,9 @@ export class Part_one_hermite extends Part_one_hermite_base
 
     // TODO: you should draw
     console.log(this.dt)
-    this.cloth.simulate(this.dt)
+    this.cloth.simulate(this.t, this.dt)
     this.cloth.show(this.shapes, caller, this.uniforms);
+
     
   }
 
