@@ -79,17 +79,17 @@ class Segment{
 export
 const Cloth = defs.Part_one_hermite_base =
 class Cloth {
-    constructor(initialPos) {
-        this.pos = initialPos;
-        this.density = 4
+    constructor(config) {
+        this.pos = config.initPos;
+        this.density = config.density;
         this.spacing = 2 / this.density
         // set up cloth
         this.points = []
         this.segments = []
 
         // initialize points
-        for (let i = -1; i <= 1; i+=this.spacing){
-            for (let j = -1; j <= 1; j += this.spacing){
+        for (let i = -config.size/2; i <= config.size/2; i+=this.spacing){
+            for (let j = -config.size/2; j <= config.size/2; j += this.spacing){
                 this.points.push(new Point(vec3(i,j,0).plus(this.pos)))
             }
         }
@@ -117,10 +117,9 @@ class Cloth {
             }
         }
 
-        this.points[0].locked = true;
-        this.points[gridSize-1].locked = true;
-        // this.points[this.points.length - gridSize].locked = true;
-        // this.points[this.points.length - 1].locked = true;
+        for (let i = 0; i < config.lockedPoints.length; i++) {
+            this.points[config.lockedPoints[i]].locked = true
+        }
         
     }
 
@@ -134,7 +133,8 @@ class Cloth {
             let initPos = points[i].pos;
             points[i].pos = points[i].pos.plus(points[i].pos.minus(points[i].prevPos));
             points[i].pos = points[i].pos.plus(vec3(0,-gravity * dt * dt, 0));
-            points[i].pos = points[i].pos.plus(vec3(-100 * (Math.random()-0.2) * dt * dt,0, Math.sin(t) * 0.005));
+            // points[i].pos = points[i].pos.plus(vec3(-100 * (Math.random()-0.2) * dt * dt,0, Math.sin(t) * 0.005));
+            points[i].pos = points[i].pos.plus(vec3(Math.sin(t) * 0.005, 0, -100 * (Math.random()-0.2) * dt * dt));
 
             points[i].prevPos = initPos;
           }

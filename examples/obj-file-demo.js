@@ -105,7 +105,7 @@ export class Obj_File_Demo extends Component
                               // regular texture and Phong lighting.
     init()
       {                               // Load the model file:
-        this.shapes = { "teapot": new Shape_From_File( "assets/teapot.obj" ) };
+        this.shapes = { "teapot": new Shape_From_File( "assets/ship.obj" ) };
 
                                       // Don't create any DOM elements to control this scene:
         this.widget_options = { make_controls: false };

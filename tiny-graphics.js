@@ -145,7 +145,7 @@ const Shape = tiny.Shape =
 
 const test_rookie_mistake = function () {
     test_rookie_mistake.counter |= 0;
-    if (test_rookie_mistake.counter++ > 200)
+    if (test_rookie_mistake.counter++ > 1000)
         throw `Error: You are sending a lot of object definitions to the GPU, probably by mistake!  Many are likely
         duplicates, which you don't want since sending each one is very slow.  TO FIX THIS: Avoid ever declaring a 
         Shape, Shader, or Texture with "new" anywhere that's called repeatedly (such as inside render_animation()).

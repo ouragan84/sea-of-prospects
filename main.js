@@ -18,7 +18,9 @@ const Part_one_hermite_base = defs.Part_one_hermite_base =
 
         this.shapes = { 'box'  : new defs.Cube(),
           'ball' : new defs.Subdivision_Sphere( 4 ),
-          'axis' : new defs.Axis_Arrows() };
+          'axis' : new defs.Axis_Arrows(),
+        };
+
 
         const phong = new defs.Phong_Shader();
         const tex_phong = new defs.Textured_Phong();
@@ -30,7 +32,27 @@ const Part_one_hermite_base = defs.Part_one_hermite_base =
 
         
         // TODO: you should create a poop class instance
-        this.cloth = new Cloth(vec3(0,2,0))
+        const sailConfig = {
+          initPos : vec3(0,2,0),
+          density : 5,
+          size : 3,
+          lockedPoints: [
+            0, 7, 56, 63
+          ]
+        }
+
+        const flagConfig = {
+          initPos : vec3(.5,5,-.1),
+          density : 6,
+          size : 1,
+          lockedPoints: [
+            0, 3
+          ]
+        }
+
+
+        this.sail = new Cloth(sailConfig)
+        this.flag = new Cloth(flagConfig)
       }
 
       render_animation( caller )
@@ -66,7 +88,7 @@ export class Part_one_hermite extends Part_one_hermite_base
   {                           
     // Call the setup code that we left inside the base class:
     super.render_animation( caller );
-    const sea_blue = color( 0,0.62,0.77,1 ), whiteish = color( .9,.9,1,1 );
+    const sea_blue = color( 0,0.62,0.77,1 ), whiteish = color( .9,.9,1,1 ), brown = color(139/255, 69/255, 19/255,1);
     const t = this.t = this.uniforms.animation_time/1000;
 
     // !!! Draw ground
@@ -75,10 +97,16 @@ export class Part_one_hermite extends Part_one_hermite_base
 
     // TODO: you should draw
     console.log(this.dt)
-    this.cloth.simulate(this.t, this.dt)
-    this.cloth.show(this.shapes, caller, this.uniforms);
+    this.sail.simulate(this.t, this.dt)
+    this.sail.show(this.shapes, caller, this.uniforms);
 
-    
+    this.flag.simulate(this.t, this.dt)
+    this.flag.show(this.shapes, caller, this.uniforms);
+
+    this.shapes.box.draw( caller, this.uniforms, Mat4.translation(0, 0, 0).times(Mat4.scale(.1, 6, .1)), { ...this.materials.shiny, color: brown } );
+    this.shapes.box.draw( caller, this.uniforms, Mat4.translation(0, .5, 0).times(Mat4.rotation(Math.PI/2,0,0,1)).times(Mat4.scale(.06, 1.5, .06)), { ...this.materials.shiny, color: brown } );
+    this.shapes.box.draw( caller, this.uniforms, Mat4.translation(0, 3.25, 0).times(Mat4.rotation(Math.PI/2,0,0,1)).times(Mat4.scale(.06, 1.5, .06)), { ...this.materials.shiny, color: brown } );
+
   }
 
 
