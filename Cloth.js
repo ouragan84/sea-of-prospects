@@ -51,9 +51,9 @@ class Point{
         this.locked = false;
         this.r = 0.1;
 
-        const phong = new defs.Phong_Shader();
+        const phong = new defs.Phong_Shader( 1 );
         this.materials = {};
-        this.materials.plastic = { shader: phong, ambient: .2, diffusivity: 1, specularity: .5, color: color( .9,.5,.9,1 ) }
+        this.materials.plastic = { shader: phong, ambient: 1, diffusivity: 0, specularity: 0, color: color( .9,.5,.9,1 ) }
     }
 
     show(shapes, caller, uniforms, mat) {       
@@ -81,20 +81,20 @@ const Cloth = defs.Part_one_hermite_base =
 class Cloth {
     constructor(config) {
         this.pos = config.initPos;
-        this.density = config.density;
+        this.density = config.density
         this.spacing = config.size / this.density
         // set up cloth
         this.points = []
         this.segments = []
+        this.material = config.material;
 
         const initial_corner_point = vec3( -1,-1,0 );
         const row_operation = (s,p) => p ? Mat4.translation( 0,.2,0 ).times(p.to4(1)).to3()
             : initial_corner_point;
         const column_operation = (t,p) =>  Mat4.translation( .2,0,0 ).times(p.to4(1)).to3();
         this.shapes = { sheet : new defs.Grid_Patch( config.density, config.density, row_operation, column_operation ) };
+
         
-        const shader = new defs.Textured_Phong( 1 );
-        this.material = { shader, ambient: 0.5, specularity:0, texture: new Texture( "assets/saba.jpg" ) };
 
         // initialize points
         for (let i = -config.size/2; i <= config.size/2; i+=this.spacing){
@@ -103,7 +103,7 @@ class Cloth {
             }
         }
         // initialize segments
-        let gridSize = Math.sqrt(this.points.length); // Calculate the grid size
+        const gridSize = this.gridSize = Math.sqrt(this.points.length); // Calculate the grid size
 
         for (let i = 0; i < gridSize; i++) {
             for (let j = 0; j < gridSize; j++) {
@@ -129,6 +129,8 @@ class Cloth {
         for (let i = 0; i < config.lockedPoints.length; i++) {
             this.points[config.lockedPoints[i]].locked = true
         }
+
+        console.log(this.shapes.sheet);
         
     }
 
@@ -178,6 +180,65 @@ class Cloth {
         }
     }
 
+    point_to_coord(i){
+        return [i % this.gridSize, Math.floor(i / this.gridSize)]
+    }
+
+    coord_to_point(x, y){
+        return x + y * this.gridSize
+    }
+
+    flat_shade () {
+      /*
+
+        3  7 11  15
+        2  6 10  14
+        1  5  9  13
+        0  4  8  12
+
+
+        
+      */
+
+      let shape = this.shapes.sheet;
+
+      // First, iterate through the index or position triples:
+      for (let counter = 0; counter < (shape.indices ? shape.indices.length : shape.arrays.position.length);
+           counter += 1) {
+          // const indices      = shape.indices.length ?
+          //                      [shape.indices[ counter ], shape.indices[ counter + 1 ], shape.indices[ counter + 2 ]]
+          //                                          : [counter, counter + 1, counter + 2];
+          // const [p1, p2, p3] = indices.map (i => shape.arrays.position[ i ]);
+          // // Cross the two edge vectors of this triangle together to get its normal:
+          // let n1           = p1.minus (p2).cross (p3.minus (p1)).normalized ();
+          // // Flip the normal if adding it to the triangle brings it closer to the origin:
+          // if (n1.times (.1).plus (p1).norm () < p1.norm ()) n1.scale_by (-1);
+
+          // // n1 = n1.normalized();
+
+          // // Propagate this normal to the 3 vertices:
+          // for (let i of indices) shape.arrays.normal[ i ] = tiny.Vector3.from (n1);
+
+          const index = shape.indices[ counter ];
+          const pc = shape.arrays.position[ index ];
+          const [cx, cy] = this.point_to_coord(index);
+
+          const p1 = (cx - 1 < 0) ? pc : shape.arrays.position[this.coord_to_point(cx - 1, cy)];
+          const p2 = (cx + 1 >= this.gridSize) ? pc : shape.arrays.position[this.coord_to_point(cx + 1, cy)];
+          const p3 = (cy - 1 < 0) ? pc : shape.arrays.position[this.coord_to_point(cx, cy - 1)];
+          const p4 = (cy + 1 >= this.gridSize) ? pc : shape.arrays.position[this.coord_to_point(cx, cy + 1)];
+
+          const v1 = p2.minus(p1);
+          const v2 = p4.minus(p3);
+
+          const n1 = v1.cross(v2).normalized();
+
+          shape.arrays.normal[index] = n1;
+
+      }
+
+  }
+
     show(shapes, caller, uniforms, mat) {
         // Update the JavaScript-side shape with new vertices:
         this.shapes.sheet.arrays.position.forEach( (p,i,a) =>{
@@ -185,7 +246,7 @@ class Cloth {
         });
         // Update the normals to reflect the surface's new arrangement.
         // This won't be perfect flat shading because vertices are shared.
-        this.shapes.sheet.flat_shade();
+        this.flat_shade();
         // Draw the current sheet shape.
         this.shapes.sheet.draw( caller, uniforms, Mat4.identity(), this.material );
     

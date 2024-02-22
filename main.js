@@ -22,24 +22,37 @@ const Part_one_hermite_base = defs.Part_one_hermite_base =
         };
 
 
-        const phong = new defs.Phong_Shader();
+        const phong = new defs.Phong_Shader(1);
         const tex_phong = new defs.Textured_Phong();
+        const bump = new defs.Fake_Bump_Map(1);
+        const Gouraud = new defs.Gouraud_Shader(1);
         this.materials = {};
         this.materials.plastic = { shader: phong, ambient: .2, diffusivity: 1, specularity: .5, color: color( .9,.5,.9,1 ) }
         this.materials.shiny = { shader: phong, ambient: .2, diffusivity: 1, specularity: .9, color: color( .9,.5,.9,1 ) }
         this.materials.metal   = { shader: phong, ambient: .2, diffusivity: 1, specularity:  1, color: color( .9,.5,.9,1 ) }
+        this.materials.cloth = { shader: phong, ambient: 0.3, diffusivity: 1, specularity: 0.1, color: color( .8,.8,.5,1 ) }
         this.materials.rgb = { shader: tex_phong, ambient: .5}
 
         
-        // TODO: you should create a poop class instance
         const sailConfig = {
           initPos : vec3(0,2.5,0),
           density : 10,
           size : 4,
           lockedPoints: [
             0, 10, 110, 120
-          ]
+          ],
+          material: this.materials.cloth
         }
+
+        // const sailConfig = {
+        //   initPos : vec3(0,2.5,0),
+        //   density : 3,
+        //   size : 4,
+        //   lockedPoints: [
+        //     0, 3, 12, 15
+        //   ],
+        //   material: this.materials.cloth
+        // }
 
         const flagConfig = {
           initPos : vec3(0.5,6,-.1),
@@ -47,7 +60,8 @@ const Part_one_hermite_base = defs.Part_one_hermite_base =
           size : 1,
           lockedPoints: [
             0,1,2,3,4,5,6,7,8,9,10,
-          ]
+          ],
+          material: this.materials.cloth
         }
 
 
@@ -96,7 +110,6 @@ export class Part_one_hermite extends Part_one_hermite_base
     this.shapes.box.draw( caller, this.uniforms, floor_transform, { ...this.materials.shiny, color: sea_blue } );
 
     // TODO: you should draw
-    console.log(this.dt)
     this.sail.simulate(this.t, this.dt)
     this.sail.show(this.shapes, caller, this.uniforms);
 

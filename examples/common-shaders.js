@@ -263,3 +263,67 @@ const Fake_Bump_Map = defs.Fake_Bump_Map =
           } `;
       }
   };
+
+
+  const Gouraud_Shader = defs.Gouraud_Shader =
+  class Gouraud_Shader extends Shader {
+      constructor(num_lights = 2) {
+          super();
+          this.num_lights = num_lights;
+      }
+      shared_glsl_code() { // Shared code included in both shaders
+          return `
+            precision mediump float;
+            const int N_LIGHTS = ${this.num_lights};
+            uniform vec4 light_positions_or_vectors[N_LIGHTS], light_colors[N_LIGHTS];
+            uniform float light_attenuation_factors[N_LIGHTS];
+            uniform float ambient, diffusivity, specularity, smoothness;
+            uniform vec4 shape_color;
+            varying vec4 VERTEX_COLOR; // Pass color from vertex to fragment shader
+        `;
+      }
+      vertex_glsl_code() { // Vertex shader
+          return this.shared_glsl_code() + `
+            attribute vec3 position, normal;
+            uniform mat4 model_transform, projection_camera_model_transform;
+            uniform vec3 camera_center;
+
+            vec4 phong_model_lighting(vec3 N, vec3 vertex_worldspace) {
+                vec3 E = normalize(camera_center - vertex_worldspace);
+                vec4 result = vec4(0.0);
+                for(int i = 0; i < N_LIGHTS; i++) {
+                    vec3 L = normalize(light_positions_or_vectors[i].xyz - vertex_worldspace * light_positions_or_vectors[i].w);
+                    vec3 H = normalize(L + E);
+                    float distance = length(light_positions_or_vectors[i].xyz - vertex_worldspace);
+                    float attenuation = 1.0 / (1.0 + light_attenuation_factors[i] * pow(distance, 2.0));
+                    float diff = max(0.0, dot(N, L));
+                    float spec = pow(max(0.0, dot(N, H)), smoothness);
+
+                    vec3 diffuse = diff * light_colors[i].xyz * diffusivity;
+                    vec3 specular = spec * light_colors[i].xyz * specularity;
+
+                    result += vec4(attenuation * (diffuse + specular), 1.0);
+                }
+                return result;
+            }
+
+            void main() {
+                vec3 N = normalize( mat3(model_transform) * normal );
+                vec3 vertex_worldspace = (model_transform * vec4(position, 1.0)).xyz;
+                VERTEX_COLOR = vec4(shape_color.xyz * ambient, shape_color.w) + phong_model_lighting(N, vertex_worldspace);
+                gl_Position = projection_camera_model_transform * vec4(position, 1.0);
+            }
+        `;
+      }
+      fragment_glsl_code() { // Fragment shader
+          return `
+            precision mediump float;
+            varying vec4 VERTEX_COLOR;
+            void main() {
+                gl_FragColor = VERTEX_COLOR;
+            }
+        `;
+      }
+      // The update_GPU, send_material, and send_uniforms methods would remain similar to those in Phong_Shader
+      // since the main differences in Gouraud shading are handled in the shaders themselves.
+  };
