@@ -33,14 +33,15 @@ const Part_one_hermite_base = defs.Part_one_hermite_base =
         this.materials.cloth = { shader: phong, ambient: 0.3, diffusivity: 1, specularity: 0.1, color: color( .8,.8,.5,1 ) }
         this.materials.rgb = { shader: tex_phong, ambient: .5}
 
-        
+        // call this with side_length = density+1
+        const get_corners = (side_length) => [0, side_length-1, side_length**2-side_length, side_length**2-1];
+        const get_edge = (side_length) => Array.from({length: side_length}, (_, i) => i);
+
         const sailConfig = {
           initPos : vec3(0,2.5,0),
           density : 10,
           size : 4,
-          lockedPoints: [
-            0, 10, 110, 120
-          ],
+          lockedPoints: get_corners(11),
           material: this.materials.cloth
         }
 
@@ -58,9 +59,7 @@ const Part_one_hermite_base = defs.Part_one_hermite_base =
           initPos : vec3(0.5,6,-.1),
           density : 10,
           size : 1,
-          lockedPoints: [
-            0,1,2,3,4,5,6,7,8,9,10,
-          ],
+          lockedPoints: get_edge(11),
           material: this.materials.cloth
         }
 
