@@ -225,24 +225,27 @@ const Textured_Phong = defs.Textured_Phong =
 
         void main() {
             vec4 tex_color = texture2D( texture, f_tex_coord );       // Sample texture image in the correct place.
-            if( tex_color.w < .01 ) discard;
+            if(tex_color.w < .01) discard;
                                                                      // Compute an initial (ambient) color:
-            gl_FragColor = vec4( ( tex_color.xyz + shape_color.xyz ) * ambient, shape_color.w * tex_color.w );
+            vec4 ambient_color = vec4( ( tex_color.xyz * ambient), tex_color.w );
                                                                      // Compute the final color with contributions from lights:
-            gl_FragColor.xyz += phong_model_lights( normalize( N ), vertex_worldspace );
+            vec3 phong_lighting = phong_model_lights( normalize( N ), vertex_worldspace );
+                                                                     // Modulate the texture color with the Phong lighting model result
+            gl_FragColor = vec4( (tex_color.xyz * phong_lighting) + ambient_color.xyz, tex_color.w );
           } `;
       }
       update_GPU (context, gpu_addresses, uniforms, model_transform, material) {
-          super.update_GPU (context, gpu_addresses, uniforms, model_transform, material);
+          super.update_GPU(context, gpu_addresses, uniforms, model_transform, material);
 
           if (material.texture && material.texture.ready) {
               // Select texture unit 0 for the fragment shader Sampler2D uniform called "texture":
               context.uniform1i (gpu_addresses.texture, 0);
-              // For this draw, use the texture image from correct the GPU buffer:
-              material.texture.activate (context, 0);
+              // For this draw, use the texture image from the correct GPU buffer:
+              material.texture.activate(context, 0);
           }
       }
   };
+
 
 
 const Fake_Bump_Map = defs.Fake_Bump_Map =

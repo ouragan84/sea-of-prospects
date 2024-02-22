@@ -30,8 +30,8 @@ const Part_one_hermite_base = defs.Part_one_hermite_base =
         this.materials.shiny = { shader: phong, ambient: .2, diffusivity: 1, specularity: .9, color: color( .9,.5,.9,1 ) }
         this.materials.metal   = { shader: phong, ambient: .2, diffusivity: 1, specularity:  1, color: color( .9,.5,.9,1 ) }
         this.materials.cloth = { shader: phong, ambient: 0.3, diffusivity: 1, specularity: 0.1, color: color( .9,.9,.6,1 ) }
-        this.materials.flag_tex = { shader: bump, ambient: .3, texture: new Texture("assets/skull.png"),  diffusivity: 1, specularity: 0.1}
-        this.materials.cloth_tex = { shader: bump, ambient: .3, texture: new Texture("assets/cloth.jpg"),  diffusivity: 1, specularity: 0.1}
+        this.materials.flag_tex = { shader: tex_phong, ambient: .3, texture: new Texture("assets/skull.png"),  diffusivity: 0.6, specularity: 0.5, color: color( 1, 1, 1 ,1 )}
+        this.materials.cloth_tex = { shader: tex_phong, ambient: .3, texture: new Texture("assets/cloth.jpg"),  diffusivity: 0.6, specularity: 0.5, color: color( 1, 1, 1 ,1 )}
         this.materials.rgb = { shader: tex_phong, ambient: .5}
 
         // call this with side_length = density+1
