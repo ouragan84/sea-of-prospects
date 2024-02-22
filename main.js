@@ -6,6 +6,48 @@ const { vec3, vec4, color, Mat4, Shape, Material, Shader, Texture, Component } =
 
 const gravity = 9.8
 
+class Keyboard_Manager {
+  // See description at:
+  // https://github.com/encyclopedia-of-code/tiny-graphics-js/wiki/tiny-graphics-gui.js#keyboard_manager
+  constructor (target = document, callback_behavior = (callback, event) => callback (event)) {
+      this.saved_controls        = {};
+      this.actively_pressed_keys = new Set ();
+      this.callback_behavior     = callback_behavior;
+      target.addEventListener ("keydown", this.key_down_handler.bind (this));
+      target.addEventListener ("keyup", this.key_up_handler.bind (this));
+      // Deal with stuck keys during focus change:
+      window.addEventListener ("focus", () => this.actively_pressed_keys.clear ());
+  }
+  key_down_handler (event) {
+      if (["INPUT", "TEXTAREA"].includes (event.target.tagName)) return;    // Don't interfere with typing.
+      this.actively_pressed_keys.add (event.key);                              // Track the pressed key.
+      for (let saved of Object.values (this.saved_controls)) {         // Re-check all the keydown handlers.
+          if (saved.shortcut_combination.every (s => this.actively_pressed_keys.has (s))
+              && event.ctrlKey === saved.shortcut_combination.includes ("Control")
+              && event.shiftKey === saved.shortcut_combination.includes ("Shift")
+              && event.altKey === saved.shortcut_combination.includes ("Alt")
+              && event.metaKey === saved.shortcut_combination.includes ("Meta"))  // Modifiers must exactly match.
+              this.callback_behavior (saved.callback, event);       // The keys match, so fire the callback.
+      }
+  }
+  key_up_handler (event) {
+      const lower_symbols = "qwertyuiopasdfghjklzxcvbnm1234567890-=[]\\;',./",
+            upper_symbols = "QWERTYUIOPASDFGHJKLZXCVBNM!@#$%^&*()_+{}|:\"<>?";
+
+      const lifted_key_symbols = [event.key, upper_symbols[ lower_symbols.indexOf (event.key) ],
+                                  lower_symbols[ upper_symbols.indexOf (event.key) ]];
+      // Call keyup for any shortcuts
+      for (let saved of Object.values (this.saved_controls))                          // that depended on the released
+          if (lifted_key_symbols.some (s => saved.shortcut_combination.includes (s)))  // key or its shift-key counterparts.
+              this.callback_behavior (saved.keyup_callback, event);                  // The keys match, so fire the
+                                                                                     // callback.
+      lifted_key_symbols.forEach (k => this.actively_pressed_keys.delete (k));
+  }
+  add (shortcut_combination, callback = () => {}, keyup_callback = () => {}) {
+      this.saved_controls[ shortcut_combination.join ('+') ] = {shortcut_combination, callback, keyup_callback};
+  }
+}
+
 export
 const Part_one_hermite_base = defs.Part_one_hermite_base =
     class Part_one_hermite_base extends Component
@@ -24,6 +66,8 @@ const Part_one_hermite_base = defs.Part_one_hermite_base =
           'ship': new Shape_From_File( "assets/ship.obj" ),
         };
 
+        this.vertical_input = 0;
+        this.horizontal_input = 0;
 
         const phong = new defs.Phong_Shader(1);
         const tex_phong = new defs.Textured_Phong(1);
@@ -70,12 +114,70 @@ const Part_one_hermite_base = defs.Part_one_hermite_base =
         this.flag = new Cloth(flagConfig)
       }
 
+      forward_pressed()
+      {
+        this.vertical_input = 1;
+        console.log('Forward Pressed', this.vertical_input)
+      }
+
+      forward_released()
+      {
+        this.vertical_input = 0;
+        console.log('Forward Released', this.vertical_input)
+      }
+
+      bottom_pressed()
+      {
+        this.vertical_input = -1;
+        console.log('Bottom Pressed', this.vertical_input)
+      }
+
+      bottom_released()
+      {
+        this.vertical_input = 0;
+        console.log('Bottom Released', this.vertical_input)
+      }
+
+      left_pressed()
+      {
+        this.horizontal_input = -1;
+        console.log('Left Pressed', this.horizontal_input)
+      }
+
+      left_released()
+      {  
+        this.horizontal_input = 0;
+        console.log('Left Released', this.horizontal_input)
+      }
+
+      right_pressed()
+      {
+        this.horizontal_input = 1;
+        console.log('Right Pressed', this.horizontal_input)
+      }
+
+      right_released()
+      {
+        this.horizontal_input = 0;
+        console.log('Right Released', this.horizontal_input)
+      }
+       
+      render_controls () {
+        this.control_panel.innerHTML += "Click and drag the scene to <br> spin your viewpoint around it.<br>";
+        this.key_triggered_button ("Forward", ["w"], () => this.forward_pressed(), undefined, () => this.forward_released());
+        this.key_triggered_button ("Right", ["d"], () => this.right_pressed(), undefined, () => this.right_released());
+        this.new_line ();
+        this.key_triggered_button ("Bottom", ["s"], () => this.bottom_pressed(), undefined, () => this.bottom_released());
+        this.key_triggered_button ("Left", ["a"], () => this.left_pressed(), undefined, () => this.left_released());
+    }
+
       render_animation( caller )
       {      
 
         // Setup -- This part sets up the scene's overall camera matrix, projection matrix, and lights:
         if( !caller.controls )
-        { this.animated_children.push( caller.controls = new defs.Movement_Controls( { uniforms: this.uniforms } ) );
+        { 
+          this.animated_children.push( caller.controls = new defs.Movement_Controls( { uniforms: this.uniforms } ) );
           caller.controls.add_mouse_controls( caller.canvas );
           Shader.assign_camera( Mat4.look_at (vec3 (10, 10, 10), vec3 (0, 0, 0), vec3 (0, 1, 0)), this.uniforms );
         }
