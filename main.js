@@ -42,33 +42,31 @@ const Part_one_hermite_base = defs.Part_one_hermite_base =
         const get_edge = (side_length) => Array.from({length: side_length}, (_, i) => i);
 
         const sailConfig = {
-          initPos : vec3(0,2.5,0),
+          initPos : vec3(0,4,0),
           density : 10,
           size : 4,
           lockedPoints: get_corners(11),
           material: this.materials.cloth_tex,
         }
-
-        // const sailConfig = {
-        //   initPos : vec3(0,2.5,0),
-        //   density : 3,
-        //   size : 4,
-        //   lockedPoints: [
-        //     0, 3, 12, 15
-        //   ],
-        //   material: this.materials.cloth
-        // }
+        const sailConfig2 = {
+          initPos : vec3(0,3.25,2.75),
+          density : 10,
+          size : 2,
+          lockedPoints: get_corners(11),
+          material: this.materials.cloth_tex,
+        }
 
         const flagConfig = {
-          initPos : vec3(0.5,6,-.1),
+          initPos : vec3(1,8,-.2),
           density : 10,
-          size : 1,
+          size : 2,
           lockedPoints: get_edge(11),
           material: this.materials.flag_tex
         }
 
 
         this.sail = new Cloth(sailConfig)
+        this.sail2 = new Cloth(sailConfig2)
         this.flag = new Cloth(flagConfig)
       }
 
@@ -119,11 +117,14 @@ export class Part_one_hermite extends Part_one_hermite_base
     this.flag.simulate(this.t, this.dt)
     this.flag.show(this.shapes, caller, this.uniforms);
 
+    this.sail2.simulate(this.t, this.dt)
+    this.sail2.show(this.shapes, caller, this.uniforms)
+
     // this.shapes.box.draw( caller, this.uniforms, Mat4.translation(0, 0, 0).times(Mat4.scale(.1, 6.5, .1)), { ...this.materials.shiny, color: brown } );
     // this.shapes.box.draw( caller, this.uniforms, Mat4.translation(0, .5, 0).times(Mat4.rotation(Math.PI/2,0,0,1)).times(Mat4.scale(.06, 2, .06)), { ...this.materials.shiny, color: brown } );
     // this.shapes.box.draw( caller, this.uniforms, Mat4.translation(0, 4.5, 0).times(Mat4.rotation(Math.PI/2,0,0,1)).times(Mat4.scale(.06, 2, .06)), { ...this.materials.shiny, color: brown } );
 
-    this.shapes.ship.draw( caller, this.uniforms, Mat4.translation(0, 1, 0).times(Mat4.scale(1, 1, -1)), this.materials.wood );
+    this.shapes.ship.draw( caller, this.uniforms, Mat4.translation(0, 1.5, .5).times(Mat4.scale(2.3,2.3,2.3)), this.materials.wood );
 
 
   }
