@@ -1,5 +1,6 @@
 import { Cloth } from './Cloth.js';
 import {tiny, defs} from './examples/common.js';
+import {Shape_From_File}  from './examples/obj-file-demo.js';
 
 const { vec3, vec4, color, Mat4, Shape, Material, Shader, Texture, Component } = tiny;
 
@@ -19,6 +20,8 @@ const Part_one_hermite_base = defs.Part_one_hermite_base =
         this.shapes = { 'box'  : new defs.Cube(),
           'ball' : new defs.Subdivision_Sphere( 4 ),
           'axis' : new defs.Axis_Arrows(),
+          'teapot': new Shape_From_File( "assets/teapot.obj" ),
+          'ship': new Shape_From_File( "assets/ship.obj" ),
         };
 
 
@@ -26,12 +29,12 @@ const Part_one_hermite_base = defs.Part_one_hermite_base =
         const tex_phong = new defs.Textured_Phong(1);
         const bump = new defs.Fake_Bump_Map(1);
         this.materials = {};
-        this.materials.plastic = { shader: phong, ambient: .2, diffusivity: 1, specularity: .5, color: color( .9,.5,.9,1 ) }
-        this.materials.shiny = { shader: phong, ambient: .2, diffusivity: 1, specularity: .9, color: color( .9,.5,.9,1 ) }
-        this.materials.metal   = { shader: phong, ambient: .2, diffusivity: 1, specularity:  1, color: color( .9,.5,.9,1 ) }
-        this.materials.cloth = { shader: phong, ambient: 0.3, diffusivity: 1, specularity: 0.1, color: color( .9,.9,.6,1 ) }
+        this.materials.plastic = { shader: phong, ambient: .3, diffusivity: 1, specularity: .5, color: color( .9,.5,.9,1 ) }
+        this.materials.shiny = { shader: phong, ambient: .3, diffusivity: 1, specularity: .9, color: color( .9,.5,.9,1 ) }
+        this.materials.metal   = { shader: phong, ambient: .3, diffusivity: 1, specularity:  1, color: color( .9,.5,.9,1 ) }
         this.materials.flag_tex = { shader: tex_phong, ambient: .3, texture: new Texture("assets/skull.png"),  diffusivity: 0.6, specularity: 0.5, color: color( 1, 1, 1 ,1 )}
         this.materials.cloth_tex = { shader: tex_phong, ambient: .3, texture: new Texture("assets/cloth.jpg"),  diffusivity: 0.6, specularity: 0.5, color: color( 1, 1, 1 ,1 )}
+        this.materials.wood = { shader: tex_phong, ambient: .3, texture: new Texture("assets/wood.jpg"),  diffusivity: 0.7, specularity: 0.3, color: color( 1, 1, 1 ,1 )}
         this.materials.rgb = { shader: tex_phong, ambient: .5}
 
         // call this with side_length = density+1
@@ -43,7 +46,7 @@ const Part_one_hermite_base = defs.Part_one_hermite_base =
           density : 10,
           size : 4,
           lockedPoints: get_corners(11),
-          material: this.materials.cloth_tex
+          material: this.materials.cloth_tex,
         }
 
         // const sailConfig = {
@@ -116,9 +119,12 @@ export class Part_one_hermite extends Part_one_hermite_base
     this.flag.simulate(this.t, this.dt)
     this.flag.show(this.shapes, caller, this.uniforms);
 
-    this.shapes.box.draw( caller, this.uniforms, Mat4.translation(0, 0, 0).times(Mat4.scale(.1, 6.5, .1)), { ...this.materials.shiny, color: brown } );
-    this.shapes.box.draw( caller, this.uniforms, Mat4.translation(0, .5, 0).times(Mat4.rotation(Math.PI/2,0,0,1)).times(Mat4.scale(.06, 2, .06)), { ...this.materials.shiny, color: brown } );
-    this.shapes.box.draw( caller, this.uniforms, Mat4.translation(0, 4.5, 0).times(Mat4.rotation(Math.PI/2,0,0,1)).times(Mat4.scale(.06, 2, .06)), { ...this.materials.shiny, color: brown } );
+    // this.shapes.box.draw( caller, this.uniforms, Mat4.translation(0, 0, 0).times(Mat4.scale(.1, 6.5, .1)), { ...this.materials.shiny, color: brown } );
+    // this.shapes.box.draw( caller, this.uniforms, Mat4.translation(0, .5, 0).times(Mat4.rotation(Math.PI/2,0,0,1)).times(Mat4.scale(.06, 2, .06)), { ...this.materials.shiny, color: brown } );
+    // this.shapes.box.draw( caller, this.uniforms, Mat4.translation(0, 4.5, 0).times(Mat4.rotation(Math.PI/2,0,0,1)).times(Mat4.scale(.06, 2, .06)), { ...this.materials.shiny, color: brown } );
+
+    this.shapes.ship.draw( caller, this.uniforms, Mat4.translation(0, 1, 0).times(Mat4.scale(1, 1, -1)), this.materials.wood );
+
 
   }
 
