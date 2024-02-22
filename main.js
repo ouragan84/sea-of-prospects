@@ -23,14 +23,15 @@ const Part_one_hermite_base = defs.Part_one_hermite_base =
 
 
         const phong = new defs.Phong_Shader(1);
-        const tex_phong = new defs.Textured_Phong();
+        const tex_phong = new defs.Textured_Phong(1);
         const bump = new defs.Fake_Bump_Map(1);
-        const Gouraud = new defs.Gouraud_Shader(1);
         this.materials = {};
         this.materials.plastic = { shader: phong, ambient: .2, diffusivity: 1, specularity: .5, color: color( .9,.5,.9,1 ) }
         this.materials.shiny = { shader: phong, ambient: .2, diffusivity: 1, specularity: .9, color: color( .9,.5,.9,1 ) }
         this.materials.metal   = { shader: phong, ambient: .2, diffusivity: 1, specularity:  1, color: color( .9,.5,.9,1 ) }
-        this.materials.cloth = { shader: phong, ambient: 0.3, diffusivity: 1, specularity: 0.1, color: color( .8,.8,.5,1 ) }
+        this.materials.cloth = { shader: phong, ambient: 0.3, diffusivity: 1, specularity: 0.1, color: color( .9,.9,.6,1 ) }
+        this.materials.flag_tex = { shader: bump, ambient: .3, texture: new Texture("assets/skull.png"),  diffusivity: 1, specularity: 0.1}
+        this.materials.cloth_tex = { shader: bump, ambient: .3, texture: new Texture("assets/cloth.jpg"),  diffusivity: 1, specularity: 0.1}
         this.materials.rgb = { shader: tex_phong, ambient: .5}
 
         // call this with side_length = density+1
@@ -42,7 +43,7 @@ const Part_one_hermite_base = defs.Part_one_hermite_base =
           density : 10,
           size : 4,
           lockedPoints: get_corners(11),
-          material: this.materials.cloth
+          material: this.materials.cloth_tex
         }
 
         // const sailConfig = {
@@ -60,7 +61,7 @@ const Part_one_hermite_base = defs.Part_one_hermite_base =
           density : 10,
           size : 1,
           lockedPoints: get_edge(11),
-          material: this.materials.cloth
+          material: this.materials.flag_tex
         }
 
 

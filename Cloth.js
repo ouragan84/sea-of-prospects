@@ -129,8 +129,6 @@ class Cloth {
         for (let i = 0; i < config.lockedPoints.length; i++) {
             this.points[config.lockedPoints[i]].locked = true
         }
-
-        console.log(this.shapes.sheet);
         
     }
 
@@ -248,7 +246,7 @@ class Cloth {
         // This won't be perfect flat shading because vertices are shared.
         this.flat_shade();
         // Draw the current sheet shape.
-        this.shapes.sheet.draw( caller, uniforms, Mat4.identity(), this.material );
+        this.shapes.sheet.draw( caller, uniforms, Mat4.identity(), this.material);
     
         // Update the gpu-side shape with new vertices.
         // Warning:  You can't call this until you've already drawn the shape once.

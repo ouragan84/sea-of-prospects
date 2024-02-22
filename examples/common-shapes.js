@@ -233,16 +233,16 @@ const Grid_Patch = defs.Grid_Patch =
           }
           // From those, use next_column function to generate the remaining points:
           for (let r = 0; r <= rows; r++)
-              for (let c = 0; c <= columns; c++) {
-                  if (c > 0) points[ r ][ c ] = next_column_function (c / columns, points[ r ][ c - 1 ], r / rows);
+            for (let c = 0; c <= columns; c++) {
+                if (c > 0) points[ r ][ c ] = next_column_function (c / columns, points[ r ][ c - 1 ], r / rows);
 
-                  this.arrays.position.push (points[ r ][ c ]);
-                  // Interpolate texture coords from a provided range.
-                  const a1 = c / columns, a2 = r / rows, x_range = texture_coord_range[ 0 ],
-                        y_range                                  = texture_coord_range[ 1 ];
-                  this.arrays.texture_coord.push (
-                    vec ((a1) * x_range[ 1 ] + (1 - a1) * x_range[ 0 ], (a2) * y_range[ 1 ] + (1 - a2) * y_range[ 0 ]));
-              }
+                this.arrays.position.push (points[ r ][ c ]);
+
+                // Calculate texture coordinates directly based on column and row position
+                const a1 = c / columns, a2 = r / rows;
+                this.arrays.texture_coord.push(vec(a1, a2));
+            }
+
           for (let r = 0; r <= rows; r++)
             // Generate normals by averaging the cross products of all defined neighbor pairs.
               for (let c = 0; c <= columns; c++) {
