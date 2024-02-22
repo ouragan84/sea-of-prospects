@@ -82,10 +82,19 @@ class Cloth {
     constructor(config) {
         this.pos = config.initPos;
         this.density = config.density;
-        this.spacing = 2 / this.density
+        this.spacing = config.size / this.density
         // set up cloth
         this.points = []
         this.segments = []
+
+        const initial_corner_point = vec3( -1,-1,0 );
+        const row_operation = (s,p) => p ? Mat4.translation( 0,.2,0 ).times(p.to4(1)).to3()
+            : initial_corner_point;
+        const column_operation = (t,p) =>  Mat4.translation( .2,0,0 ).times(p.to4(1)).to3();
+        this.shapes = { sheet : new defs.Grid_Patch( config.density, config.density, row_operation, column_operation ) };
+        
+        const shader = new defs.Textured_Phong( 1 );
+        this.material = { shader, ambient: 0.5, specularity:0, texture: new Texture( "assets/saba.jpg" ) };
 
         // initialize points
         for (let i = -config.size/2; i <= config.size/2; i+=this.spacing){
@@ -170,13 +179,28 @@ class Cloth {
     }
 
     show(shapes, caller, uniforms, mat) {
-        for(let i = 0; i < this.segments.length; i++){
-            this.segments[i].show(caller, uniforms);
-        }
+        // Update the JavaScript-side shape with new vertices:
+        this.shapes.sheet.arrays.position.forEach( (p,i,a) =>{
+          a[i] = this.points[i].pos
+        });
+        // Update the normals to reflect the surface's new arrangement.
+        // This won't be perfect flat shading because vertices are shared.
+        this.shapes.sheet.flat_shade();
+        // Draw the current sheet shape.
+        this.shapes.sheet.draw( caller, uniforms, Mat4.identity(), this.material );
     
-        for(let i = 0; i < this.points.length; i++){
-            this.points[i].show(shapes, caller, uniforms, mat);
-        }
+        // Update the gpu-side shape with new vertices.
+        // Warning:  You can't call this until you've already drawn the shape once.
+        this.shapes.sheet.copy_onto_graphics_card( caller.context, ["position","normal"], false );
+
+        // ------------------
+        // for(let i = 0; i < this.segments.length; i++){
+        //     this.segments[i].show(caller, uniforms);
+        // }
+    
+        // for(let i = 0; i < this.points.length; i++){
+        //     this.points[i].show(shapes, caller, uniforms, mat);
+        // }
     }
 }
 

@@ -33,20 +33,20 @@ const Part_one_hermite_base = defs.Part_one_hermite_base =
         
         // TODO: you should create a poop class instance
         const sailConfig = {
-          initPos : vec3(0,2,0),
-          density : 5,
-          size : 3,
+          initPos : vec3(0,2.5,0),
+          density : 10,
+          size : 4,
           lockedPoints: [
-            0, 7, 56, 63
+            0, 10, 110, 120
           ]
         }
 
         const flagConfig = {
-          initPos : vec3(.5,5,-.1),
-          density : 6,
+          initPos : vec3(0.5,6,-.1),
+          density : 10,
           size : 1,
           lockedPoints: [
-            0, 3
+            0,1,2,3,4,5,6,7,8,9,10,
           ]
         }
 
@@ -103,9 +103,9 @@ export class Part_one_hermite extends Part_one_hermite_base
     this.flag.simulate(this.t, this.dt)
     this.flag.show(this.shapes, caller, this.uniforms);
 
-    this.shapes.box.draw( caller, this.uniforms, Mat4.translation(0, 0, 0).times(Mat4.scale(.1, 6, .1)), { ...this.materials.shiny, color: brown } );
-    this.shapes.box.draw( caller, this.uniforms, Mat4.translation(0, .5, 0).times(Mat4.rotation(Math.PI/2,0,0,1)).times(Mat4.scale(.06, 1.5, .06)), { ...this.materials.shiny, color: brown } );
-    this.shapes.box.draw( caller, this.uniforms, Mat4.translation(0, 3.25, 0).times(Mat4.rotation(Math.PI/2,0,0,1)).times(Mat4.scale(.06, 1.5, .06)), { ...this.materials.shiny, color: brown } );
+    this.shapes.box.draw( caller, this.uniforms, Mat4.translation(0, 0, 0).times(Mat4.scale(.1, 6.5, .1)), { ...this.materials.shiny, color: brown } );
+    this.shapes.box.draw( caller, this.uniforms, Mat4.translation(0, .5, 0).times(Mat4.rotation(Math.PI/2,0,0,1)).times(Mat4.scale(.06, 2, .06)), { ...this.materials.shiny, color: brown } );
+    this.shapes.box.draw( caller, this.uniforms, Mat4.translation(0, 4.5, 0).times(Mat4.rotation(Math.PI/2,0,0,1)).times(Mat4.scale(.06, 2, .06)), { ...this.materials.shiny, color: brown } );
 
   }
 
