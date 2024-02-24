@@ -1,6 +1,7 @@
 import { Cloth } from './Cloth.js';
 import {tiny, defs} from './examples/common.js';
 import {Shape_From_File}  from './examples/obj-file-demo.js';
+import { Ocean } from './Ocean.js';
 
 const { vec3, vec4, color, Mat4, Shape, Material, Shader, Texture, Component } = tiny;
 
@@ -79,7 +80,9 @@ const Part_one_hermite_base = defs.Part_one_hermite_base =
         this.materials.flag_tex = { shader: tex_phong, ambient: .3, texture: new Texture("assets/skull.png"),  diffusivity: 0.6, specularity: 0.5, color: color( 1, 1, 1 ,1 )}
         this.materials.cloth_tex = { shader: tex_phong, ambient: .3, texture: new Texture("assets/cloth.jpg"),  diffusivity: 0.6, specularity: 0.5, color: color( 1, 1, 1 ,1 )}
         this.materials.wood = { shader: tex_phong, ambient: .3, texture: new Texture("assets/wood.jpg"),  diffusivity: 0.7, specularity: 0.3, color: color( 1, 1, 1 ,1 )}
-        this.materials.rgb = { shader: tex_phong, ambient: .5}
+        this.materials.ocean = { shader: phong, ambient: .3, diffusivity: 1, specularity: .5, color: color( 0,0.62,0.77,1 ) }
+        this.materials.oceanfloor = { shader: phong, ambient: .3, diffusivity: 1, specularity: .5, color: color( 0.5,0.5,0.5,1 ) }
+        
 
         // call this with side_length = density+1
         const get_corners = (side_length) => [0, side_length-1, side_length**2-side_length, side_length**2-1];
@@ -108,58 +111,72 @@ const Part_one_hermite_base = defs.Part_one_hermite_base =
           material: this.materials.flag_tex
         }
 
+        const oceanConfig = {
+          initPos : vec3(0,0,0),
+          density : 40,
+          size : 40,
+          material: this.materials.ocean,
+          floorDensity : 10,
+          floorMinY : -10,
+          floorMaxY : -9,
+          floorMaterial: this.materials.oceanfloor,
+          wave_amplitude: 0.5
+        }
+
 
         this.sail = new Cloth(sailConfig)
         this.sail2 = new Cloth(sailConfig2)
         this.flag = new Cloth(flagConfig)
+
+        this.ocean = new Ocean(oceanConfig)
       }
 
       forward_pressed()
       {
         this.vertical_input = 1;
-        console.log('Forward Pressed', this.vertical_input)
+        // console.log('Forward Pressed', this.vertical_input)
       }
 
       forward_released()
       {
         this.vertical_input = 0;
-        console.log('Forward Released', this.vertical_input)
+        // console.log('Forward Released', this.vertical_input)
       }
 
       bottom_pressed()
       {
         this.vertical_input = -1;
-        console.log('Bottom Pressed', this.vertical_input)
+        // console.log('Bottom Pressed', this.vertical_input)
       }
 
       bottom_released()
       {
         this.vertical_input = 0;
-        console.log('Bottom Released', this.vertical_input)
+        // console.log('Bottom Released', this.vertical_input)
       }
 
       left_pressed()
       {
         this.horizontal_input = -1;
-        console.log('Left Pressed', this.horizontal_input)
+        // console.log('Left Pressed', this.horizontal_input)
       }
 
       left_released()
       {  
         this.horizontal_input = 0;
-        console.log('Left Released', this.horizontal_input)
+        // console.log('Left Released', this.horizontal_input)
       }
 
       right_pressed()
       {
         this.horizontal_input = 1;
-        console.log('Right Pressed', this.horizontal_input)
+        // console.log('Right Pressed', this.horizontal_input)
       }
 
       right_released()
       {
         this.horizontal_input = 0;
-        console.log('Right Released', this.horizontal_input)
+        // console.log('Right Released', this.horizontal_input)
       }
        
       render_controls () {
@@ -209,8 +226,8 @@ export class Part_one_hermite extends Part_one_hermite_base
     const t = this.t = this.uniforms.animation_time/1000;
 
     // !!! Draw ground
-    let floor_transform = Mat4.translation(0, 0, 0).times(Mat4.scale(10, 0.01, 10));
-    this.shapes.box.draw( caller, this.uniforms, floor_transform, { ...this.materials.shiny, color: sea_blue } );
+    // let floor_transform = Mat4.translation(0, 0, 0).times(Mat4.scale(10, 0.01, 10));
+    // this.shapes.box.draw( caller, this.uniforms, floor_transform, { ...this.materials.shiny, color: sea_blue } );
 
     // TODO: you should draw
     this.sail.simulate(this.t, this.dt)
@@ -228,6 +245,9 @@ export class Part_one_hermite extends Part_one_hermite_base
 
     this.shapes.ship.draw( caller, this.uniforms, Mat4.translation(0, 1.5, .5).times(Mat4.scale(2.3,2.3,2.3)), this.materials.wood );
 
+    this.ocean.simulate(this.t, this.dt)
+    this.ocean.show(this.shapes, caller, this.uniforms)
+  
 
   }
 

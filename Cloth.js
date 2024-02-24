@@ -178,15 +178,15 @@ class Cloth {
         }
     }
 
-    point_to_coord(i){
-        return [i % this.gridSize, Math.floor(i / this.gridSize)]
+    point_to_coord(i, gridSize){
+      return [i % gridSize, Math.floor(i / gridSize)]
     }
 
-    coord_to_point(x, y){
-        return x + y * this.gridSize
+    coord_to_point(x, y, gridSize){
+        return x + y * gridSize
     }
 
-    flat_shade () {
+    flat_shade (shape, gridSize) {
       /*
 
         3  7 11  15
@@ -198,7 +198,7 @@ class Cloth {
         
       */
 
-      let shape = this.shapes.sheet;
+      
 
       // First, iterate through the index or position triples:
       for (let counter = 0; counter < (shape.indices ? shape.indices.length : shape.arrays.position.length);
@@ -219,12 +219,12 @@ class Cloth {
 
           const index = shape.indices[ counter ];
           const pc = shape.arrays.position[ index ];
-          const [cx, cy] = this.point_to_coord(index);
+          const [cx, cy] = this.point_to_coord(index, gridSize);
 
-          const p1 = (cx - 1 < 0) ? pc : shape.arrays.position[this.coord_to_point(cx - 1, cy)];
-          const p2 = (cx + 1 >= this.gridSize) ? pc : shape.arrays.position[this.coord_to_point(cx + 1, cy)];
-          const p3 = (cy - 1 < 0) ? pc : shape.arrays.position[this.coord_to_point(cx, cy - 1)];
-          const p4 = (cy + 1 >= this.gridSize) ? pc : shape.arrays.position[this.coord_to_point(cx, cy + 1)];
+          const p1 = (cx - 1 < 0) ? pc : shape.arrays.position[this.coord_to_point(cx - 1, cy,gridSize)];
+          const p2 = (cx + 1 >= gridSize) ? pc : shape.arrays.position[this.coord_to_point(cx + 1, cy,gridSize)];
+          const p3 = (cy - 1 < 0) ? pc : shape.arrays.position[this.coord_to_point(cx, cy - 1,gridSize)];
+          const p4 = (cy + 1 >= gridSize) ? pc : shape.arrays.position[this.coord_to_point(cx, cy + 1,gridSize)];
 
           const v1 = p2.minus(p1);
           const v2 = p4.minus(p3);
@@ -243,8 +243,8 @@ class Cloth {
           a[i] = this.points[i].pos
         });
         // Update the normals to reflect the surface's new arrangement.
-        // This won't be perfect flat shading because vertices are shared.
-        this.flat_shade();
+        // This won't be perfect flat shading because vertices are shared.'
+        this.flat_shade(this.shapes.sheet, this.gridSize);
         // Draw the current sheet shape.
         this.shapes.sheet.draw( caller, uniforms, Mat4.identity(), this.material);
     
