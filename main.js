@@ -1,6 +1,7 @@
 import { Cloth } from './Cloth.js';
 import {tiny, defs} from './examples/common.js';
 import {Shape_From_File}  from './examples/obj-file-demo.js';
+import { RigidBody } from './RigidBody.js';
 
 const { vec3, vec4, color, Mat4, Shape, Material, Shader, Texture, Component } = tiny;
 
@@ -23,6 +24,9 @@ const Part_one_hermite_base = defs.Part_one_hermite_base =
           'teapot': new Shape_From_File( "assets/teapot.obj" ),
           'ship': new Shape_From_File( "assets/ship.obj" ),
         };
+
+        this.vertical_input = 0;
+        this.horizontal_input = 0;
 
 
         const phong = new defs.Phong_Shader(1);
@@ -68,6 +72,65 @@ const Part_one_hermite_base = defs.Part_one_hermite_base =
         this.sail = new Cloth(sailConfig)
         this.sail2 = new Cloth(sailConfig2)
         this.flag = new Cloth(flagConfig)
+
+        this.rb = new RigidBody(vec3(0,1,0))
+      }
+
+      forward_pressed()
+      {
+        this.vertical_input = 1;
+        console.log('Forward Pressed', this.vertical_input)
+      }
+
+      forward_released()
+      {
+        this.vertical_input = 0;
+        console.log('Forward Released', this.vertical_input)
+      }
+
+      bottom_pressed()
+      {
+        this.vertical_input = -1;
+        console.log('Bottom Pressed', this.vertical_input)
+      }
+
+      bottom_released()
+      {
+        this.vertical_input = 0;
+        console.log('Bottom Released', this.vertical_input)
+      }
+
+      left_pressed()
+      {
+        this.horizontal_input = -1;
+        console.log('Left Pressed', this.horizontal_input)
+      }
+
+      left_released()
+      {  
+        this.horizontal_input = 0;
+        console.log('Left Released', this.horizontal_input)
+      }
+
+      right_pressed()
+      {
+        this.horizontal_input = 1;
+        console.log('Right Pressed', this.horizontal_input)
+      }
+
+      right_released()
+      {
+        this.horizontal_input = 0;
+        console.log('Right Released', this.horizontal_input)
+      }
+
+      render_controls () {
+        this.control_panel.innerHTML += "Click and drag the scene to <br> spin your viewpoint around it.<br>";
+        this.key_triggered_button ("Forward", ["w"], () => this.forward_pressed(), undefined, () => this.forward_released());
+        this.key_triggered_button ("Right", ["d"], () => this.right_pressed(), undefined, () => this.right_released());
+        this.new_line ();
+        this.key_triggered_button ("Bottom", ["s"], () => this.bottom_pressed(), undefined, () => this.bottom_released());
+        this.key_triggered_button ("Left", ["a"], () => this.left_pressed(), undefined, () => this.left_released());
       }
 
       render_animation( caller )
@@ -111,23 +174,86 @@ export class Part_one_hermite extends Part_one_hermite_base
     this.shapes.box.draw( caller, this.uniforms, floor_transform, { ...this.materials.shiny, color: sea_blue } );
 
     // TODO: you should draw
-    this.sail.simulate(this.t, this.dt)
-    this.sail.show(this.shapes, caller, this.uniforms);
+    // this.sail.simulate(this.t, this.dt)
+    // this.sail.show(this.shapes, caller, this.uniforms);
 
-    this.flag.simulate(this.t, this.dt)
-    this.flag.show(this.shapes, caller, this.uniforms);
+    // this.flag.simulate(this.t, this.dt)
+    // this.flag.show(this.shapes, caller, this.uniforms);
 
-    this.sail2.simulate(this.t, this.dt)
-    this.sail2.show(this.shapes, caller, this.uniforms)
+    // this.sail2.simulate(this.t, this.dt)
+    // this.sail2.show(this.shapes, caller, this.uniforms)
 
-    // this.shapes.box.draw( caller, this.uniforms, Mat4.translation(0, 0, 0).times(Mat4.scale(.1, 6.5, .1)), { ...this.materials.shiny, color: brown } );
-    // this.shapes.box.draw( caller, this.uniforms, Mat4.translation(0, .5, 0).times(Mat4.rotation(Math.PI/2,0,0,1)).times(Mat4.scale(.06, 2, .06)), { ...this.materials.shiny, color: brown } );
-    // this.shapes.box.draw( caller, this.uniforms, Mat4.translation(0, 4.5, 0).times(Mat4.rotation(Math.PI/2,0,0,1)).times(Mat4.scale(.06, 2, .06)), { ...this.materials.shiny, color: brown } );
+    // // this.shapes.box.draw( caller, this.uniforms, Mat4.translation(0, 0, 0).times(Mat4.scale(.1, 6.5, .1)), { ...this.materials.shiny, color: brown } );
+    // // this.shapes.box.draw( caller, this.uniforms, Mat4.translation(0, .5, 0).times(Mat4.rotation(Math.PI/2,0,0,1)).times(Mat4.scale(.06, 2, .06)), { ...this.materials.shiny, color: brown } );
+    // // this.shapes.box.draw( caller, this.uniforms, Mat4.translation(0, 4.5, 0).times(Mat4.rotation(Math.PI/2,0,0,1)).times(Mat4.scale(.06, 2, .06)), { ...this.materials.shiny, color: brown } );
 
-    this.shapes.ship.draw( caller, this.uniforms, Mat4.translation(0, 1.5, .5).times(Mat4.scale(2.3,2.3,2.3)), this.materials.wood );
+    // this.shapes.ship.draw( caller, this.uniforms, Mat4.translation(0, 1.5, .5).times(Mat4.scale(2.3,2.3,2.3)), this.materials.wood );
 
+    this.rb.applyForceAtPosition(vec3(0,20,0).times(this.vertical_input), vec3(1,0,1))
+    this.rb.applyForce(vec3(0,-gravity * this.rb.mass, 0))
+    this.rb.update(this.dt)
+    this.rb.checkCollissionWithGroundPlane(1000,25)
+    this.rb.show(caller, this.uniforms)
+
+    let temp_pos = vec3(0,1.48,0)
+    let tt = Mat4.translation(temp_pos[0], temp_pos[1], temp_pos[2]).times(Mat4.scale(.1, .1, .1));
+    this.shapes.ball.draw( caller, this.uniforms, tt, { ...this.materials.shiny, color: whiteish } );
+    console.log(isPointInsideRigidBody(temp_pos, this.rb))
 
   }
 
 
+}
+
+
+function isPointInsideRigidBody(point, rigidBody) {
+  // Step 1: Translate the point into the rigid body's local coordinate system
+  let localPoint = point.minus(rigidBody.pos);
+  
+  // Step 2: Rotate the point by the inverse of the rigid body's orientation
+  // Calculate the inverse of the orientation quaternion
+  let angle = rigidBody.orientation[0];
+  let axis = vec3(rigidBody.orientation[1], rigidBody.orientation[2], rigidBody.orientation[3]);
+  let invOrientation = quaternionFromAngleAxis(-angle, axis); // Assuming you have this function
+  
+  // Apply the inverse rotation to the point
+  localPoint = rotateVectorByQuaternion(localPoint, invOrientation); // Assuming you have this function
+  
+  // Step 3: Check if the localPoint is within the bounds defined by the scale
+  let halfScale = rigidBody.scale.times(0.5);
+  return Math.abs(localPoint[0]) <= halfScale[0] &&
+         Math.abs(localPoint[1]) <= halfScale[1] &&
+         Math.abs(localPoint[2]) <= halfScale[2];
+}
+
+// Helper function to create a quaternion from an angle and an axis
+function quaternionFromAngleAxis(angle, axis) {
+  let halfAngle = angle * 0.5;
+  let s = Math.sin(halfAngle);
+  return vec4(Math.cos(halfAngle), axis[0] * s, axis[1] * s, axis[2] * s);
+}
+
+// Helper function to rotate a vector by a quaternion
+function rotateVectorByQuaternion(vector, quaternion) {
+  // Convert the vector into a quaternion with a w-value of 0
+  let vQuat = vec4(0, vector[0], vector[1], vector[2]);
+  
+  // Calculate the conjugate of the quaternion
+  let qConj = vec4(quaternion[0], -quaternion[1], -quaternion[2], -quaternion[3]);
+  
+  // Rotate the vector quaternion: q * v * q^-1
+  let rotatedQuat = quaternionMultiply(quaternionMultiply(quaternion, vQuat), qConj);
+  
+  // Return the rotated vector, ignoring the w component
+  return vec3(rotatedQuat[1], rotatedQuat[2], rotatedQuat[3]);
+}
+
+// Helper function to multiply two quaternions
+function quaternionMultiply(q1, q2) {
+  return vec4(
+      q1[0] * q2[0] - q1[1] * q2[1] - q1[2] * q2[2] - q1[3] * q2[3],
+      q1[0] * q2[1] + q1[1] * q2[0] + q1[2] * q2[3] - q1[3] * q2[2],
+      q1[0] * q2[2] - q1[1] * q2[3] + q1[2] * q2[0] + q1[3] * q2[1],
+      q1[0] * q2[3] + q1[1] * q2[2] - q1[2] * q2[1] + q1[3] * q2[0]
+  );
 }
