@@ -98,6 +98,10 @@ const Phong_Shader = defs.Phong_Shader =
         uniform float light_attenuation_factors[N_LIGHTS];
         uniform vec4 shape_color;
         uniform vec3 squared_scale, camera_center;
+        uniform vec4 background_color_top, background_color_bottom;
+        uniform vec4 fog_color;
+        uniform float fog_min_distance, fog_max_distance, fog_intensity;
+
 
         varying vec3 N, vertex_worldspace;
                                              // ***** PHONG SHADING HAPPENS HERE: *****

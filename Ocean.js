@@ -112,39 +112,42 @@ class Ocean {
         
   
         // First, iterate through the index or position triples:
+        // for (let counter = 0; counter < (shape.indices ? shape.indices.length : shape.arrays.position.length);
+        //      counter += 1) {
+        //     const index = shape.indices[ counter ];
+        //     const pc = shape.arrays.position[ index ];
+        //     const [cx, cy] = this.point_to_coord(index,gridSize);
+  
+        //     const p1 = (cx - 1 < 0) ? pc : shape.arrays.position[this.coord_to_point(cx - 1, cy,gridSize)];
+        //     const p2 = (cx + 1 >= gridSize) ? pc : shape.arrays.position[this.coord_to_point(cx + 1, cy,gridSize)];
+        //     const p3 = (cy - 1 < 0) ? pc : shape.arrays.position[this.coord_to_point(cx, cy - 1,gridSize)];
+        //     const p4 = (cy + 1 >= gridSize) ? pc : shape.arrays.position[this.coord_to_point(cx, cy + 1,gridSize)];
+  
+        //     const v1 = p2.minus(p1);
+        //     const v2 = p4.minus(p3);
+  
+        //     const n1 = v1.cross(v2).normalized();
+  
+        //     shape.arrays.normal[index] = n1;
+  
+        // }
+
         for (let counter = 0; counter < (shape.indices ? shape.indices.length : shape.arrays.position.length);
-             counter += 1) {
-            // const indices      = shape.indices.length ?
-            //                      [shape.indices[ counter ], shape.indices[ counter + 1 ], shape.indices[ counter + 2 ]]
-            //                                          : [counter, counter + 1, counter + 2];
-            // const [p1, p2, p3] = indices.map (i => shape.arrays.position[ i ]);
-            // // Cross the two edge vectors of this triangle together to get its normal:
-            // let n1           = p1.minus (p2).cross (p3.minus (p1)).normalized ();
-            // // Flip the normal if adding it to the triangle brings it closer to the origin:
-            // if (n1.times (.1).plus (p1).norm () < p1.norm ()) n1.scale_by (-1);
-  
-            // // n1 = n1.normalized();
-  
-            // // Propagate this normal to the 3 vertices:
-            // for (let i of indices) shape.arrays.normal[ i ] = tiny.Vector3.from (n1);
-  
-            const index = shape.indices[ counter ];
-            const pc = shape.arrays.position[ index ];
-            const [cx, cy] = this.point_to_coord(index,gridSize);
-  
-            const p1 = (cx - 1 < 0) ? pc : shape.arrays.position[this.coord_to_point(cx - 1, cy,gridSize)];
-            const p2 = (cx + 1 >= gridSize) ? pc : shape.arrays.position[this.coord_to_point(cx + 1, cy,gridSize)];
-            const p3 = (cy - 1 < 0) ? pc : shape.arrays.position[this.coord_to_point(cx, cy - 1,gridSize)];
-            const p4 = (cy + 1 >= gridSize) ? pc : shape.arrays.position[this.coord_to_point(cx, cy + 1,gridSize)];
-  
-            const v1 = p2.minus(p1);
-            const v2 = p4.minus(p3);
-  
-            const n1 = v1.cross(v2).normalized();
-  
-            shape.arrays.normal[index] = n1;
-  
-        }
+               counter += 3) {
+
+                const p1 = shape.arrays.position[shape.indices[counter]];
+                const p2 = shape.arrays.position[shape.indices[counter+1]];
+                const p3 = shape.arrays.position[shape.indices[counter+2]];
+
+                const v1 = p2.minus(p1);
+                const v2 = p3.minus(p1);
+
+                const n1 = v1.cross(v2).normalized();
+
+                shape.arrays.normal[shape.indices[counter]] = n1;
+                shape.arrays.normal[shape.indices[counter+1]] = n1;
+                shape.arrays.normal[shape.indices[counter+2]] = n1;
+          }
   
     }
 
