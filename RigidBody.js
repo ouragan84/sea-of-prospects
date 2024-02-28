@@ -82,3 +82,56 @@ class RigidBody {
     }
 
 }
+
+export function isPointInsideRigidBody(point, rigidBody) {
+    // Step 1: Translate the point into the rigid body's local coordinate system
+    let localPoint = point.minus(rigidBody.pos);
+    
+    // Step 2: Rotate the point by the inverse of the rigid body's orientation
+    // Calculate the inverse of the orientation quaternion
+    let angle = rigidBody.orientation[0];
+    let axis = vec3(rigidBody.orientation[1], rigidBody.orientation[2], rigidBody.orientation[3]);
+    let invOrientation = quaternionFromAngleAxis(-angle, axis); // Assuming you have this function
+    
+    // Apply the inverse rotation to the point
+    localPoint = rotateVectorByQuaternion(localPoint, invOrientation); // Assuming you have this function
+    
+    // Step 3: Check if the localPoint is within the bounds defined by the scale
+    let halfScale = rigidBody.scale.times(0.5);
+    return Math.abs(localPoint[0]) <= halfScale[0] &&
+           Math.abs(localPoint[1]) <= halfScale[1] &&
+           Math.abs(localPoint[2]) <= halfScale[2];
+  }
+  
+  // Helper function to create a quaternion from an angle and an axis
+  export function quaternionFromAngleAxis(angle, axis) {
+    let halfAngle = angle * 0.5;
+    let s = Math.sin(halfAngle);
+    return vec4(Math.cos(halfAngle), axis[0] * s, axis[1] * s, axis[2] * s);
+  }
+  
+  // Helper function to rotate a vector by a quaternion
+  function rotateVectorByQuaternion(vector, quaternion) {
+    // Convert the vector into a quaternion with a w-value of 0
+    let vQuat = vec4(0, vector[0], vector[1], vector[2]);
+    
+    // Calculate the conjugate of the quaternion
+    let qConj = vec4(quaternion[0], -quaternion[1], -quaternion[2], -quaternion[3]);
+    
+    // Rotate the vector quaternion: q * v * q^-1
+    let rotatedQuat = quaternionMultiply(quaternionMultiply(quaternion, vQuat), qConj);
+    
+    // Return the rotated vector, ignoring the w component
+    return vec3(rotatedQuat[1], rotatedQuat[2], rotatedQuat[3]);
+  }
+  
+  // Helper function to multiply two quaternions
+  export function quaternionMultiply(q1, q2) {
+    return vec4(
+        q1[0] * q2[0] - q1[1] * q2[1] - q1[2] * q2[2] - q1[3] * q2[3],
+        q1[0] * q2[1] + q1[1] * q2[0] + q1[2] * q2[3] - q1[3] * q2[2],
+        q1[0] * q2[2] - q1[1] * q2[3] + q1[2] * q2[0] + q1[3] * q2[1],
+        q1[0] * q2[3] + q1[1] * q2[2] - q1[2] * q2[1] + q1[3] * q2[0]
+    );
+  }
+  

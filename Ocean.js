@@ -1,6 +1,7 @@
 import {tiny, defs} from './examples/common.js';
 
 const { vec3, vec4, color, Mat4, Shape, Material, Shader, Texture, Component } = tiny;
+import {isPointInsideRigidBody} from './RigidBody.js';
 
 
 // Ocean Class is like the cloth, with individual points that move according to a callable function
@@ -9,8 +10,9 @@ const { vec3, vec4, color, Mat4, Shape, Material, Shader, Texture, Component } =
 // We also use the Grid_Patch class to draw the ocean floor underneath the ocean, which is created with perlin noise
 class Point{
     constructor(pos){
+        this.originalPos = pos.copy()
         this.pos = pos
-        this.prevPos = pos
+        this.prevPos = pos.copy()
         this.locked = false;
         this.r = 0.1;
 
@@ -84,9 +86,61 @@ class Ocean {
 
     simulate(t, dt){
         for (let i = 0; i < this.points.length; i++){
-            // this.points[i].prevPos = this.points[i].pos
-            this.points[i].pos[1] =  this.pos[1] + Math.sin(t + this.points[i].pos[0]) * Math.sin(t + this.points[i].pos[2]) * this.wave_amplitude
+            this.points[i].prevPos = this.points[i].pos.copy()
+            this.points[i].pos[1] = this.points[i].originalPos[1] + Math.sin(t + this.points[i].pos[0]) * Math.sin(t + this.points[i].pos[2]) * this.wave_amplitude;
+            this.points[i].pos[0] = this.points[i].originalPos[0] + Math.sin(t + this.points[i].pos[2]) * Math.sin(t + this.points[i].pos[1]) * this.wave_amplitude;
+            this.points[i].pos[2] = this.points[i].originalPos[2] + Math.sin(t + this.points[i].pos[0]) * Math.sin(t + this.points[i].pos[1]) * this.wave_amplitude;
         }
+    }
+
+    applyWaterForceOnRigidBody(rigidBody, dt){
+        // Get list of points that are inside the rigid body
+        let pointsInsideRigidBody = this.points.filter(point => isPointInsideRigidBody(point.pos, rigidBody));
+
+        if (pointsInsideRigidBody.length === 0 && rigidBody.pos[1] > 0) return;
+
+        // Find average height of points inside the rigid body
+        let averageHeight = 0
+
+        if (pointsInsideRigidBody.length > 0){
+            averageHeight = pointsInsideRigidBody.reduce((acc, point) => acc + point.pos[1], 0) / pointsInsideRigidBody.length;
+        }
+
+        // Get depth of the rigid body in the water using it's scale, position, and orientation (assuming it's a box)
+        let depth = rigidBody.scale[1] - (rigidBody.pos[1] - averageHeight);
+
+        let percentSubmerged = depth / (2*rigidBody.scale[1]);
+        if (percentSubmerged < 0) percentSubmerged = 0;
+        if (percentSubmerged > 1) percentSubmerged = 1;
+
+        // Apply buoyant force
+        let volume = rigidBody.scale[0] * rigidBody.scale[1] * rigidBody.scale[2] * 8;
+        const densityWater = 1000; // kg/m^3
+        let buoyantForce = vec3(0, 9.8 * percentSubmerged * volume * densityWater, 0);
+        rigidBody.applyForce(buoyantForce);
+
+
+        // const boyant_friction = 0.2;
+        const water_friction = 0.4;
+        const water_drag = 0.5;
+
+        // Apply drag force
+        rigidBody.applyForce(rigidBody.vel.times(-water_drag * buoyantForce.norm()));
+
+        // Apply friction force
+        const friction_dir = rigidBody.vel.norm() < 0.001 ? vec3(0,0,0) : rigidBody.vel.normalized().times(-1);
+        rigidBody.applyForce(friction_dir.times(water_friction * buoyantForce.norm()));
+
+        // For each point inside the rigid body, apply a force in the direction of that point's velocity (pos - prevPos) / dt
+        const point_coefficient = 10; // kg*m/s
+        pointsInsideRigidBody.forEach(point => {
+            // caclulate velocity
+            let velocity = point.pos.minus(point.prevPos).times(1/dt);
+            let force = velocity.times(point_coefficient);
+            rigidBody.applyForceAtPosition(force, point.pos);
+        });
+
+        // TODO: Damp the rigid body's angular velocity, and restore towards vertical (over dampen)
     }
 
     point_to_coord(i, gridSize){
@@ -97,7 +151,7 @@ class Ocean {
         return x + y * gridSize
     }
 
-    flat_shade (shape, gridSize) {
+    shade (shape, gridSize) {
         /*
   
           3  7 11  15
@@ -132,6 +186,9 @@ class Ocean {
   
         // }
 
+        // array of normals size of number of vertices
+        let normals = Array(shape.arrays.position.length).fill(vec3(0,0,0));
+
         for (let counter = 0; counter < (shape.indices ? shape.indices.length : shape.arrays.position.length);
                counter += 3) {
 
@@ -144,10 +201,21 @@ class Ocean {
 
                 const n1 = v1.cross(v2).normalized();
 
-                shape.arrays.normal[shape.indices[counter]] = n1;
-                shape.arrays.normal[shape.indices[counter+1]] = n1;
-                shape.arrays.normal[shape.indices[counter+2]] = n1;
+                normals[shape.indices[counter]] = normals[shape.indices[counter]].plus(n1);
+                normals[shape.indices[counter+1]] = normals[shape.indices[counter+1]].plus(n1);
+                normals[shape.indices[counter+2]] = normals[shape.indices[counter+2]].plus(n1);
           }
+
+        for (let i = 0; i < normals.length; i++){
+            normals[i] = normals[i].normalized();
+        }
+
+        for (let counter = 0; counter < (shape.indices ? shape.indices.length : shape.arrays.position.length);
+               counter += 1) {
+            const index = shape.indices[ counter ];
+            shape.arrays.normal[index] = normals[index];
+        }
+
   
     }
 
@@ -158,7 +226,7 @@ class Ocean {
         });
         // Update the normals to reflect the surface's new arrangement.
         // This won't be perfect flat shading because vertices are shared.
-        this.flat_shade(this.shapes.ocean, this.gridSize);
+        this.shade(this.shapes.ocean, this.gridSize);
         // Draw the current sheet shape.
         // this.shapes.ocean.flat_shade();
 
@@ -174,7 +242,7 @@ class Ocean {
         });
         // Update the normals to reflect the surface's new arrangement.
         // This won't be perfect flat shading because vertices are shared.
-        this.flat_shade(this.shapes.floor, this.floorGridSize);
+        this.shade(this.shapes.floor, this.floorGridSize);
         // this.shapes.floor.flat_shade();
         // Draw the current sheet shape.
         this.shapes.floor.draw( caller, uniforms, Mat4.identity(), this.floorMaterial);
