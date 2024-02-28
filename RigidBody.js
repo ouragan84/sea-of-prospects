@@ -30,7 +30,8 @@ class RigidBody {
     }
 
     applyTorque(torque) {
-        let momentOfInertia = 5;
+        // let momentOfInertia = 5;
+        let momentOfInertia = 1000;
         this.angularAcc = this.angularAcc.plus(vec3(torque[0] / momentOfInertia, torque[1] / momentOfInertia, torque[2] / momentOfInertia));
     }
     

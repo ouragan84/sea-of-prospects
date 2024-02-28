@@ -132,13 +132,17 @@ class Ocean {
         rigidBody.applyForce(friction_dir.times(water_friction * buoyantForce.norm()));
 
         // For each point inside the rigid body, apply a force in the direction of that point's velocity (pos - prevPos) / dt
-        const point_coefficient = 10; // kg*m/s
+        const point_coefficient = 100; // kg*m/s
         pointsInsideRigidBody.forEach(point => {
             // caclulate velocity
             let velocity = point.pos.minus(point.prevPos).times(1/dt);
             let force = velocity.times(point_coefficient);
             rigidBody.applyForceAtPosition(force, point.pos);
         });
+
+        // rigidBody.applyForceAtPosition(vec3(0, 100, 0), vec3(1,0,0));
+
+        console.log(rigidBody.angularVel.norm(), rigidBody.angularAcc.norm());
 
         // TODO: Damp the rigid body's angular velocity, and restore towards vertical (over dampen)
     }
