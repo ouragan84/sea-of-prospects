@@ -137,7 +137,11 @@ class Ocean {
             // caclulate velocity
             let velocity = point.pos.minus(point.prevPos).times(1/dt);
             let force = velocity.times(point_coefficient);
-            rigidBody.applyForceAtPosition(force, point.pos);
+
+            // calculate torque to apply based on force and position relative to the center of mass
+            let leverArm = point.pos.minus(rigidBody.pos); // vector from COM to force application point
+            let torque = leverArm.cross(force); // Nigger product to get torque
+            rigidBody.applyTorque(torque);
         });
 
         // rigidBody.applyForceAtPosition(vec3(0, 100, 0), vec3(1,0,0));

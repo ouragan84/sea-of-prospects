@@ -31,7 +31,7 @@ class RigidBody {
 
     applyTorque(torque) {
         // let momentOfInertia = 5;
-        let momentOfInertia = 1000;
+        let momentOfInertia = 10;
         this.angularAcc = this.angularAcc.plus(vec3(torque[0] / momentOfInertia, torque[1] / momentOfInertia, torque[2] / momentOfInertia));
     }
     
@@ -52,21 +52,33 @@ class RigidBody {
     update(dt) {
         this.vel = this.vel.plus(this.acc.times(dt));
         this.pos = this.pos.plus(this.vel.times(dt));
-
+    
         // Angular motion updates
         this.angularVel = this.angularVel.plus(this.angularAcc.times(dt));
-        
-        let axis = this.angularVel.normalized(); // The axis to rotate around
-        if (isNaN(axis[0]) && isNaN(axis[1]) && isNaN(axis[2])) axis = vec3(0,1,0)
-        this.orientation = vec4(this.orientation[0] + this.angularVel.norm() * dt, axis[0], axis[1], axis[2])
+    
+        // Update orientation quaternion based on angular velocity
+        if (this.angularVel.norm() > 0) {
+            // Convert angular velocity to a quaternion
+            let angle = this.angularVel.norm() * dt;
+            let axis = this.angularVel.normalized();
+            let deltaOrientation = quaternionFromAngleAxis(angle, axis);
+    
+            // Multiply current orientation quaternion by deltaOrientation
+            this.orientation = quaternionMultiply(this.orientation, deltaOrientation);
+    
+            // Normalize the orientation quaternion to avoid scaling effects
+            this.orientation = normalizeQuaternion(this.orientation);
+        }
+    
         this.transform = Mat4.identity().times(Mat4.translation(this.pos[0], this.pos[1], this.pos[2])).times(Mat4.scale(this.scale[0],this.scale[1],this.scale[2]));
         this.transform = this.transform.times(Mat4.rotation(this.orientation[0], this.orientation[1], this.orientation[2], this.orientation[3]));
-
-        this.angularVel = this.angularVel.times(this.angularDragPercent)
-
+    
+        this.angularVel = this.angularVel.times(this.angularDragPercent);
+    
         this.acc = vec3(0, 0, 0);
         this.angularAcc = vec3(0, 0, 0);
     }
+    
 
     show(caller, uniforms) {
         this.shapes.box.draw( caller, uniforms, this.transform, this.def_mat );
@@ -134,5 +146,10 @@ export function isPointInsideRigidBody(point, rigidBody) {
         q1[0] * q2[2] - q1[1] * q2[3] + q1[2] * q2[0] + q1[3] * q2[1],
         q1[0] * q2[3] + q1[1] * q2[2] - q1[2] * q2[1] + q1[3] * q2[0]
     );
+  }
+
+  function normalizeQuaternion(quaternion) {
+    let norm = Math.sqrt(quaternion[0] * quaternion[0] + quaternion[1] * quaternion[1] + quaternion[2] * quaternion[2] + quaternion[3] * quaternion[3]);
+    return vec4(quaternion[0] / norm, quaternion[1] / norm, quaternion[2] / norm, quaternion[3] / norm);
   }
   
