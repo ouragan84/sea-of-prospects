@@ -17,11 +17,31 @@ class Point{
         const phong = new defs.Phong_Shader( 1 );
         this.materials = {};
         this.materials.plastic = { shader: phong, ambient: 1, diffusivity: 0, specularity: 0, color: color( .9,.5,.9,1 ) }
+
+
     }
 
     show(shapes, caller, uniforms, mat) {       
         let transform = Mat4.identity().times(Mat4.translation(this.pos[0], this.pos[1], this.pos[2])).times(Mat4.scale(this.r, this.r, this.r)); 
         shapes.ball.draw( caller, uniforms, transform, {...this.materials.plastic, color: this.locked ? color(0, 0, 1, 1.0) : color(0.9,0.9,1,1.0)});
+    }
+}
+
+class Wave {
+    constructor(amplitude, frequency, theta, phaseOffset, wavelength) {
+        this.amplitude = amplitude;
+        this.frequency = frequency;
+        this.directionX = Math.cos(theta);
+        this.directionZ = Math.sin(theta);
+        this.phaseOffset = phaseOffset;
+        this.wavelength = wavelength;
+    }
+
+    // Calculate the wave's contribution at a given point and time
+    contribution(posX, posZ, t) {
+        // Adjust wavePhase calculation to include the wavelength
+        let wavePhase = (this.directionX * posX + this.directionZ * posZ) / this.wavelength + this.phaseOffset;
+        return Math.exp(Math.sin(t * this.frequency + wavePhase) * this.amplitude)-1
     }
 }
 
@@ -45,6 +65,16 @@ class Ocean {
         this.floorPoints = []
         this.shapes = {};
 
+        this.waves = [
+            //Wave(amplitude: any, frequency: any, theta: any, phaseOffset: any)
+            new Wave(0.3, 1, 1, Math.random() * Math.PI * 2, 10),
+            new Wave(0.3, 2, 2, Math.random() * Math.PI * 2, 6),
+            new Wave(0.25, 4, 2.5, Math.random() * Math.PI * 2, 2),
+            new Wave(0.05, 5, 1.5, Math.random() * Math.PI * 2, 1),
+            new Wave(0.05, 5, 3, Math.random() * Math.PI * 2, .75),
+            new Wave(0.02, 5, 5, Math.random() * Math.PI * 2, .5),
+        ];
+
         // Set up Ocean
         const initial_corner_point = vec3( 0, 0, 0 );
         const row_operation = (s,p) => p ? Mat4.translation( 0,0,.2 ).times(p.to4(1)).to3()
@@ -58,6 +88,8 @@ class Ocean {
                 this.points.push(new Point(vec3(i,0,j).plus(this.pos)))
             }
         }
+
+        this.originalHeights = this.points.map(p => p.pos[1]); // Store the original y-coordinate (height) of each point
 
         // Set up Ocean Floor
         const initial_corner_point_floor = vec3( 0,this.floorMinY,0 );
@@ -84,8 +116,15 @@ class Ocean {
 
     simulate(t, dt){
         for (let i = 0; i < this.points.length; i++){
-            // this.points[i].prevPos = this.points[i].pos
-            this.points[i].pos[1] =  this.pos[1] + Math.sin(t + this.points[i].pos[0]) * Math.sin(t + this.points[i].pos[2]) * this.wave_amplitude
+            let posY = this.pos[1]; // Start with the base height
+    
+            // Add the contribution from each wave
+            for (let wave of this.waves) {
+                posY += wave.contribution(this.points[i].pos[0], this.points[i].pos[2], t);
+            }
+    
+            // Update the point's y position
+            this.points[i].pos[1] = posY;
         }
     }
 

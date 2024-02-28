@@ -112,17 +112,18 @@ const Part_one_hermite_base = defs.Part_one_hermite_base =
         }
 
         const oceanConfig = {
-          initPos : vec3(0,0,0),
-          density : 40,
+          initPos : vec3(0,-2,0),
+          density : 80,
           size : 40,
           material: this.materials.ocean,
           floorDensity : 10,
           floorMinY : -10,
           floorMaxY : -9,
           floorMaterial: this.materials.oceanfloor,
-          wave_amplitude: 0.5
+          wave_amplitude: 1
         }
-
+        
+        
 
         this.sail = new Cloth(sailConfig)
         this.sail2 = new Cloth(sailConfig2)
