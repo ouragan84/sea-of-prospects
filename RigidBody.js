@@ -5,7 +5,7 @@ const { vec3, vec4, color, Mat4, Shape, Material, Shader, Texture, Component } =
 export
 const RigidBody = defs.RigidBody =
 class RigidBody {
-    constructor(initalPos, initialVelocity, mass, scale, orientation) {
+    constructor(initalPos, initialVelocity, mass, scale, orientation, momentOfInertia) {
         this.pos = initalPos || vec3(0,0,0)
         this.vel = initialVelocity || vec3(0,0,0)
         this.acc = vec3(0,0,0)
@@ -23,6 +23,9 @@ class RigidBody {
             'box'  : new defs.Cube()
         }
         this.def_mat = { shader: new defs.Phong_Shader(1), ambient: .3, diffusivity: 1, specularity: .5, color: color( .9,.1,.1,1 ) }
+
+        this.momentOfInertia = momentOfInertia;
+        console.log(this.momentOfInertia)
     }
 
     applyForce(f) {
@@ -31,8 +34,8 @@ class RigidBody {
 
     applyTorque(torque) {
         // let momentOfInertia = 5;
-        let momentOfInertia = 10;
-        this.angularAcc = this.angularAcc.plus(vec3(torque[0] / momentOfInertia, torque[1] / momentOfInertia, torque[2] / momentOfInertia));
+        // let momentOfInertia = 10;
+        this.angularAcc = this.angularAcc.plus(torque.times(1 / this.momentOfInertia));
     }
     
     applyForceAtPosition(force, position) {

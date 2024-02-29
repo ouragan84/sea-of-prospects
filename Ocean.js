@@ -132,7 +132,7 @@ class Ocean {
         rigidBody.applyForce(friction_dir.times(water_friction * buoyantForce.norm()));
 
         // For each point inside the rigid body, apply a force in the direction of that point's velocity (pos - prevPos) / dt
-        const point_coefficient = 100; // kg*m/s
+        const point_coefficient = 500; // kg*m/s
         pointsInsideRigidBody.forEach(point => {
             // caclulate velocity
             let velocity = point.pos.minus(point.prevPos).times(1/dt);
@@ -140,15 +140,15 @@ class Ocean {
 
             // calculate torque to apply based on force and position relative to the center of mass
             let leverArm = point.pos.minus(rigidBody.pos); // vector from COM to force application point
-            let torque = leverArm.cross(force); // Nigger product to get torque
+            let torque = leverArm.cross(force); // product to get torque
             rigidBody.applyTorque(torque);
+            rigidBody.applyForce(force);
         });
 
-        // rigidBody.applyForceAtPosition(vec3(0, 100, 0), vec3(1,0,0));
-
-        console.log(rigidBody.angularVel.norm(), rigidBody.angularAcc.norm());
+        console.log(rigidBody.angularVel.norm(), rigidBody.angularAcc.norm())
 
         // TODO: Damp the rigid body's angular velocity, and restore towards vertical (over dampen)
+        
     }
 
     point_to_coord(i, gridSize){
@@ -228,21 +228,32 @@ class Ocean {
     }
 
     show(shapes, caller, uniforms, mat) {
+        if (this.once === undefined) {
+            this.once = true;
+            this.shapes.ocean.draw( caller, uniforms, Mat4.identity(), this.material);
+            this.shapes.floor.draw( caller, uniforms, Mat4.identity(), this.floorMaterial);
+        }
+
+
         // Update the JavaScript-side shape with new vertices:
         this.shapes.ocean.arrays.position.forEach( (p,i,a) =>{
           a[i] = this.points[i].pos
         });
         // Update the normals to reflect the surface's new arrangement.
         // This won't be perfect flat shading because vertices are shared.
+
         this.shade(this.shapes.ocean, this.gridSize);
         // Draw the current sheet shape.
         // this.shapes.ocean.flat_shade();
 
-        this.shapes.ocean.draw( caller, uniforms, Mat4.identity(), this.material);
     
         // Update the gpu-side shape with new vertices.
         // Warning:  You can't call this until you've already drawn the shape once.
-        this.shapes.ocean.copy_onto_graphics_card( caller.context, ["position","normal"], false );
+        this.shapes.ocean.copy_onto_graphics_card(caller.context, ["position", "normal"], false);
+
+        this.shapes.ocean.draw( caller, uniforms, Mat4.identity(), this.material);
+
+
 
 
         this.shapes.floor.arrays.position.forEach( (p,i,a) =>{

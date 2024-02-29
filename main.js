@@ -154,7 +154,7 @@ const Part_one_hermite_base = defs.Part_one_hermite_base =
         this.ocean = new Ocean(oceanConfig)
         // this.ocean2 = new Ocean(ocean2Config)
 
-        this.rb = new RigidBody(vec3(0, 0, 0), vec3(0, 0, 0), 1000, vec3(1,1,1), vec4(0, 0, 1, 0));
+        this.rb = new RigidBody(vec3(0, 0, 0), vec3(0, 0, 0), 2000, vec3(1,1,1), vec4(0, 0, 1, 0), 10);
 
       }
 
