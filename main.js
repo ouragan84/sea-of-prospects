@@ -3,10 +3,11 @@ import {tiny, defs} from './examples/common.js';
 import {Shape_From_File}  from './examples/obj-file-demo.js';
 import { Ocean } from './Ocean.js';
 import { RigidBody, isPointInsideRigidBody } from './RigidBody.js';
+import { Ship } from './ship.js';
 
 const { vec3, vec4, color, Mat4, Shape, Material, Shader, Texture, Component } = tiny;
 
-const gravity = 9.8
+const gravity = defs.gravity = 9.8
 
 class Keyboard_Manager {
   // See description at:
@@ -154,6 +155,8 @@ const Part_one_hermite_base = defs.Part_one_hermite_base =
         this.ocean = new Ocean(oceanConfig)
         // this.ocean2 = new Ocean(ocean2Config)
 
+        this.ship = new Ship()
+
         this.rb = new RigidBody(vec3(0, 0, 0), vec3(0, 0, 0), 2000, vec3(1,1,1), vec4(0, 0, 1, 0), 10);
 
       }
@@ -213,7 +216,7 @@ const Part_one_hermite_base = defs.Part_one_hermite_base =
         this.new_line ();
         this.key_triggered_button ("Bottom", ["s"], () => this.bottom_pressed(), undefined, () => this.bottom_released());
         this.key_triggered_button ("Left", ["a"], () => this.left_pressed(), undefined, () => this.left_released());
-    }
+      }
 
       render_animation( caller )
       {      
@@ -271,18 +274,18 @@ export class Part_one_hermite extends Part_one_hermite_base
     this.ocean.simulate(this.t, this.dt)
     this.ocean.show(this.shapes, caller, this.uniforms)
 
-    this.ocean.applyWaterForceOnRigidBody(this.rb, this.dt)
+    this.ship.update(this.t, this.dt)
+    this.ship.show(caller, this.uniforms)
+
+    this.ocean.applyWaterForceOnRigidBody(this.ship.rb, this.dt)
 
     // this.ocean2.simulate(this.t, this.dt)
     // this.ocean2.show(this.shapes, caller, this.uniforms)
   
     // this.rb.applyForceAtPosition(vec3(0,20,0).times(this.vertical_input), vec3(1,0,1))
-    this.rb.applyForce(vec3(0,-gravity * this.rb.mass, 0))
-
-
-    this.rb.update(this.dt)
-    // this.rb.checkCollissionWithGroundPlane(1000,25)
-    this.rb.show(caller, this.uniforms)
+    // this.rb.applyForce(vec3(0,-gravity * this.rb.mass, 0))
+    // this.rb.update(this.dt)
+    // this.rb.show(caller, this.uniforms)
 
     let temp_pos = vec3(0,1.48,0)
     let tt = Mat4.translation(temp_pos[0], temp_pos[1], temp_pos[2]).times(Mat4.scale(.1, .1, .1));

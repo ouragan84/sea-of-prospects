@@ -125,10 +125,11 @@ class Cloth {
                 }
             }
         }
-
+        
         for (let i = 0; i < config.lockedPoints.length; i++) {
             this.points[config.lockedPoints[i]].locked = true
         }
+        this.config = config
         
     }
 
@@ -163,19 +164,11 @@ class Cloth {
 
     }
 
-    updatePosition(newPos) {
-        // Calculate the difference between the new position and the old position
-        let offset = newPos.minus(this.pos);
-        
-        // Update the current position to the new position
-        this.pos = newPos;
-        
-        // Update all points with the new offset
-        for (let point of this.points) {
-            if(!point.locked){
-                point.pos = point.pos.plus(offset);
-            }
-        }
+    updatePosition(anchors) {
+      console.log(anchors)
+      for (let i = 0; i < this.config.lockedPoints.length; i++) {
+        this.points[this.config.lockedPoints[i]].pos = anchors[i]
+      }
     }
 
     point_to_coord(i, gridSize){
@@ -237,7 +230,7 @@ class Cloth {
 
   }
 
-    show(shapes, caller, uniforms, mat) {
+    show(shapes, caller, uniforms, anchors) {
         // Update the JavaScript-side shape with new vertices:
         this.shapes.sheet.arrays.position.forEach( (p,i,a) =>{
           a[i] = this.points[i].pos

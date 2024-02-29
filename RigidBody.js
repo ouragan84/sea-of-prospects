@@ -25,7 +25,7 @@ class RigidBody {
         this.def_mat = { shader: new defs.Phong_Shader(1), ambient: .3, diffusivity: 1, specularity: .5, color: color( .9,.1,.1,1 ) }
 
         this.momentOfInertia = momentOfInertia;
-        console.log(this.momentOfInertia)
+        // console.log(this.momentOfInertia)
     }
 
     applyForce(f) {
@@ -155,4 +155,3 @@ export function isPointInsideRigidBody(point, rigidBody) {
     let norm = Math.sqrt(quaternion[0] * quaternion[0] + quaternion[1] * quaternion[1] + quaternion[2] * quaternion[2] + quaternion[3] * quaternion[3]);
     return vec4(quaternion[0] / norm, quaternion[1] / norm, quaternion[2] / norm, quaternion[3] / norm);
   }
-  

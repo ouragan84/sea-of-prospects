@@ -145,7 +145,7 @@ class Ocean {
             rigidBody.applyForce(force);
         });
 
-        console.log(rigidBody.angularVel.norm(), rigidBody.angularAcc.norm())
+        // console.log(rigidBody.angularVel.norm(), rigidBody.angularAcc.norm())
 
         // TODO: Damp the rigid body's angular velocity, and restore towards vertical (over dampen)
         
