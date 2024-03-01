@@ -157,7 +157,7 @@ const Part_one_hermite_base = defs.Part_one_hermite_base =
 
         this.ship = new Ship()
 
-        this.rb = new RigidBody(vec3(0, 0, 0), vec3(0, 0, 0), 2000, vec3(1,1,1), vec4(0, 0, 1, 0), 10);
+        this.rb = new RigidBody(vec3(0, 4, 0), vec3(0, 0, 0), 2000, vec3(1,1,1), vec4(0, 0, 1, 0), 100);
 
       }
 
@@ -287,9 +287,9 @@ export class Part_one_hermite extends Part_one_hermite_base
     // this.rb.update(this.dt)
     // this.rb.show(caller, this.uniforms)
 
-    let temp_pos = vec3(0,1.48,0)
-    let tt = Mat4.translation(temp_pos[0], temp_pos[1], temp_pos[2]).times(Mat4.scale(.1, .1, .1));
-    this.shapes.ball.draw( caller, this.uniforms, tt, { ...this.materials.shiny, color: whiteish } );
+    // let temp_pos = vec3(0,1.48,0)
+    // let tt = Mat4.translation(temp_pos[0], temp_pos[1], temp_pos[2]).times(Mat4.scale(.1, .1, .1));
+    // this.shapes.ball.draw( caller, this.uniforms, tt, { ...this.materials.shiny, color: whiteish } );
   }
 
 

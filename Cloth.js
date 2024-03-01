@@ -165,7 +165,7 @@ class Cloth {
     }
 
     updatePosition(anchors) {
-      console.log(anchors)
+      // console.log(anchors)
       for (let i = 0; i < this.config.lockedPoints.length; i++) {
         this.points[this.config.lockedPoints[i]].pos = anchors[i]
       }

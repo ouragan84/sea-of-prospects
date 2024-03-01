@@ -115,13 +115,13 @@ class Ocean {
 
         // Apply buoyant force
         let volume = rigidBody.scale[0] * rigidBody.scale[1] * rigidBody.scale[2] * 8;
-        const densityWater = 1000; // kg/m^3
+        const densityWater = 200; // kg/m^3
         let buoyantForce = vec3(0, 9.8 * percentSubmerged * volume * densityWater, 0);
         rigidBody.applyForce(buoyantForce);
 
 
         // const boyant_friction = 0.2;
-        const water_friction = 0.4;
+        const water_friction = 1;
         const water_drag = 0.5;
 
         // Apply drag force
@@ -132,7 +132,7 @@ class Ocean {
         rigidBody.applyForce(friction_dir.times(water_friction * buoyantForce.norm()));
 
         // For each point inside the rigid body, apply a force in the direction of that point's velocity (pos - prevPos) / dt
-        const point_coefficient = 500; // kg*m/s
+        const point_coefficient = 5; // kg*m/s
         pointsInsideRigidBody.forEach(point => {
             // caclulate velocity
             let velocity = point.pos.minus(point.prevPos).times(1/dt);
