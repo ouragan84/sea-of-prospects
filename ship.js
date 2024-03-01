@@ -17,7 +17,7 @@ class Ship {
       'ship': new Shape_From_File( "assets/ship.obj" ),
     }
 
-    const init_pos = vec3(0, 1, 0);
+    const init_pos = vec3(0, 5, 0);
 
     const tex_phong = new defs.Textured_Phong(1);
     const phong = new defs.Phong_Shader(1);
@@ -120,7 +120,7 @@ class Ship {
   computeFlagAnchors(){
     let positions = []
     for(let i = 0; i < 11; i++){
-      let temp_t = this.rb.transform.times(this.offsetMat).times(Mat4.translation(0,3.25-i*.1,-.3))
+      let temp_t = this.rb.transform.times(this.offsetMat).times(Mat4.translation(0,2.25+i*.1,-.3))
       positions.push(vec3(temp_t[0][3], temp_t[1][3], temp_t[2][3]))
     }
     return positions

@@ -85,8 +85,8 @@ const Part_one_hermite_base = defs.Part_one_hermite_base =
         
         const oceanConfig = {
           initPos : vec3(0,0,0),
-          density : 40,
-          size : 40,
+          density : 80,
+          size : 80,
           material: this.materials.ocean,
           floorDensity : 20,
           floorMinY : -10,
@@ -105,8 +105,8 @@ const Part_one_hermite_base = defs.Part_one_hermite_base =
         }
         this.mouseVelX = 0;
         this.mouseVelY = 0;
-        this.theta = 0
-        this.phi = 0
+        this.theta = Math.PI/4
+        this.phi = Math.PI/4
         this.currentX = 0
         this.currentY = 0
         this.currentZ = 0
@@ -220,7 +220,7 @@ const Part_one_hermite_base = defs.Part_one_hermite_base =
         this.currentZ = newZ;
 
         // Assign the interpolated position to the camera
-        Shader.assign_camera(Mat4.look_at(vec3(newX, newY, newZ), vec3(0, 0, 0), vec3(0, 1, 0)), this.uniforms);
+        Shader.assign_camera(Mat4.look_at(vec3(newX, newY, newZ), this.ship.rb.pos, vec3(0, 1, 0)), this.uniforms);
 
         this.uniforms.projection_transform = Mat4.perspective( Math.PI/4, caller.width/caller.height, 1, 100 );
 
