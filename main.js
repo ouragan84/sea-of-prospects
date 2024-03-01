@@ -197,6 +197,13 @@ export class Part_one_hermite extends Part_one_hermite_base
 
     this.ship.update(this.t, this.dt)
     this.ship.show(caller, this.uniforms)
+
+    // let y = this.ocean.gersrnerWave.solveForY(5,5,this.t);
+
+    // console.log(y)
+
+    // draw ball
+    // this.shapes.ball.draw( caller, this.uniforms, Mat4.translation(5, y, 5).times(Mat4.scale(0.2,0.2,0.2)), this.materials.plastic );
   }
 
 

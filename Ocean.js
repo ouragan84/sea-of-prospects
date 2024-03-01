@@ -27,6 +27,72 @@ class Point{
     }
 }
 
+export class GerstnerWave{
+
+    constructor()
+    {
+        this.n = 3;
+        this.s = [.5, 0.4, 0.2];  // steepness
+        this.l = [4.0, 3.0, 1.0];  // wave length
+        this.v = [4 * Math.PI / 10.0, 
+                  8 * Math.PI / 10.0, 
+                  12 * Math.PI / 10.0];  // speed
+
+        this.dir = [vec3(1, 0, -.4),
+                    vec3(.2, 0, .9),
+                    vec3(-.6, 0, .4)];  // direction vector
+    }
+
+    setMainDirection(dir){
+        this.dir[0] = dir;
+    }
+
+    gersrnerWave(pos, t){
+
+        let new_pos = vec3(pos[0], pos[1], pos[2]);
+        
+        for (let i = 0; i < this.n; i++){
+            let k = 2 * Math.PI / this.l[i];
+            let nD = this.dir[i].normalized();
+            let f = k * nD.dot(new_pos) - (this.v[i] * t);
+            let a = this.s[i] / k;
+
+            new_pos = new_pos.plus(vec3(nD[0] * a * Math.cos(f), a * Math.sin(f), nD[2] * a * Math.cos(f)));
+        }
+
+        return new_pos;
+
+    }
+
+
+    solveForY(x, z, t){
+        // solve for y at a given x, z, and t.
+        // first apply the gersrner wave function to the x, z, and t.
+        // based on the new x, z, can compute the error and converge to the x and z value that will give the y value we want.
+
+        let y = 0;
+        let error = 0;
+        let iterations = 0;
+        let max_iterations = 10;
+        let step = 0.1;
+
+        while (error < 0.01 && iterations < max_iterations){
+            let new_pos = vec3(x, y, z);
+            let new_y = this.gersrnerWave(new_pos, t)[1];
+            error = Math.abs(new_y - y);
+            y = new_y;
+            iterations++;
+        }
+
+        return y;
+
+    }
+}
+
+
+
+        
+
 export
 const Ocean = defs.Part_one_hermite_base =
 class Ocean {
@@ -82,14 +148,13 @@ class Ocean {
         this.floorGridSize = Math.sqrt(this.floorPoints.length); // Calculate the grid size
 
         // console.log(this)
+        this.gersrnerWave = new GerstnerWave();
     }
 
     simulate(t, dt){
         for (let i = 0; i < this.points.length; i++){
-            this.points[i].prevPos = this.points[i].pos.copy()
-            // this.points[i].pos[1] = this.points[i].originalPos[1] + Math.sin(t + this.points[i].pos[0]) * Math.sin(t + this.points[i].pos[2]) * this.wave_amplitude;
-            // this.points[i].pos[0] = this.points[i].originalPos[0] + Math.sin(t + this.points[i].pos[2]) * Math.sin(t + this.points[i].pos[1]) * this.wave_amplitude;
-            // this.points[i].pos[2] = this.points[i].originalPos[2] + Math.sin(t + this.points[i].pos[0]) * Math.sin(t + this.points[i].pos[1]) * this.wave_amplitude;
+            this.points[i].prevPos = this.points[i].pos.copy();
+            this.points[i].pos = this.gersrnerWave.gersrnerWave(this.points[i].originalPos, t);
         }
     }
 
@@ -105,9 +170,9 @@ class Ocean {
         // Find average height of points inside the rigid body
         let averageHeight = 0
 
-        // if (pointsInsideRigidBody.length > 0){
-        //     averageHeight = pointsInsideRigidBody.reduce((acc, point) => acc + point.pos[1], 0) / pointsInsideRigidBody.length;
-        // }
+        if (pointsInsideRigidBody.length > 0){
+            averageHeight = pointsInsideRigidBody.reduce((acc, point) => acc + point.pos[1], 0) / pointsInsideRigidBody.length;
+        }
 
         // Get depth of the rigid body in the water using it's scale, position, and orientation (assuming it's a box)
 
@@ -115,6 +180,7 @@ class Ocean {
 
         let percentSubmerged = depth / (2*rigidBody.scale[1]);
         if (percentSubmerged < 0) percentSubmerged = 0;
+
         if (percentSubmerged > 1) percentSubmerged = 1;
 
         // Apply buoyant force

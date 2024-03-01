@@ -72,7 +72,7 @@ class Ship {
 
     // this.rb.applyForce(vec3(0,-gravity * this.rb.mass, 0)) 
     this.rb.update(dt)
-    // this.rb.checkCollissionWithGroundPlane(1000,25)
+    // this.rb.checkCollissionWithGroundPlane(1000,25) 
   }
 
   show(caller, uniforms) {
