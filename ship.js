@@ -17,6 +17,8 @@ class Ship {
       'ship': new Shape_From_File( "assets/ship.obj" ),
     }
 
+    const init_pos = vec3(0, 4, 0);
+
     const tex_phong = new defs.Textured_Phong(1);
     const phong = new defs.Phong_Shader(1);
     this.materials = {};
@@ -29,21 +31,21 @@ class Ship {
     const get_edge = (side_length) => Array.from({length: side_length}, (_, i) => i);
 
     const sailConfig = {
-      initPos : vec3(0,4,0),
+      initPos : vec3(0,4,0).plus(init_pos),
       density : 10,
       size : 4,
       lockedPoints: get_corners(11),
       material: this.materials.cloth_tex,
     }
     const sailConfig2 = {
-      initPos : vec3(0,3.25,2.75),
+      initPos : vec3(0,3.25,2.75).plus(init_pos),
       density : 10,
       size : 2,
       lockedPoints: get_corners(11),
       material: this.materials.cloth_tex,
     }
     const flagConfig = {
-      initPos : vec3(1,8,-.2),
+      initPos : vec3(1,8,-.2).plus(init_pos),
       density : 10,
       size : 2,
       lockedPoints: get_edge(11),
@@ -54,9 +56,13 @@ class Ship {
     this.sail2 = new Cloth(sailConfig2)
     this.flag = new Cloth(flagConfig)
 
-    this.rb = new RigidBody(vec3(0, 2, 0), vec3(0, 0, 0), 2000, vec3(2.3,2.3,2.3), vec4(0, 0, 1, 0), 100);
+    this.boatscale = vec3(2.3,2.3,2.3)
+    this.boatoffset = vec3(0,.6,.2)
 
+    this.rb = new RigidBody(init_pos, vec3(0, 0, 0), 2000, vec3(1.7,1.2,4), vec4(0, 0, 1, 0), 100);
 
+    this.offsetMat = Mat4.translation(this.boatoffset[0], this.boatoffset[1], this.boatoffset[2])
+    .times(Mat4.scale(this.boatscale[0]/this.rb.scale[0], this.boatscale[1]/this.rb.scale[1], this.boatscale[2]/this.rb.scale[2]))
   }
 
   update(t, dt){
@@ -64,7 +70,7 @@ class Ship {
     this.flag.simulate(t, dt)
     this.sail2.simulate(t, dt)
 
-    this.rb.applyForce(vec3(0,-gravity * this.rb.mass, 0)) 
+    // this.rb.applyForce(vec3(0,-gravity * this.rb.mass, 0)) 
     this.rb.update(dt)
     // this.rb.checkCollissionWithGroundPlane(1000,25)
   }
@@ -79,15 +85,19 @@ class Ship {
 
     this.flag.updatePosition(this.computeFlagAnchors())
     this.flag.show(this.shapes, caller, uniforms);
+
     // this.shapes.ship.draw( caller, uniforms, Mat4.translation(0, 1.5, .5).times(Mat4.scale(2.3,2.3,2.3)), this.materials.wood );
-    this.shapes.ship.draw( caller, uniforms, this.rb.transform, this.materials.wood );
+    this.shapes.ship.draw( caller, uniforms, this.rb.transform.times(this.offsetMat), this.materials.wood );
+
+    // draw rigid body
+    // this.shapes.box.draw( caller, uniforms, this.rb.transform, this.materials.plastic );
   }
 
   computeSail1anchors(){
-    let p1_t = this.rb.transform.times(Mat4.translation(.8,0.28,-0.25))
-    let p2_t = this.rb.transform.times(Mat4.translation(-.8,0.28,-0.25))
-    let p3_t = this.rb.transform.times(Mat4.translation(.8,1.92,-0.25))
-    let p4_t = this.rb.transform.times(Mat4.translation(-.8,1.92,-0.25))
+    let p1_t = this.rb.transform.times(this.offsetMat).times(Mat4.translation(.8,0.28,-0.25))
+    let p2_t = this.rb.transform.times(this.offsetMat).times(Mat4.translation(-.8,0.28,-0.25))
+    let p3_t = this.rb.transform.times(this.offsetMat).times(Mat4.translation(.8,1.92,-0.25))
+    let p4_t = this.rb.transform.times(this.offsetMat).times(Mat4.translation(-.8,1.92,-0.25))
     let p1 = vec3(p1_t[0][3], p1_t[1][3], p1_t[2][3])
     let p2 = vec3(p2_t[0][3], p2_t[1][3], p2_t[2][3])
     let p3 = vec3(p3_t[0][3], p3_t[1][3], p3_t[2][3])
@@ -96,10 +106,10 @@ class Ship {
   }
 
   computeSail2anchors(){
-    let p1_t = this.rb.transform.times(Mat4.translation(.42,.34,0.97))
-    let p2_t = this.rb.transform.times(Mat4.translation(-.42,.34,0.97))
-    let p3_t = this.rb.transform.times(Mat4.translation(.42,1.16,0.97))
-    let p4_t = this.rb.transform.times(Mat4.translation(-.42,1.16,0.97))
+    let p1_t = this.rb.transform.times(this.offsetMat).times(Mat4.translation(.42,.34,0.97))
+    let p2_t = this.rb.transform.times(this.offsetMat).times(Mat4.translation(-.42,.34,0.97))
+    let p3_t = this.rb.transform.times(this.offsetMat).times(Mat4.translation(.42,1.16,0.97))
+    let p4_t = this.rb.transform.times(this.offsetMat).times(Mat4.translation(-.42,1.16,0.97))
     let p1 = vec3(p1_t[0][3], p1_t[1][3], p1_t[2][3])
     let p2 = vec3(p2_t[0][3], p2_t[1][3], p2_t[2][3])
     let p3 = vec3(p3_t[0][3], p3_t[1][3], p3_t[2][3])
@@ -110,7 +120,7 @@ class Ship {
   computeFlagAnchors(){
     let positions = []
     for(let i = 0; i < 11; i++){
-      let temp_t = this.rb.transform.times(Mat4.translation(0,3.25-i*.1,-.3))
+      let temp_t = this.rb.transform.times(this.offsetMat).times(Mat4.translation(0,3.25-i*.1,-.3))
       positions.push(vec3(temp_t[0][3], temp_t[1][3], temp_t[2][3]))
     }
     return positions

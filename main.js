@@ -91,8 +91,7 @@ const Part_one_hermite_base = defs.Part_one_hermite_base =
           floorDensity : 20,
           floorMinY : -10,
           floorMaxY : -9,
-          floorMaterial: this.materials.oceanfloor,
-          wave_amplitude: 0.2
+          floorMaterial: this.materials.oceanfloor
         }
 
         this.ocean = new Ocean(oceanConfig)
@@ -194,10 +193,10 @@ export class Part_one_hermite extends Part_one_hermite_base
     this.ocean.simulate(this.t, this.dt)
     this.ocean.show(this.shapes, caller, this.uniforms)
 
+    this.ocean.applyWaterForceOnRigidBody(this.ship.rb, this.dt);
+
     this.ship.update(this.t, this.dt)
     this.ship.show(caller, this.uniforms)
-
-    this.ocean.applyWaterForceOnRigidBody(this.ship.rb, this.dt);
   }
 
 

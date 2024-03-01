@@ -41,7 +41,7 @@ class Ocean {
         this.floorMaxY = config.floorMaxY;
         this.floorDensity = config.floorDensity;
         this.floorSpacing = config.size / this.floorDensity;
-        this.wave_amplitude = config.wave_amplitude;
+        // this.wave_amplitude = config.wave_amplitude;
 
         this.points = []
         this.floorPoints = []
@@ -87,9 +87,9 @@ class Ocean {
     simulate(t, dt){
         for (let i = 0; i < this.points.length; i++){
             this.points[i].prevPos = this.points[i].pos.copy()
-            this.points[i].pos[1] = this.points[i].originalPos[1] + Math.sin(t + this.points[i].pos[0]) * Math.sin(t + this.points[i].pos[2]) * this.wave_amplitude;
-            this.points[i].pos[0] = this.points[i].originalPos[0] + Math.sin(t + this.points[i].pos[2]) * Math.sin(t + this.points[i].pos[1]) * this.wave_amplitude;
-            this.points[i].pos[2] = this.points[i].originalPos[2] + Math.sin(t + this.points[i].pos[0]) * Math.sin(t + this.points[i].pos[1]) * this.wave_amplitude;
+            // this.points[i].pos[1] = this.points[i].originalPos[1] + Math.sin(t + this.points[i].pos[0]) * Math.sin(t + this.points[i].pos[2]) * this.wave_amplitude;
+            // this.points[i].pos[0] = this.points[i].originalPos[0] + Math.sin(t + this.points[i].pos[2]) * Math.sin(t + this.points[i].pos[1]) * this.wave_amplitude;
+            // this.points[i].pos[2] = this.points[i].originalPos[2] + Math.sin(t + this.points[i].pos[0]) * Math.sin(t + this.points[i].pos[1]) * this.wave_amplitude;
         }
     }
 
@@ -97,16 +97,20 @@ class Ocean {
         // Get list of points that are inside the rigid body
         let pointsInsideRigidBody = this.points.filter(point => isPointInsideRigidBody(point.pos, rigidBody));
 
-        if (pointsInsideRigidBody.length === 0 && rigidBody.pos[1] > 0) return;
+        if (pointsInsideRigidBody.length === 0 && rigidBody.pos[1] > 0){
+            rigidBody.applyForce(vec3(0,-9.8 * rigidBody.mass, 0))
+            return;
+        }
 
         // Find average height of points inside the rigid body
         let averageHeight = 0
 
-        if (pointsInsideRigidBody.length > 0){
-            averageHeight = pointsInsideRigidBody.reduce((acc, point) => acc + point.pos[1], 0) / pointsInsideRigidBody.length;
-        }
+        // if (pointsInsideRigidBody.length > 0){
+        //     averageHeight = pointsInsideRigidBody.reduce((acc, point) => acc + point.pos[1], 0) / pointsInsideRigidBody.length;
+        // }
 
         // Get depth of the rigid body in the water using it's scale, position, and orientation (assuming it's a box)
+
         let depth = rigidBody.scale[1] - (rigidBody.pos[1] - averageHeight);
 
         let percentSubmerged = depth / (2*rigidBody.scale[1]);
@@ -120,8 +124,12 @@ class Ocean {
         rigidBody.applyForce(buoyantForce);
 
 
+        // apply gravity
+        rigidBody.applyForce(vec3(0,-9.8 * rigidBody.mass, 0))
+
+
         // const boyant_friction = 0.2;
-        const water_friction = 1;
+        const water_friction = 0.5;
         const water_drag = 0.5;
 
         // Apply drag force
@@ -132,18 +140,18 @@ class Ocean {
         rigidBody.applyForce(friction_dir.times(water_friction * buoyantForce.norm()));
 
         // For each point inside the rigid body, apply a force in the direction of that point's velocity (pos - prevPos) / dt
-        const point_coefficient = 5; // kg*m/s
-        pointsInsideRigidBody.forEach(point => {
-            // caclulate velocity
-            let velocity = point.pos.minus(point.prevPos).times(1/dt);
-            let force = velocity.times(point_coefficient);
+        // const point_coefficient = 5; // kg*m/s
+        // pointsInsideRigidBody.forEach(point => {
+        //     // caclulate velocity
+        //     let velocity = point.pos.minus(point.prevPos).times(1/dt);
+        //     let force = velocity.times(point_coefficient);
 
-            // calculate torque to apply based on force and position relative to the center of mass
-            let leverArm = point.pos.minus(rigidBody.pos); // vector from COM to force application point
-            let torque = leverArm.cross(force); // product to get torque
-            rigidBody.applyTorque(torque);
-            rigidBody.applyForce(force);
-        });
+        //     // calculate torque to apply based on force and position relative to the center of mass
+        //     let leverArm = point.pos.minus(rigidBody.pos); // vector from COM to force application point
+        //     let torque = leverArm.cross(force); // product to get torque
+        //     rigidBody.applyTorque(torque);
+        //     rigidBody.applyForce(force);
+        // });
 
         // console.log(rigidBody.angularVel.norm(), rigidBody.angularAcc.norm())
 
