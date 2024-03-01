@@ -158,7 +158,7 @@ class Ocean {
         }
     }
 
-    applyWaterForceOnRigidBody(rigidBody, t, dt, caller, uniforms, sphere, mat1, mat2){
+    applyWaterForceOnRigidBody(rigidBody, t, dt, caller, uniforms, sphere, mat1, mat2, horizontal_input, vertical_input){
 
         // const transform = Mat4.translation(rigidBody.pos[0], rigidBody.pos[1], rigidBody.pos[2]).times(Mat4.scale(rigidBody.scale[0],rigidBody.scale[1],rigidBody.scale[2])).times(Mat4.rotation(rigidBody.orientation[0], rigidBody.orientation[1], rigidBody.orientation[2], rigidBody.orientation[3]));
 
@@ -227,7 +227,8 @@ class Ocean {
         }
 
         const torque_coef = 10000;
-        const angular_drag_coef = 0.9;
+        const angular_drag_coef = 1;
+        const angular_friction_coef = 0.4;
 
         // Apply torque to make the boat align with the ocean normal
         const torque = boat_normal.cross(ocean_normal).times(angle * torque_coef);
@@ -237,6 +238,22 @@ class Ocean {
         const angular_drag = rigidBody.angularVel.times(-angular_drag_coef);
         rigidBody.applyTorque(angular_drag);
 
+        // Apply angular friction
+        if(rigidBody.angularVel.norm() > 0){
+            const angular_friction = rigidBody.angularVel.normalized().times(-angular_friction_coef * gravity * rigidBody.mass);
+            rigidBody.applyTorque(angular_friction);
+        }
+
+        const coef1 = 10000
+        const coef2 = 5000
+
+        // Apply horizontal and vertical input
+        const vertical_force = vec3(0, 0, vertical_input * coef1);
+        rigidBody.applyForce(vertical_force);
+
+        // Apply torque for horizontal input
+        const horizontal_torque = vec3(0, horizontal_input * coef2, 0);
+        rigidBody.applyTorque(horizontal_torque);
 
         
     }

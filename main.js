@@ -230,7 +230,7 @@ const Part_one_hermite_base = defs.Part_one_hermite_base =
                 velocity.y = (newMousePos[1] - lastMousePos[1]) / timeDiff;
             }
             
-            console.log(`Instantaneous Mouse Velocity - X: ${isFinite(velocity.x) ? velocity.x.toFixed(2) : 0}px/s, Y: ${isFinite(velocity.y) ? velocity.y.toFixed(2) : 0}px/s`);
+            // console.log(`Instantaneous Mouse Velocity - X: ${isFinite(velocity.x) ? velocity.x.toFixed(2) : 0}px/s, Y: ${isFinite(velocity.y) ? velocity.y.toFixed(2) : 0}px/s`);
 
             // Update last position and time for the next calculation
             lastMousePos = newMousePos;
@@ -251,7 +251,7 @@ export class Part_one_hermite extends Part_one_hermite_base
     this.ocean.simulate(this.t, this.dt)
     this.ocean.show(this.shapes, caller, this.uniforms)
 
-    this.ocean.applyWaterForceOnRigidBody(this.ship.rb, t, this.dt, caller, this.uniforms, this.shapes.ball, {...this.materials.plastic, color:color(1,0,0,1)}, this.materials.metal)
+    this.ocean.applyWaterForceOnRigidBody(this.ship.rb, t, this.dt, caller, this.uniforms, this.shapes.ball, {...this.materials.plastic, color:color(1,0,0,1)}, this.materials.metal, this.horizontal_input, this.vertical_input)
 
     this.ship.update(this.t, this.dt)
     this.ship.show(caller, this.uniforms)

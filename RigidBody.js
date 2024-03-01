@@ -73,7 +73,7 @@ class RigidBody {
             this.orientation = normalizeQuaternion(this.orientation);
         }
     
-        this.transform = Mat4.identity().times(Mat4.translation(this.pos[0], this.pos[1], this.pos[2])).times(Mat4.scale(this.scale[0],this.scale[1],this.scale[2])).times(Mat4.rotation(this.orientation[0], this.orientation[1], this.orientation[2], this.orientation[3]))
+        this.transform = Mat4.translation(this.pos[0], this.pos[1], this.pos[2]).times(Mat4.rotation(this.orientation[0], this.orientation[1], this.orientation[2], this.orientation[3])).times(Mat4.scale(this.scale[0],this.scale[1],this.scale[2]))
     
         this.angularVel = this.angularVel.times(this.angularDragPercent);
     
