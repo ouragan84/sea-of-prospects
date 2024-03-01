@@ -70,6 +70,8 @@ const Part_one_hermite_base = defs.Part_one_hermite_base =
         this.vertical_input = 0;
         this.horizontal_input = 0;
 
+        this.is_camera_unlocked = false
+
         const phong = new defs.Phong_Shader(1);
         const tex_phong = new defs.Textured_Phong(1);
         const bump = new defs.Fake_Bump_Map(1);
@@ -97,6 +99,9 @@ const Part_one_hermite_base = defs.Part_one_hermite_base =
         this.ocean = new Ocean(oceanConfig)
 
         this.ship = new Ship()
+
+        this.camera_coordinates = vec3(10,10,10)
+        this.camera_matrix = Mat4.look_at (this.camera_coordinates, vec3 (0, 0, 0), vec3 (0, 1, 0))
 
       }
 
@@ -168,7 +173,46 @@ const Part_one_hermite_base = defs.Part_one_hermite_base =
         this.horizontal_input = 0;
         // console.log('Right Released', this.horizontal_input)
       }
-       
+
+      camera_control_pressed()
+      {
+          this.is_camera_unlocked = !this.is_camera_unlocked
+      }
+      
+      move_camera(mouse_vx, mouse_vy)
+      {
+          //console.log(`Instantaneous Mouse Velocity - X: ${mouse_vx}px/s, Y: ${mouse_vy}px/s`);
+          this.update_camera(mouse_vx, mouse_vy)
+      }
+
+      lerp(a, b, t) {
+        return (1 - Math.sqrt(t)) * a + Math.sqrt(t) * b;
+    }
+    
+
+      // vx is the mouse x velocity and vy is the mouse y velocity
+      update_camera(vx, vy)
+      {
+          const scaleX = 0.00001; // Adjust this to control sensitivity of horizontal movement
+          const scaleZ = 0.00001; // Adjust this to control sensitivity of vertical movement (forward/backward)
+          const responsiveness = 0.1
+
+          // Calculate new camera position
+          // Note: You might need to adjust the direction (+ or -) based on how your scene is set up
+          const new_x = this.camera_coordinates[0] + (vx * scaleX);
+          const new_z = this.camera_coordinates[2] - (vy * scaleZ); // Using '-' for inverse relation in vertical mouse movement
+
+          // Update camera_coordinates with new position
+          this.camera_coordinates = vec3(this.lerp(this.camera_coordinates[0], new_x, responsiveness), 10, this.lerp(this.camera_coordinates[2], new_z, responsiveness)); // Y-coordinate remains constant at 10
+          console.log('camera: ', this.camera_coordinates)
+
+          // Update camera_matrix to "look at" the ship at (0, 0, 0) from the new position
+          this.camera_matrix = Mat4.look_at(this.camera_coordinates, vec3(0, 0, 0), vec3(0, 1, 0));
+
+          // Assign the updated camera matrix to the shader
+          Shader.assign_camera(this.camera_matrix, this.uniforms);
+      }
+
       render_controls () {
         this.control_panel.innerHTML += "Click and drag the scene to <br> spin your viewpoint around it.<br>";
         this.key_triggered_button ("Forward", ["w"], () => this.forward_pressed(), undefined, () => this.forward_released());
@@ -176,6 +220,7 @@ const Part_one_hermite_base = defs.Part_one_hermite_base =
         this.new_line ();
         this.key_triggered_button ("Bottom", ["s"], () => this.bottom_pressed(), undefined, () => this.bottom_released());
         this.key_triggered_button ("Left", ["a"], () => this.left_pressed(), undefined, () => this.left_released());
+        this.key_triggered_button ("Change Orientation", ["m"], () => this.camera_control_pressed());
       }
 
       render_animation( caller )
@@ -186,7 +231,8 @@ const Part_one_hermite_base = defs.Part_one_hermite_base =
         { 
           this.animated_children.push( caller.controls = new defs.Movement_Controls( { uniforms: this.uniforms } ) );
           caller.controls.add_mouse_controls( caller.canvas );
-          Shader.assign_camera( Mat4.look_at (vec3 (10, 10, 10), vec3 (0, 0, 0), vec3 (0, 1, 0)), this.uniforms );
+          console.log('camera in animation: ', this.camera_matrix)
+          Shader.assign_camera( this.camera_matrix, this.uniforms );
         }
         this.uniforms.projection_transform = Mat4.perspective( Math.PI/4, caller.width/caller.height, 1, 100 );
 
@@ -229,8 +275,14 @@ const Part_one_hermite_base = defs.Part_one_hermite_base =
                 velocity.x = (newMousePos[0] - lastMousePos[0]) / timeDiff;
                 velocity.y = (newMousePos[1] - lastMousePos[1]) / timeDiff;
             }
-            
-            console.log(`Instantaneous Mouse Velocity - X: ${isFinite(velocity.x) ? velocity.x.toFixed(2) : 0}px/s, Y: ${isFinite(velocity.y) ? velocity.y.toFixed(2) : 0}px/s`);
+
+            let vx = isFinite(velocity.x) ? velocity.x.toFixed(2) : 0
+            let vy = isFinite(velocity.y) ? velocity.y.toFixed(2) : 0
+
+            if(this.is_camera_unlocked)
+            {
+                this.move_camera(vx, vy)
+            }
 
             // Update last position and time for the next calculation
             lastMousePos = newMousePos;
@@ -256,7 +308,6 @@ export class Part_one_hermite extends Part_one_hermite_base
     this.ship.update(this.t, this.dt)
     this.ship.show(caller, this.uniforms)
   }
-
 
 }
 
