@@ -227,7 +227,7 @@ class Ocean {
         }
 
         const torque_coef = 10000;
-        const angular_drag_coef = 1;
+        const angular_drag_coef = 0.8;
         const angular_friction_coef = 0.4;
 
         // Apply torque to make the boat align with the ocean normal
@@ -239,6 +239,8 @@ class Ocean {
         const coef1 = 10000
         const coef2 = 5000
 
+        const max_ang_speed = 10;
+
         // Apply vertcal force in the forward direction of the boat (rigidbody.orentation is a quaternion)
         const forward = rigidBody.transform.times(vec4(0, 0, -1, 0)).to3().normalized();
         const vertical_force = forward.times(vertical_input * coef1);
@@ -249,8 +251,8 @@ class Ocean {
         rigidBody.applyTorque(horizontal_torque);
 
         // limit the angular velocity to magnitude of 10
-        if(rigidBody.angularVel.norm() > 10){
-            rigidBody.angularVel = rigidBody.angularVel.normalized().times(10);
+        if(rigidBody.angularVel.norm() > max_ang_speed){
+            rigidBody.angularVel = rigidBody.angularVel.normalized().times(max_ang_speed);
         }
 
         // Apply angular drag
