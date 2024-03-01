@@ -100,6 +100,27 @@ const Part_one_hermite_base = defs.Part_one_hermite_base =
 
       }
 
+      getMousePos(canvas, evt) {
+          var rect = canvas.getBoundingClientRect();
+          return vec3(evt.clientX - rect.left, evt.clientY - rect.top,0)
+      }
+
+      getMouseVel(prevPos, currPos, dt) {
+        return currPos.minus(prevPos).times(10000/dt);
+      }
+
+      mouseToWorldPos(mousePos) {
+          //mouse x goes from 0 to 1080
+          //mouse y goes from 0 to 600
+          //world x -> -5 to 5
+          //world y -> 1 to 3
+
+          let x = map(mousePos[0], 0, 1080, -5, 5)
+          let y = map(mousePos[1], 0, 600, 3, 1)
+
+          return vec3(x,y,z)
+      }
+
       forward_pressed()
       {
         this.vertical_input = 1;
@@ -178,6 +199,43 @@ const Part_one_hermite_base = defs.Part_one_hermite_base =
         // !!! Light changed here
         const light_position = vec4(20, 20, -10, 1.0);
         this.uniforms.lights = [ defs.Phong_Shader.light_source( light_position, color( 1,1,1,1 ), 1000000 ) ];
+
+        // draw axis arrows.
+        this.shapes.axis.draw(caller, this.uniforms, Mat4.identity().times(Mat4.scale(0.5,0.5,0.5)), this.materials.metal);
+
+        // Initialization
+        let lastMousePos = null;
+        let lastTime = Date.now();
+
+        caller.canvas.addEventListener("mousemove", e => {
+            e.preventDefault();
+            const newMousePos = this.getMousePos(caller.canvas, e);
+            const currentTime = Date.now();
+
+            // Initialize lastMousePos if it's not set
+            if (!lastMousePos) {
+                lastMousePos = newMousePos;
+            }
+
+            // Calculate time difference in seconds
+            const timeDiff = (currentTime - lastTime) / 1000; // Convert to seconds
+
+            // Initialize velocity
+            let velocity = { x: 0, y: 0 };
+
+            // Only calculate velocity if timeDiff is greater than zero
+            if (timeDiff > 0) {
+                // Calculate instantaneous velocity
+                velocity.x = (newMousePos[0] - lastMousePos[0]) / timeDiff;
+                velocity.y = (newMousePos[1] - lastMousePos[1]) / timeDiff;
+            }
+            
+            console.log(`Instantaneous Mouse Velocity - X: ${isFinite(velocity.x) ? velocity.x.toFixed(2) : 0}px/s, Y: ${isFinite(velocity.y) ? velocity.y.toFixed(2) : 0}px/s`);
+
+            // Update last position and time for the next calculation
+            lastMousePos = newMousePos;
+            lastTime = currentTime;
+        });
       }
     }
 
