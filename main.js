@@ -98,6 +98,19 @@ const Part_one_hermite_base = defs.Part_one_hermite_base =
 
         this.ship = new Ship()
 
+        // camera config
+        this.cameraConfig = {
+          distanceFromSubject: 20,
+          sensitivity: .0001,
+        }
+        this.mouseVelX = 0;
+        this.mouseVelY = 0;
+        this.theta = 0
+        this.phi = 0
+        this.currentX = 0
+        this.currentY = 0
+        this.currentZ = 0
+
       }
 
       getMousePos(canvas, evt) {
@@ -180,18 +193,36 @@ const Part_one_hermite_base = defs.Part_one_hermite_base =
 
       render_animation( caller )
       {      
-
-        // Setup -- This part sets up the scene's overall camera matrix, projection matrix, and lights:
-        if( !caller.controls )
-        { 
-          this.animated_children.push( caller.controls = new defs.Movement_Controls( { uniforms: this.uniforms } ) );
-          caller.controls.add_mouse_controls( caller.canvas );
-          Shader.assign_camera( Mat4.look_at (vec3 (10, 10, 10), vec3 (0, 0, 0), vec3 (0, 1, 0)), this.uniforms );
-        }
-        this.uniforms.projection_transform = Mat4.perspective( Math.PI/4, caller.width/caller.height, 1, 100 );
-
         const t = this.t = this.uniforms.animation_time/1000;
         const dt = this.dt = 0.02
+
+        // Update theta and phi based on mouse input
+        this.theta += this.mouseVelX * this.cameraConfig.sensitivity;
+        this.phi = Math.max(0.1, Math.min(Math.PI - 0.1, this.phi - this.mouseVelY * this.cameraConfig.sensitivity));
+
+        // Calculate target position
+        const r = this.cameraConfig.distanceFromSubject;
+        const targetX = r * Math.sin(this.phi) * Math.cos(this.theta);
+        const targetY = r * Math.cos(this.phi);
+        const targetZ = r * Math.sin(this.phi) * Math.sin(this.theta);
+
+        // Interpolation factor (t)
+        const a = 0.1; // Adjust this value to control the smoothness (smaller values result in smoother movement)
+
+        // Interpolate the camera position
+        const newX = lerp(this.currentX, targetX, a);
+        const newY = lerp(this.currentY, targetY, a);
+        const newZ = lerp(this.currentZ, targetZ, a);
+
+        // Update the current camera position
+        this.currentX = newX;
+        this.currentY = newY;
+        this.currentZ = newZ;
+
+        // Assign the interpolated position to the camera
+        Shader.assign_camera(Mat4.look_at(vec3(newX, newY, newZ), vec3(0, 0, 0), vec3(0, 1, 0)), this.uniforms);
+
+        this.uniforms.projection_transform = Mat4.perspective( Math.PI/4, caller.width/caller.height, 1, 100 );
 
         const angle = Math.sin( t );
 
@@ -231,10 +262,12 @@ const Part_one_hermite_base = defs.Part_one_hermite_base =
             }
             
             // console.log(`Instantaneous Mouse Velocity - X: ${isFinite(velocity.x) ? velocity.x.toFixed(2) : 0}px/s, Y: ${isFinite(velocity.y) ? velocity.y.toFixed(2) : 0}px/s`);
-
+            this.mouseVelX = velocity.x
+            this.mouseVelY = velocity.y
             // Update last position and time for the next calculation
             lastMousePos = newMousePos;
             lastTime = currentTime;
+
         });
       }
     }
@@ -255,6 +288,7 @@ export class Part_one_hermite extends Part_one_hermite_base
 
     this.ship.update(this.t, this.dt)
     this.ship.show(caller, this.uniforms)
+    
 
     // let y = this.ocean.gersrnerWave.solveForY(5,5,this.t);
 
@@ -268,3 +302,6 @@ export class Part_one_hermite extends Part_one_hermite_base
 }
 
 
+function lerp( a, b, alpha ) {
+  return a + alpha * (b-a)
+ }
