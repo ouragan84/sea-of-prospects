@@ -92,7 +92,7 @@ const Part_one_hermite_base = defs.Part_one_hermite_base =
           floorMinY : -10,
           floorMaxY : -9,
           floorMaterial: this.materials.oceanfloor,
-          wave_amplitude: 0.5
+          wave_amplitude: 0.2
         }
 
         this.ocean = new Ocean(oceanConfig)
