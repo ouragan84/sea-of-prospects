@@ -158,70 +158,86 @@ class Ocean {
         }
     }
 
-    applyWaterForceOnRigidBody(rigidBody, dt){
-        // Get list of points that are inside the rigid body
-        let pointsInsideRigidBody = this.points.filter(point => isPointInsideRigidBody(point.pos, rigidBody));
+    applyWaterForceOnRigidBody(rigidBody, t, dt, caller, uniforms, sphere, mat1, mat2){
 
-        if (pointsInsideRigidBody.length === 0 && rigidBody.pos[1] > 0){
-            rigidBody.applyForce(vec3(0,-9.8 * rigidBody.mass, 0))
-            return;
-        }
+        // const transform = Mat4.translation(rigidBody.pos[0], rigidBody.pos[1], rigidBody.pos[2]).times(Mat4.scale(rigidBody.scale[0],rigidBody.scale[1],rigidBody.scale[2])).times(Mat4.rotation(rigidBody.orientation[0], rigidBody.orientation[1], rigidBody.orientation[2], rigidBody.orientation[3]));
 
-        // Find average height of points inside the rigid body
-        let averageHeight = 0
+        const corner1_boat = rigidBody.transform.times(vec4(-1, 1, 1, 1)).to3();
+        const corner2_boat = rigidBody.transform.times(vec4(1, 1, 1, 1)).to3();
+        const corner3_boat = rigidBody.transform.times(vec4(0, 1, -1, 1)).to3();
 
-        if (pointsInsideRigidBody.length > 0){
-            averageHeight = pointsInsideRigidBody.reduce((acc, point) => acc + point.pos[1], 0) / pointsInsideRigidBody.length;
-        }
+        const corner1_ocean = vec3(corner1_boat[0], this.gersrnerWave.solveForY(corner1_boat[0], corner1_boat[2], t), corner1_boat[2]);
+        const corner2_ocean = vec3(corner2_boat[0], this.gersrnerWave.solveForY(corner2_boat[0], corner2_boat[2], t), corner2_boat[2]);
+        const corner3_ocean = vec3(corner3_boat[0], this.gersrnerWave.solveForY(corner3_boat[0], corner3_boat[2], t), corner3_boat[2]);
 
-        // Get depth of the rigid body in the water using it's scale, position, and orientation (assuming it's a box)
+        // draw all the corners
+        // sphere.draw( caller, uniforms, Mat4.translation(corner1_boat[0], corner1_boat[1], corner1_boat[2]).times(Mat4.scale(0.1,0.1,0.1)), mat1 );
+        // sphere.draw( caller, uniforms, Mat4.translation(corner2_boat[0], corner2_boat[1], corner2_boat[2]).times(Mat4.scale(0.1,0.1,0.1)), mat1 );
+        // sphere.draw( caller, uniforms, Mat4.translation(corner3_boat[0], corner3_boat[1], corner3_boat[2]).times(Mat4.scale(0.1,0.1,0.1)), mat1 );
 
-        let depth = rigidBody.scale[1] - (rigidBody.pos[1] - averageHeight);
+        // sphere.draw( caller, uniforms, Mat4.translation(corner1_ocean[0], corner1_ocean[1], corner1_ocean[2]).times(Mat4.scale(0.1,0.1,0.1)), mat2 );
+        // sphere.draw( caller, uniforms, Mat4.translation(corner2_ocean[0], corner2_ocean[1], corner2_ocean[2]).times(Mat4.scale(0.1,0.1,0.1)), mat2 );
+        // sphere.draw( caller, uniforms, Mat4.translation(corner3_ocean[0], corner3_ocean[1], corner3_ocean[2]).times(Mat4.scale(0.1,0.1,0.1)), mat2 );
 
-        let percentSubmerged = depth / (2*rigidBody.scale[1]);
-        if (percentSubmerged < 0) percentSubmerged = 0;
 
-        if (percentSubmerged > 1) percentSubmerged = 1;
 
-        // Apply buoyant force
-        let volume = rigidBody.scale[0] * rigidBody.scale[1] * rigidBody.scale[2] * 8;
-        const densityWater = 200; // kg/m^3
-        let buoyantForce = vec3(0, 9.8 * percentSubmerged * volume * densityWater, 0);
-        rigidBody.applyForce(buoyantForce);
+        const boat_normal = corner3_boat.minus(corner2_boat).cross(corner1_boat.minus(corner2_boat)).normalized();
+        const ocean_normal = corner3_ocean.minus(corner2_ocean).cross(corner1_ocean.minus(corner2_ocean)).normalized();
+
+        let corner1_percent_submerged = (corner1_ocean[1] - corner1_boat[1]) / (2 * rigidBody.scale[1]) + 1;
+        if (corner1_percent_submerged < 0) corner1_percent_submerged = 0;
+        if (corner1_percent_submerged > 1) corner1_percent_submerged = 1;
+
+        let corner2_percent_submerged = (corner2_ocean[1] - corner2_boat[1]) / (2 * rigidBody.scale[1]) + 1;
+        if (corner2_percent_submerged < 0) corner2_percent_submerged = 0;
+        if (corner2_percent_submerged > 1) corner2_percent_submerged = 1;
+
+        let corner3_percent_submerged = (corner3_ocean[1] - corner3_boat[1]) / (2 * rigidBody.scale[1]) + 1;
+        if (corner3_percent_submerged < 0) corner3_percent_submerged = 0;
+        if (corner3_percent_submerged > 1) corner3_percent_submerged = 1;
+
+        let percent_submerged = (corner1_percent_submerged + corner2_percent_submerged + corner3_percent_submerged) / 3;
+
+        const angle = Math.acos(boat_normal.dot(ocean_normal));
 
 
         // apply gravity
-        rigidBody.applyForce(vec3(0,-9.8 * rigidBody.mass, 0))
+        const gravity = 9.8;
+        rigidBody.applyForce(vec3(0, -gravity * rigidBody.mass, 0));
+
+        // Apply overdamped boyancy force in the direction of the normal of the ocean
+
+        const boyancy_factor = 4;
+
+        const boyancy_force = ocean_normal.times(boyancy_factor * gravity * rigidBody.mass * percent_submerged);
+        rigidBody.applyForce(boyancy_force);
+
+        const drag_coef = 0.4;
+        const friction_coef = 0.4;
+
+        if(percent_submerged > 0){
+            // Apply drag force
+            const drag_force = rigidBody.vel.times(-drag_coef);
+
+            // Apply friction force
+            if( rigidBody.vel.norm() > 0){
+                const friction_force = rigidBody.vel.normalized().times(-friction_coef * gravity * rigidBody.mass);
+                rigidBody.applyForce(friction_force);
+            }
+        }
+
+        const torque_coef = 10000;
+        const angular_drag_coef = 0.9;
+
+        // Apply torque to make the boat align with the ocean normal
+        const torque = boat_normal.cross(ocean_normal).times(angle * torque_coef);
+        rigidBody.applyTorque(torque);
+
+        // Apply angular drag
+        const angular_drag = rigidBody.angularVel.times(-angular_drag_coef);
+        rigidBody.applyTorque(angular_drag);
 
 
-        // const boyant_friction = 0.2;
-        const water_friction = 0.5;
-        const water_drag = 0.5;
-
-        // Apply drag force
-        rigidBody.applyForce(rigidBody.vel.times(-water_drag * buoyantForce.norm()));
-
-        // Apply friction force
-        const friction_dir = rigidBody.vel.norm() < 0.001 ? vec3(0,0,0) : rigidBody.vel.normalized().times(-1);
-        rigidBody.applyForce(friction_dir.times(water_friction * buoyantForce.norm()));
-
-        // For each point inside the rigid body, apply a force in the direction of that point's velocity (pos - prevPos) / dt
-        // const point_coefficient = 5; // kg*m/s
-        // pointsInsideRigidBody.forEach(point => {
-        //     // caclulate velocity
-        //     let velocity = point.pos.minus(point.prevPos).times(1/dt);
-        //     let force = velocity.times(point_coefficient);
-
-        //     // calculate torque to apply based on force and position relative to the center of mass
-        //     let leverArm = point.pos.minus(rigidBody.pos); // vector from COM to force application point
-        //     let torque = leverArm.cross(force); // product to get torque
-        //     rigidBody.applyTorque(torque);
-        //     rigidBody.applyForce(force);
-        // });
-
-        // console.log(rigidBody.angularVel.norm(), rigidBody.angularAcc.norm())
-
-        // TODO: Damp the rigid body's angular velocity, and restore towards vertical (over dampen)
         
     }
 
@@ -328,11 +344,6 @@ class Ocean {
         this.shapes.ocean.draw( caller, uniforms, Mat4.identity(), this.material);
 
 
-
-
-        this.shapes.floor.arrays.position.forEach( (p,i,a) =>{
-            a[i] = this.floorPoints[i].pos
-        });
         // Update the normals to reflect the surface's new arrangement.
         // This won't be perfect flat shading because vertices are shared.
         this.shade(this.shapes.floor, this.floorGridSize);

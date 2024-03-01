@@ -17,7 +17,7 @@ class Ship {
       'ship': new Shape_From_File( "assets/ship.obj" ),
     }
 
-    const init_pos = vec3(0, 4, 0);
+    const init_pos = vec3(0, 1, 0);
 
     const tex_phong = new defs.Textured_Phong(1);
     const phong = new defs.Phong_Shader(1);

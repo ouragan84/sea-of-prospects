@@ -193,7 +193,7 @@ export class Part_one_hermite extends Part_one_hermite_base
     this.ocean.simulate(this.t, this.dt)
     this.ocean.show(this.shapes, caller, this.uniforms)
 
-    this.ocean.applyWaterForceOnRigidBody(this.ship.rb, this.dt);
+    this.ocean.applyWaterForceOnRigidBody(this.ship.rb, t, this.dt, caller, this.uniforms, this.shapes.ball, {...this.materials.plastic, color:color(1,0,0,1)}, this.materials.metal)
 
     this.ship.update(this.t, this.dt)
     this.ship.show(caller, this.uniforms)
