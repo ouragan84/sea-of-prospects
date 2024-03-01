@@ -54,7 +54,7 @@ class Ship {
     this.sail2 = new Cloth(sailConfig2)
     this.flag = new Cloth(flagConfig)
 
-    this.rb = new RigidBody(vec3(0, 0, 0), vec3(0, 0, 0), 2000, vec3(2.3,2.3,2.3), vec4(0, 0, 1, 0), 50);
+    this.rb = new RigidBody(vec3(0, 2, 0), vec3(0, 0, 0), 2000, vec3(2.3,2.3,2.3), vec4(0, 0, 1, 0), 100);
 
 
   }
