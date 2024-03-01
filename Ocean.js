@@ -234,6 +234,25 @@ class Ocean {
         const torque = boat_normal.cross(ocean_normal).times(angle * torque_coef);
         rigidBody.applyTorque(torque);
 
+        
+
+        const coef1 = 10000
+        const coef2 = 5000
+
+        // Apply vertcal force in the forward direction of the boat (rigidbody.orentation is a quaternion)
+        const forward = rigidBody.transform.times(vec4(0, 0, -1, 0)).to3().normalized();
+        const vertical_force = forward.times(vertical_input * coef1);
+        rigidBody.applyForce(vertical_force);
+
+        // Apply torque for horizontal input
+        const horizontal_torque = vec3(0, horizontal_input * coef2, 0);
+        rigidBody.applyTorque(horizontal_torque);
+
+        // limit the angular velocity to magnitude of 10
+        if(rigidBody.angularVel.norm() > 10){
+            rigidBody.angularVel = rigidBody.angularVel.normalized().times(10);
+        }
+
         // Apply angular drag
         const angular_drag = rigidBody.angularVel.times(-angular_drag_coef);
         rigidBody.applyTorque(angular_drag);
@@ -243,17 +262,7 @@ class Ocean {
             const angular_friction = rigidBody.angularVel.normalized().times(-angular_friction_coef * gravity * rigidBody.mass);
             rigidBody.applyTorque(angular_friction);
         }
-
-        const coef1 = 10000
-        const coef2 = 5000
-
-        // Apply horizontal and vertical input
-        const vertical_force = vec3(0, 0, vertical_input * coef1);
-        rigidBody.applyForce(vertical_force);
-
-        // Apply torque for horizontal input
-        const horizontal_torque = vec3(0, horizontal_input * coef2, 0);
-        rigidBody.applyTorque(horizontal_torque);
+        
 
         
     }
