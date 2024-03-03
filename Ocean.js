@@ -36,8 +36,19 @@ export class GerstnerWave{
                     vec3(-.6, 0, .4),
                     vec3(-.8, 0, -.5),
                     vec3(.3, 0, -.8)
-                
                 ];  // direction vector
+
+        // this.n = 1;
+        // this.s = [.5];  // steepness
+        // this.l = [4.0];  // wave length
+        // this.v = [4 * Math.PI / 10.0];  // speed
+
+        // this.dir = [vec3(1, 0, -.4)];  // direction vector
+
+
+        for (let i = 0; i < this.n; i++){
+            this.dir[i] = this.dir[i].normalized();
+        }
     }
 
     gersrnerWave(pos, t){
@@ -45,17 +56,50 @@ export class GerstnerWave{
         let new_pos = vec3(pos[0], pos[1], pos[2]);
         
         for (let i = 0; i < this.n; i++){
-            let k = 2 * Math.PI / this.l[i];
-            let nD = this.dir[i].normalized();
-            let f = k * nD.dot(new_pos) - (this.v[i] * t);
-            let a = this.s[i] / k;
+            const k = 2 * Math.PI / this.l[i];
+            const d = this.dir[i]
+            const f = k * (pos[0] * d[0] + pos[2] * d[2]) - (this.v[i] * t);
+            const a = this.s[i] / k;
 
-            new_pos = new_pos.plus(vec3(nD[0] * a * Math.cos(f), a * Math.sin(f), nD[2] * a * Math.cos(f)));
+            new_pos = new_pos.plus(vec3(
+                d[0] * a * Math.cos(f), 
+                a * Math.sin(f), 
+                d[2] * a * Math.cos(f)
+            ));
         }
 
         return new_pos;
 
     }
+
+    gersrnerWaveNormal(pos, t){
+        let rx = vec3(1,0,0);
+        let rz = vec3(0,0,1);
+
+        for (let i = 0; i < this.n; i++){
+            const k = 2 * Math.PI / this.l[i];
+            const d = this.dir[i]
+            const f = k * (pos[0] * d[0] + pos[2] * d[2]) - (this.v[i] * t);
+            const a = this.s[i] / k;
+
+            rx = rx.plus(vec3(
+                - d[0] * d[0] * a * k * Math.sin(f),
+                d[0] * a * k * Math.cos(f),
+                - d[0] * d[2] * a * k * Math.sin(f)
+            ));
+
+            rz = rz.plus(vec3(
+                - d[2] * d[0] * a * k * Math.sin(f),
+                d[2] * a * k * Math.cos(f),
+                - d[2] * d[2] * a * k * Math.sin(f)
+            ));
+        }
+
+
+        return rz.cross(rx).normalized();
+    }
+
+
 
     get_glsl_strings(){
         // Ensure all numeric values have a decimal point to be treated as floats
@@ -88,7 +132,6 @@ export class GerstnerWave{
         let error = 0;
         let iterations = 0;
         let max_iterations = 10;
-        let step = 0.1;
 
         while (error < 0.01 && iterations < max_iterations){
             let new_pos = vec3(x, y, z);
@@ -104,17 +147,6 @@ export class GerstnerWave{
 
 
 
-    /*
-    To get normal:
-
-    get point (x, y, z) at time t
-    get point (x + epsilon, y, z) at time t
-    get point (x, y, z + epsilon) at time t
-
-    cross product of the two vectors gives the normal
-
-
-    */
 }  
 
         
@@ -302,8 +334,6 @@ class Ocean {
             rigidBody.applyTorque(angular_friction);
         }
         
-
-        
     }
 
     point_to_coord(i, gridSize){
@@ -343,8 +373,6 @@ class Ocean {
             const index = shape.indices[ counter ];
             shape.arrays.normal[index] = normals[index];
         }
-
-  
     }
 
     show(shapes, caller, uniforms, mat) {
@@ -353,58 +381,10 @@ class Ocean {
     }
 }
 
-function dist3D(vec1, vec2) {
-    // Extracting coordinates from the first vector
-    const x1 = vec1[0];
-    const y1 = vec1[1];
-    const z1 = vec1[2];
-  
-    // Extracting coordinates from the second vector
-    const x2 = vec2[0];
-    const y2 = vec2[1];
-    const z2 = vec2[2];
-  
-    // Calculating the distance using the Euclidean distance formula
-    const distance = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2) + Math.pow(z2 - z1, 2));
-  
-    return distance;
-}
-
-function shuffle(array) {
-    let currentIndex = array.length,  randomIndex;
-  
-    while (currentIndex != 0) {
-      randomIndex = Math.floor(Math.random() * currentIndex);
-      currentIndex--;
-  
-      //swap
-      [array[currentIndex], array[randomIndex]] = [
-        array[randomIndex], array[currentIndex]];
-    }
-  
-    return array;
-  }
-
-function fade(t) {
-    // Fade function as defined by Ken Perlin. This eases coordinate values
-    // so that they will ease towards integral values. This smooths the final output.
-    return t * t * t * (t * (t * 6 - 15) + 10);
-}
-
 function lerp(a, b, t) {
     // Linear interpolate between a and b
     return (1 - t) * a + t * b;
 }
-
-function grad(hash, x) {
-    // This will hash the input value x, and produce a gradient from the hashed value.
-    const h = hash & 15;
-    const grad = 1 + (h & 7); // Gradient value is one of 1, 2, ..., 8
-    return (h & 8 ? -grad : grad) * x; // and a random direction
-}
-
-// define stuff for perlin noise
-const perm = shuffle([...Array(256).keys()]);
 
 
 // Smoothstep function for smoother transitions
@@ -479,18 +459,41 @@ export const Ocean_Shader = defs.Ocean_Shader =
             for (int i = 0; i < MAX_WAVES; i++) {
                 if (i >= num_waves) break;
                 float k = 2.0 * 3.14159 / wave_length[i];
-                vec3 nD = direction[i];
-                float f = k * dot(nD, new_pos) - (speed[i] * t);
+                vec3 d = direction[i];
+                float f = k * (d.x * (pos.x + offset_x) + d.z * (pos.z + offset_z)) - (speed[i] * t);
                 float a = steepness[i] / k;
-                new_pos = new_pos + vec3(nD[0] * a * cos(f), a * sin(f), nD[2] * a * cos(f));
+                new_pos = new_pos + vec3(
+                    d.x * a * cos(f), 
+                    a * sin(f), 
+                    d.z * a * cos(f)
+                );
             }
             return new_pos;
         }
 
         vec3 get_gersrner_wave_normal(vec3 pos, float t, float offset_x, float offset_z) {
-            float epsilon = 0.001;
-            vec3 p = get_gersrner_wave_position(pos, t, offset_x, offset_z);
-            return normalize(p - pos + vec3(0, 1, 0));
+            vec3 rx = vec3(1.0,0.0,0.0);
+            vec3 rz = vec3(0.0,0.0,1.0);
+
+            for (int i = 0; i < MAX_WAVES; i++) {
+                if (i >= num_waves) break;
+                float k = 2.0 * 3.14159 / wave_length[i];
+                vec3 d = direction[i];
+                float f = k * (d.x * (pos.x + offset_x) + d.z * (pos.z + offset_z)) - (speed[i] * t);
+                float a = steepness[i] / k;
+                rx += vec3(
+                    - d.x * d.x * a * k * sin(f),
+                    d.x * a * k * cos(f),
+                    - d.x * d.z * a * k * sin(f)
+                );
+                rz += vec3(
+                    - d.z * d.x * a * k * sin(f),
+                    d.z * a * k * cos(f),
+                    - d.z * d.z * a * k * sin(f)
+                );
+            }
+
+            return normalize(cross(rz, rx));
         }
 
         void main() {        

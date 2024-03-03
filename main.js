@@ -85,8 +85,8 @@ const Part_one_hermite_base = defs.Part_one_hermite_base =
         
         const oceanConfig = {
           initPos : vec3(0,0,0),
-          density : 400,
-          size : 200,
+          density : 200,
+          size : 100,
           material: this.materials.ocean,
           floorDensity : 20,
           floorMinY : -10,
@@ -107,9 +107,9 @@ const Part_one_hermite_base = defs.Part_one_hermite_base =
         this.mouseVelY = 0;
         this.theta = Math.PI/4
         this.phi = Math.PI/4
-        this.currentX = 0
-        this.currentY = 0
-        this.currentZ = 0
+        this.currentX = 10
+        this.currentY = 10
+        this.currentZ = 10
 
       }
 
@@ -220,7 +220,7 @@ const Part_one_hermite_base = defs.Part_one_hermite_base =
         this.currentZ = newZ;
 
         // Assign the interpolated position to the camera
-        Shader.assign_camera(Mat4.look_at(vec3(newX, newY, newZ), this.ship.rb.pos, vec3(0, 1, 0)), this.uniforms);
+        Shader.assign_camera(Mat4.look_at(vec3(newX, newY, newZ), vec3(0,0,0), vec3(0, 1, 0)), this.uniforms);
 
         this.uniforms.projection_transform = Mat4.perspective( Math.PI/4, caller.width/caller.height, 1, 100 );
 
@@ -282,7 +282,7 @@ export class Part_one_hermite extends Part_one_hermite_base
     const sea_blue = color( 0,0.62,0.77,1 ), whiteish = color( .9,.9,1,1 ), brown = color(139/255, 69/255, 19/255,1);
     const t = this.t = this.uniforms.animation_time/1000;
     this.ocean.simulate(this.t, this.dt)
-    this.ocean.show(this.shapes, caller, this.uniforms)
+    this.ocean.show(this.shapes, caller, this.uniforms, this.materials)
 
     this.ocean.applyWaterForceOnRigidBody(this.ship.rb, t, this.dt, caller, this.uniforms, this.shapes.ball, {...this.materials.plastic, color:color(1,0,0,1)}, this.materials.metal, this.horizontal_input, this.vertical_input)
 
