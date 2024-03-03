@@ -1,6 +1,6 @@
 import {tiny, defs} from './examples/common.js';
 
-const { vec3, vec4, color, Mat4, Shape, Material, Shader, Texture, Component } = tiny;
+const { vec3, vec4, color, Mat4, Shape, Material, Shader, Texture, Component, Matrix, Vector} = tiny;
 import {isPointInsideRigidBody} from './RigidBody.js';
 
 
@@ -15,15 +15,6 @@ class Point{
         this.prevPos = pos.copy()
         this.locked = false;
         this.r = 0.1;
-
-        const phong = new defs.Phong_Shader( 1 );
-        this.materials = {};
-        this.materials.plastic = { shader: phong, ambient: 1, diffusivity: 0, specularity: 0, color: color( .9,.5,.9,1 ) }
-    }
-
-    show(shapes, caller, uniforms, mat) {       
-        let transform = Mat4.identity().times(Mat4.translation(this.pos[0], this.pos[1], this.pos[2])).times(Mat4.scale(this.r, this.r, this.r)); 
-        shapes.ball.draw( caller, uniforms, transform, {...this.materials.plastic, color: this.locked ? color(0, 0, 1, 1.0) : color(0.9,0.9,1,1.0)});
     }
 }
 
@@ -31,20 +22,22 @@ export class GerstnerWave{
 
     constructor()
     {
-        this.n = 3;
-        this.s = [.5, 0.4, 0.2];  // steepness
-        this.l = [4.0, 3.0, 1.0];  // wave length
+        this.n = 5;
+        this.s = [.5, 0.4, 0.2, 0.13, 0.1];  // steepness
+        this.l = [4.0, 3.0, 1.0, 0.8, 0.5];  // wave length
         this.v = [4 * Math.PI / 10.0, 
                   8 * Math.PI / 10.0, 
-                  12 * Math.PI / 10.0];  // speed
+                  12 * Math.PI / 10.0,
+                  10 * Math.PI / 10.0,
+                  15 * Math.PI / 10.0];  // speed
 
         this.dir = [vec3(1, 0, -.4),
                     vec3(.2, 0, .9),
-                    vec3(-.6, 0, .4)];  // direction vector
-    }
-
-    setMainDirection(dir){
-        this.dir[0] = dir;
+                    vec3(-.6, 0, .4),
+                    vec3(-.8, 0, -.5),
+                    vec3(.3, 0, -.8)
+                
+                ];  // direction vector
     }
 
     gersrnerWave(pos, t){
@@ -63,6 +56,27 @@ export class GerstnerWave{
         return new_pos;
 
     }
+
+    get_glsl_strings(){
+        // Ensure all numeric values have a decimal point to be treated as floats
+        let sInit = this.s.map((value, index) => `steepness[${index}] = ${value.toFixed(1)};`).join("\n    ");
+        let lInit = this.l.map((value, index) => `wave_length[${index}] = ${value.toFixed(1)};`).join("\n    ");
+        let vInit = this.v.map((value, index) => `speed[${index}] = ${value.toFixed(1)};`).join("\n    ");
+        let dirInit = this.dir.map((vec, index) => `direction[${index}] = vec3(${vec.map(v => v.toFixed(1)).join(", ")});`).join("\n    ");
+    
+        return {
+            n: `int num_waves = ${this.n};`,
+            s: `float steepness[${this.n}];`,
+            l: `float wave_length[${this.n}];`,
+            v: `float speed[${this.n}];`,
+            dir: `vec3 direction[${this.n}];`,
+            sInit: sInit,
+            lInit: lInit,
+            vInit: vInit,
+            dirInit: dirInit
+        }
+    }
+    
 
 
     solveForY(x, z, t){
@@ -87,9 +101,21 @@ export class GerstnerWave{
         return y;
 
     }
-}
 
 
+
+    /*
+    To get normal:
+
+    get point (x, y, z) at time t
+    get point (x + epsilon, y, z) at time t
+    get point (x, y, z + epsilon) at time t
+
+    cross product of the two vectors gives the normal
+
+
+    */
+}  
 
         
 
@@ -101,17 +127,30 @@ class Ocean {
         this.pos = config.initPos;
         this.density = config.density
         this.spacing = config.size / this.density
-        this.material = config.material;
-        this.floorMaterial = config.floorMaterial;
+        // this.material = config.material;
+        // this.floorMaterial = config.floorMaterial;
         this.floorMinY = config.floorMinY;
         this.floorMaxY = config.floorMaxY;
         this.floorDensity = config.floorDensity;
         this.floorSpacing = config.size / this.floorDensity;
         // this.wave_amplitude = config.wave_amplitude;
 
+        this.gersrnerWave = new GerstnerWave();
+
+        console.log(this.gersrnerWave.get_glsl_strings())
+
+        const ocean = new Ocean_Shader(1, this.gersrnerWave.get_glsl_strings());
+        const floor = new defs.Phong_Shader(1);
+
+        this.materials = {};
+        this.materials.ocean = { shader: ocean, ambient: 0.3, diffusivity: .3, specularity: .9, color: color( .35,.8,.95,1 ) }
+        this.materials.floor = { shader: floor, ambient: 0.3, diffusivity: .5, specularity: .4, color: color( .5,.5,.5,1 ) }
+
         this.points = []
         this.floorPoints = []
         this.shapes = {};
+
+        this.ocean_offset = vec3(0, 0, 0);
 
         // Set up Ocean
         const initial_corner_point = vec3( 0, 0, 0 );
@@ -148,14 +187,23 @@ class Ocean {
         this.floorGridSize = Math.sqrt(this.floorPoints.length); // Calculate the grid size
 
         // console.log(this)
-        this.gersrnerWave = new GerstnerWave();
+
+        this.shapes.ocean.arrays.position.forEach( (p,i,a) =>{
+            a[i] = this.points[i].pos
+        });
+
+        this.shapes.floor.arrays.position.forEach( (p,i,a) =>{
+            a[i] = this.points[i].pos
+        });
+
+        this.shapes.floor.flat_shade();
     }
 
     simulate(t, dt){
-        for (let i = 0; i < this.points.length; i++){
-            this.points[i].prevPos = this.points[i].pos.copy();
-            this.points[i].pos = this.gersrnerWave.gersrnerWave(this.points[i].originalPos, t);
-        }
+        // for (let i = 0; i < this.points.length; i++){
+        //     this.points[i].prevPos = this.points[i].pos.copy();
+        //     this.points[i].pos = this.gersrnerWave.gersrnerWave(this.points[i].originalPos, t);
+        // }
     }
 
     applyWaterForceOnRigidBody(rigidBody, t, dt, caller, uniforms, sphere, mat1, mat2, horizontal_input, vertical_input){
@@ -169,17 +217,6 @@ class Ocean {
         const corner1_ocean = vec3(corner1_boat[0], this.gersrnerWave.solveForY(corner1_boat[0], corner1_boat[2], t), corner1_boat[2]);
         const corner2_ocean = vec3(corner2_boat[0], this.gersrnerWave.solveForY(corner2_boat[0], corner2_boat[2], t), corner2_boat[2]);
         const corner3_ocean = vec3(corner3_boat[0], this.gersrnerWave.solveForY(corner3_boat[0], corner3_boat[2], t), corner3_boat[2]);
-
-        // draw all the corners
-        // sphere.draw( caller, uniforms, Mat4.translation(corner1_boat[0], corner1_boat[1], corner1_boat[2]).times(Mat4.scale(0.1,0.1,0.1)), mat1 );
-        // sphere.draw( caller, uniforms, Mat4.translation(corner2_boat[0], corner2_boat[1], corner2_boat[2]).times(Mat4.scale(0.1,0.1,0.1)), mat1 );
-        // sphere.draw( caller, uniforms, Mat4.translation(corner3_boat[0], corner3_boat[1], corner3_boat[2]).times(Mat4.scale(0.1,0.1,0.1)), mat1 );
-
-        // sphere.draw( caller, uniforms, Mat4.translation(corner1_ocean[0], corner1_ocean[1], corner1_ocean[2]).times(Mat4.scale(0.1,0.1,0.1)), mat2 );
-        // sphere.draw( caller, uniforms, Mat4.translation(corner2_ocean[0], corner2_ocean[1], corner2_ocean[2]).times(Mat4.scale(0.1,0.1,0.1)), mat2 );
-        // sphere.draw( caller, uniforms, Mat4.translation(corner3_ocean[0], corner3_ocean[1], corner3_ocean[2]).times(Mat4.scale(0.1,0.1,0.1)), mat2 );
-
-
 
         const boat_normal = corner3_boat.minus(corner2_boat).cross(corner1_boat.minus(corner2_boat)).normalized();
         const ocean_normal = corner3_ocean.minus(corner2_ocean).cross(corner1_ocean.minus(corner2_ocean)).normalized();
@@ -278,41 +315,6 @@ class Ocean {
     }
 
     shade (shape, gridSize) {
-        /*
-  
-          3  7 11  15
-          2  6 10  14
-          1  5  9  13
-          0  4  8  12
-  
-  
-          
-        */
-  
-        
-  
-        // First, iterate through the index or position triples:
-        // for (let counter = 0; counter < (shape.indices ? shape.indices.length : shape.arrays.position.length);
-        //      counter += 1) {
-        //     const index = shape.indices[ counter ];
-        //     const pc = shape.arrays.position[ index ];
-        //     const [cx, cy] = this.point_to_coord(index,gridSize);
-  
-        //     const p1 = (cx - 1 < 0) ? pc : shape.arrays.position[this.coord_to_point(cx - 1, cy,gridSize)];
-        //     const p2 = (cx + 1 >= gridSize) ? pc : shape.arrays.position[this.coord_to_point(cx + 1, cy,gridSize)];
-        //     const p3 = (cy - 1 < 0) ? pc : shape.arrays.position[this.coord_to_point(cx, cy - 1,gridSize)];
-        //     const p4 = (cy + 1 >= gridSize) ? pc : shape.arrays.position[this.coord_to_point(cx, cy + 1,gridSize)];
-  
-        //     const v1 = p2.minus(p1);
-        //     const v2 = p4.minus(p3);
-  
-        //     const n1 = v1.cross(v2).normalized();
-  
-        //     shape.arrays.normal[index] = n1;
-  
-        // }
-
-        // array of normals size of number of vertices
         let normals = Array(shape.arrays.position.length).fill(vec3(0,0,0));
 
         for (let counter = 0; counter < (shape.indices ? shape.indices.length : shape.arrays.position.length);
@@ -346,47 +348,8 @@ class Ocean {
     }
 
     show(shapes, caller, uniforms, mat) {
-        if (this.once === undefined) {
-            this.once = true;
-            this.shapes.ocean.draw( caller, uniforms, Mat4.identity(), this.material);
-            this.shapes.floor.draw( caller, uniforms, Mat4.identity(), this.floorMaterial);
-        }
-
-
-        // Update the JavaScript-side shape with new vertices:
-        this.shapes.ocean.arrays.position.forEach( (p,i,a) =>{
-          a[i] = this.points[i].pos
-        });
-        // Update the normals to reflect the surface's new arrangement.
-        // This won't be perfect flat shading because vertices are shared.
-
-        this.shade(this.shapes.ocean, this.gridSize);
-        // Draw the current sheet shape.
-        // this.shapes.ocean.flat_shade();
-
-    
-        // Update the gpu-side shape with new vertices.
-        // Warning:  You can't call this until you've already drawn the shape once.
-        this.shapes.ocean.copy_onto_graphics_card(caller.context, ["position", "normal"], false);
-
-        this.shapes.ocean.draw( caller, uniforms, Mat4.identity(), this.material);
-
-
-        // Update the normals to reflect the surface's new arrangement.
-        // This won't be perfect flat shading because vertices are shared.
-        this.shade(this.shapes.floor, this.floorGridSize);
-        // this.shapes.floor.flat_shade();
-        // Draw the current sheet shape.
-        this.shapes.floor.draw( caller, uniforms, Mat4.identity(), this.floorMaterial);
-
-        // ------------------
-        // for(let i = 0; i < this.segments.length; i++){
-        //     this.segments[i].show(caller, uniforms);
-        // }
-    
-        // for(let i = 0; i < this.points.length; i++){
-        //     this.points[i].show(shapes, caller, uniforms, mat);
-        // }
+        this.shapes.ocean.draw( caller, {...uniforms, offset: this.ocean_offset}, Mat4.identity(), this.materials.ocean);
+        this.shapes.floor.draw( caller, uniforms, Mat4.identity(), this.materials.floor);
     }
 }
 
@@ -473,3 +436,98 @@ function perlin2d(x, y, min, max) {
     // Scale to min-max range
     return min + (max - min) * normalized;
 }
+
+
+
+export const Ocean_Shader = defs.Ocean_Shader =
+  class Ocean_Shader extends defs.Phong_Shader {
+
+    constructor(num_lights, wave_obj) {
+        super(num_lights);
+        this.gersrnerWave = wave_obj;
+    }
+ 
+    vertex_glsl_code () {           // ********* VERTEX SHADER *********
+        return this.shared_glsl_code () + `
+        attribute vec3 position, normal;                            // Position is expressed in object coordinates.
+
+        uniform mat4 model_transform;
+        uniform mat4 projection_camera_model_transform;
+        uniform float time;
+        uniform float offset_x;
+        uniform float offset_z;
+
+        ${this.gersrnerWave.n}
+        ${this.gersrnerWave.s}
+        ${this.gersrnerWave.l}
+        ${this.gersrnerWave.v}
+        ${this.gersrnerWave.dir}
+
+        void init_waves(){
+            ${this.gersrnerWave.sInit}
+            ${this.gersrnerWave.lInit}
+            ${this.gersrnerWave.vInit}
+            ${this.gersrnerWave.dirInit}
+        }
+
+        bool has_initialized_vars = false;
+
+        const int MAX_WAVES = 10;
+
+        vec3 get_gersrner_wave_position(vec3 pos, float t, float offset_x, float offset_z){
+            vec3 new_pos = vec3(pos.x + offset_x, pos.y, pos.z + offset_z);
+            for (int i = 0; i < MAX_WAVES; i++) {
+                if (i >= num_waves) break;
+                float k = 2.0 * 3.14159 / wave_length[i];
+                vec3 nD = direction[i];
+                float f = k * dot(nD, new_pos) - (speed[i] * t);
+                float a = steepness[i] / k;
+                new_pos = new_pos + vec3(nD[0] * a * cos(f), a * sin(f), nD[2] * a * cos(f));
+            }
+            return new_pos;
+        }
+
+        vec3 get_gersrner_wave_normal(vec3 pos, float t, float offset_x, float offset_z) {
+            float epsilon = 0.001;
+            vec3 p = get_gersrner_wave_position(pos, t, offset_x, offset_z);
+            return normalize(p - pos + vec3(0, 1, 0));
+        }
+
+        void main() {        
+            if (!has_initialized_vars){
+                init_waves();
+                has_initialized_vars = true;
+            }
+
+            vec3 p = get_gersrner_wave_position(position, time, offset_x, offset_z);
+            
+            gl_Position = projection_camera_model_transform * vec4( p, 1.0 );     // Move vertex to final space.
+                                            // The final normal vector in screen space.
+
+            vec3 new_normal = get_gersrner_wave_normal(position, time, offset_x, offset_z);
+            N = normalize( mat3( model_transform ) * new_normal / squared_scale);
+
+            vertex_worldspace = ( model_transform * vec4( p, 1.0 ) ).xyz;
+        } `;
+    }
+    fragment_glsl_code () {          // ********* FRAGMENT SHADER *********
+        return this.shared_glsl_code () + `
+      void main() {                          
+                                         // Compute an initial (ambient) color:
+          gl_FragColor = vec4( shape_color.xyz * ambient, shape_color.w );
+                                         // Compute the final color with contributions from lights:
+          gl_FragColor.xyz += phong_model_lights( normalize( N ), vertex_worldspace );
+        } `;
+    }
+      update_GPU (context, gpu_addresses, uniforms, model_transform, material) {
+          super.update_GPU(context, gpu_addresses, uniforms, model_transform, material);
+
+          context.uniform1f(gpu_addresses.time, uniforms.animation_time / 1000);
+          context.uniform1f(gpu_addresses.offset_x, uniforms.offset[0]);
+          context.uniform1f(gpu_addresses.offset_z, uniforms.offset[2]);
+      }
+  };
+
+
+
+  

@@ -1,7 +1,7 @@
 import { Cloth } from './Cloth.js';
 import {tiny, defs} from './examples/common.js';
 import {Shape_From_File}  from './examples/obj-file-demo.js';
-import { Ocean } from './Ocean.js';
+import { Ocean, Ocean_Shader } from './Ocean.js';
 import { RigidBody, isPointInsideRigidBody } from './RigidBody.js';
 import { Ship } from './ship.js';
 
@@ -85,8 +85,8 @@ const Part_one_hermite_base = defs.Part_one_hermite_base =
         
         const oceanConfig = {
           initPos : vec3(0,0,0),
-          density : 80,
-          size : 80,
+          density : 400,
+          size : 200,
           material: this.materials.ocean,
           floorDensity : 20,
           floorMinY : -10,
@@ -229,10 +229,10 @@ const Part_one_hermite_base = defs.Part_one_hermite_base =
         // const light_position = Mat4.rotation( angle,   1,0,0 ).times( vec4( 0,-1,1,0 ) ); !!!
         // !!! Light changed here
         const light_position = vec4(20, 20, -10, 1.0);
-        this.uniforms.lights = [ defs.Phong_Shader.light_source( light_position, color( 1,1,1,1 ), 1000000 ) ];
+        
+        this.uniforms.lights = [ defs.Phong_Shader.light_source( light_position, color( 1,1,1,1 ), 1000000 )];
 
         // draw axis arrows.
-        this.shapes.axis.draw(caller, this.uniforms, Mat4.identity().times(Mat4.scale(0.5,0.5,0.5)), this.materials.metal);
 
         // Initialization
         let lastMousePos = null;
@@ -305,3 +305,4 @@ export class Part_one_hermite extends Part_one_hermite_base
 function lerp( a, b, alpha ) {
   return a + alpha * (b-a)
  }
+
