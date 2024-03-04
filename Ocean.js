@@ -234,7 +234,9 @@ class Ocean {
     apply_rb_offset(rigidBody){
         if(!rigidBody.position || isNaN(rigidBody.position[0]) || isNaN(rigidBody.position[2]))
             return;
-        this.ocean_offset = vec3(rigidBody.position[0], 0, rigidBody.position[2]);
+        let new_x = rigidBody.position[0] - (rigidBody.position[0] % this.spacing);
+        let new_z = rigidBody.position[2] - (rigidBody.position[2] % this.spacing);
+        this.ocean_offset = vec3(new_x, 0, new_z);
 
     }
 
