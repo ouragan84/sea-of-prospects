@@ -241,10 +241,9 @@ class Ocean {
     applyWaterForceOnRigidBody(rigidBody, t, dt, caller, uniforms, sphere, mat1, mat2, horizontal_input, vertical_input){
 
         // const transform = Mat4.translation(rigidBody.pos[0], rigidBody.pos[1], rigidBody.pos[2]).times(Mat4.scale(rigidBody.scale[0],rigidBody.scale[1],rigidBody.scale[2])).times(Mat4.rotation(rigidBody.orientation[0], rigidBody.orientation[1], rigidBody.orientation[2], rigidBody.orientation[3]));
-
-        const corner1_boat = rigidBody.transform.times(vec4(-1, 1, 1, 1)).to3();
-        const corner2_boat = rigidBody.transform.times(vec4(1, 1, 1, 1)).to3();
-        const corner3_boat = rigidBody.transform.times(vec4(0, 1, -1, 1)).to3();
+        const corner1_boat = rigidBody.getTransformationMatrix().times(vec4(-1, 1, 1, 1)).to3();
+        const corner2_boat = rigidBody.getTransformationMatrix().times(vec4(1, 1, 1, 1)).to3();
+        const corner3_boat = rigidBody.getTransformationMatrix().times(vec4(0, 1, -1, 1)).to3();
 
         const corner1_ocean = vec3(corner1_boat[0], this.gersrnerWave.solveForY(corner1_boat[0], corner1_boat[2], t), corner1_boat[2]);
         const corner2_ocean = vec3(corner2_boat[0], this.gersrnerWave.solveForY(corner2_boat[0], corner2_boat[2], t), corner2_boat[2]);
@@ -272,26 +271,26 @@ class Ocean {
 
         // apply gravity
         const gravity = 9.8;
-        rigidBody.applyForce(vec3(0, -gravity * rigidBody.mass, 0));
+        rigidBody.addForce(vec3(0, -gravity * rigidBody.mass, 0));
 
         // Apply overdamped boyancy force in the direction of the normal of the ocean
 
         const boyancy_factor = 4;
 
         const boyancy_force = ocean_normal.times(boyancy_factor * gravity * rigidBody.mass * percent_submerged);
-        rigidBody.applyForce(boyancy_force);
+        rigidBody.addForce(boyancy_force);
 
         const drag_coef = 0.4;
         const friction_coef = 0.4;
 
         if(percent_submerged > 0){
             // Apply drag force
-            const drag_force = rigidBody.vel.times(-drag_coef);
+            const drag_force = rigidBody.velocity.times(-drag_coef);
 
             // Apply friction force
-            if( rigidBody.vel.norm() > 0){
-                const friction_force = rigidBody.vel.normalized().times(-friction_coef * gravity * rigidBody.mass);
-                rigidBody.applyForce(friction_force);
+            if( rigidBody.velocity.norm() > 0){
+                const friction_force = rigidBody.velocity.normalized().times(-friction_coef * gravity * rigidBody.mass);
+                rigidBody.addForce(friction_force);
             }
         }
 
@@ -301,7 +300,7 @@ class Ocean {
 
         // Apply torque to make the boat align with the ocean normal
         const torque = boat_normal.cross(ocean_normal).times(angle * torque_coef);
-        rigidBody.applyTorque(torque);
+        rigidBody.addTorque(torque);
 
         
 
@@ -311,27 +310,27 @@ class Ocean {
         const max_ang_speed = 10;
 
         // Apply vertcal force in the forward direction of the boat (rigidbody.orentation is a quaternion)
-        const forward = rigidBody.transform.times(vec4(0, 0, -1, 0)).to3().normalized();
+        const forward = rigidBody.getTransformationMatrix().times(vec4(0, 0, -1, 0)).to3().normalized();
         const vertical_force = forward.times(vertical_input * coef1);
-        rigidBody.applyForce(vertical_force);
+        rigidBody.addForce(vertical_force);
 
         // Apply torque for horizontal input
         const horizontal_torque = vec3(0, horizontal_input * coef2, 0);
-        rigidBody.applyTorque(horizontal_torque);
+        rigidBody.addTorque(horizontal_torque);
 
         // limit the angular velocity to magnitude of 10
-        if(rigidBody.angularVel.norm() > max_ang_speed){
-            rigidBody.angularVel = rigidBody.angularVel.normalized().times(max_ang_speed);
+        if(rigidBody.angularVelocity.norm() > max_ang_speed){
+            rigidBody.angularVelocity = rigidBody.angularVelocity.normalized().times(max_ang_speed);
         }
 
         // Apply angular drag
-        const angular_drag = rigidBody.angularVel.times(-angular_drag_coef);
-        rigidBody.applyTorque(angular_drag);
+        const angular_drag = rigidBody.angularVelocity.times(-angular_drag_coef);
+        rigidBody.addTorque(angular_drag);
 
         // Apply angular friction
-        if(rigidBody.angularVel.norm() > 0){
-            const angular_friction = rigidBody.angularVel.normalized().times(-angular_friction_coef * gravity * rigidBody.mass);
-            rigidBody.applyTorque(angular_friction);
+        if(rigidBody.angularVelocity.norm() > 0){
+            const angular_friction = rigidBody.angularVelocity.normalized().times(-angular_friction_coef * gravity * rigidBody.mass);
+            rigidBody.addTorque(angular_friction);
         }
         
     }

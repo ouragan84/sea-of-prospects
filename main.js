@@ -111,6 +111,8 @@ const Part_one_hermite_base = defs.Part_one_hermite_base =
         this.currentY = 10
         this.currentZ = 10
 
+        this.rb = new RigidBody();
+
       }
 
       getMousePos(canvas, evt) {
@@ -294,8 +296,16 @@ export class Part_one_hermite extends Part_one_hermite_base
 
     // console.log(y)
 
-    // draw ball
-    // this.shapes.ball.draw( caller, this.uniforms, Mat4.translation(5, y, 5).times(Mat4.scale(0.2,0.2,0.2)), this.materials.plastic );
+
+    // tester code
+    // this.rb.applyForce(vec3(0,10,0), vec3(0,0,0))
+    // this.rb.addTorque(vec3(0,1,0))
+    // this.rb.update(this.dt)
+    // this.rb.show(caller, this.uniforms)
+
+    // draw ball and debug floor
+    // this.shapes.ball.draw( caller, this.uniforms, Mat4.translation(0, 1, 0).times(Mat4.scale(0.2,0.2,0.2)), this.materials.plastic );
+    // this.shapes.box.draw( caller, this.uniforms, Mat4.translation(0, 0, 0).times(Mat4.scale(20,0.02,20)), this.materials.plastic );
   }
 
 

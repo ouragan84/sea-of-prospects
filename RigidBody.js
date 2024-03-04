@@ -5,95 +5,79 @@ const { vec3, vec4, color, Mat4, Shape, Material, Shader, Texture, Component } =
 export
 const RigidBody = defs.RigidBody =
 class RigidBody {
-    constructor(initalPos, initialVelocity, mass, scale, orientation, momentOfInertia) {
-        this.pos = initalPos || vec3(0,0,0)
-        this.vel = initialVelocity || vec3(0,0,0)
-        this.acc = vec3(0,0,0)
-        this.scale = scale || vec3(1,1,1)
+    constructor(mass=1, position = vec3(0, 1, 0), rotation = Mat4.identity(), scale = vec3(4,2,1), momentOfInertia = 1) {
+        this.position = position;
+        this.rotation = rotation; 
 
-        this.angularDragPercent = 0.95 // closer this is to 1, less energy lost to drag
+        this.velocity = vec3(0, 0, 0); 
+        this.angularVelocity = vec3(0, 0, 0);
 
-        this.angularVel = vec3(0, 0, 0); // Angular velocity in radians per second
-        this.angularAcc = vec3(0, 0, 0); // Angular acceleration
-        this.orientation = orientation || vec4(0, 0, 1, 0); // position equivalent of rotation
+        this.force = vec3(0, 0, 0);
+        this.torque = vec3(0, 0, 0); 
 
-        this.mass = mass || 1
-        this.transform = Mat4.translation(this.pos[0], this.pos[1], this.pos[2]).times(Mat4.scale(this.scale[0], this.scale[1], this.scale[2])).times(Mat4.rotation(this.orientation[0], this.orientation[1], this.orientation[2], this.orientation[3] ));
+        this.mass = mass
+        this.momentOfInertia = momentOfInertia
+        this.scale = scale
+    
         this.shapes = {
             'box'  : new defs.Cube()
         }
         this.def_mat = { shader: new defs.Phong_Shader(1), ambient: .3, diffusivity: 1, specularity: .5, color: color( .9,.1,.1,1 ) }
-
-        this.momentOfInertia = momentOfInertia;
-        // console.log(this.momentOfInertia)
     }
 
-    applyForce(f) {
-        this.acc = this.acc.plus(vec3(f[0] / this.mass, f[1] / this.mass, f[2] / this.mass))
+    // apply a force at a point in world coordinates
+    addForceAtPoint(force, point) {
+        this.force.add_by(force);
+        const torque = point.minus(this.position).cross(force);
+        this.torque.add_by(torque);
     }
 
-    applyTorque(torque) {
-        // let momentOfInertia = 5;
-        // let momentOfInertia = 10;
-        this.angularAcc = this.angularAcc.plus(torque.times(1 / this.momentOfInertia));
+    addForce(force) {
+        this.force.add_by(force);
     }
-    
-    applyForceAtPosition(force, position) {
-        // apply linear force
-        this.applyForce(force);
-    
-        // calc the vector from the center of mass to the point of force application
-        // the center of mass is at this.pos for simplicity
-        let r = position.minus(this.pos);
-    
-        // Calculate the torque: torque = r x F
-        let torque = r.cross(force);
-    
-        this.applyTorque(torque);
+
+    addTorque(torque) {
+        this.torque.add_by(torque);
     }
 
     update(dt) {
-        this.vel = this.vel.plus(this.acc.times(dt));
-        this.pos = this.pos.plus(this.vel.times(dt));
-    
-        // Angular motion updates
-        this.angularVel = this.angularVel.plus(this.angularAcc.times(dt));
-    
-        // Update orientation quaternion based on angular velocity
-        if (this.angularVel.norm() > 0) {
-            // Convert angular velocity to a quaternion
-            let angle = this.angularVel.norm() * dt;
-            let axis = this.angularVel.normalized();
-            let deltaOrientation = quaternionFromAngleAxis(angle, axis);
-    
-            // Multiply current orientation quaternion by deltaOrientation
-            this.orientation = quaternionMultiply(this.orientation, deltaOrientation);
-    
-            // Normalize the orientation quaternion to avoid scaling effects
-            this.orientation = normalizeQuaternion(this.orientation);
+        // linear motion
+        const acceleration = this.force.times(1 / this.mass);
+        this.velocity.add_by(acceleration.times(dt));
+        this.position.add_by(this.velocity.times(dt));
+
+        const angularAcceleration = this.torque.times(1 / this.momentOfInertia); // placeholder for inertia tensor calculation
+        this.angularVelocity.add_by(angularAcceleration.times(dt));
+        
+        // rotation matrix R using angular velocity omega
+        const omegaMat = new Mat4(
+            [0, -this.angularVelocity[2], this.angularVelocity[1], 0],
+            [this.angularVelocity[2], 0, -this.angularVelocity[0], 0],
+            [-this.angularVelocity[1], this.angularVelocity[0], 0, 0],
+            [0, 0, 0, 0]);
+        const rotationIncrement = this.rotation.times(omegaMat).times(dt); // R omega delta t
+        for (let i = 0; i < 3; i++) {
+            for (let j = 0; j < 3; j++) {
+                this.rotation[i][j] += rotationIncrement[i][j]; // Euler
+            }
         }
-    
-        this.transform = Mat4.translation(this.pos[0], this.pos[1], this.pos[2]).times(Mat4.rotation(this.orientation[0], this.orientation[1], this.orientation[2], this.orientation[3])).times(Mat4.scale(this.scale[0],this.scale[1],this.scale[2]))
-    
-        this.angularVel = this.angularVel.times(this.angularDragPercent);
-    
-        this.acc = vec3(0, 0, 0);
-        this.angularAcc = vec3(0, 0, 0);
+        this.rotation = normalizeColumns(this.rotation) // normalize to preserve orthagonality
+
+        // reset forces and torques
+        this.force = vec3(0, 0, 0);
+        this.torque = vec3(0, 0, 0);
     }
-    
+
+    getTransformationMatrix() {
+        return Mat4.translation(this.position[0], this.position[1], this.position[2]).pre_multiply(this.rotation).times(Mat4.scale(this.scale[0], this.scale[1], this.scale[2]));
+    }
 
     show(caller, uniforms) {
-        this.shapes.box.draw( caller, uniforms, this.transform, this.def_mat );
+        this.shapes.box.draw( caller, uniforms, this.getTransformationMatrix(), this.def_mat );
     }
 
     checkCollissionWithGroundPlane(ks, kd) {
-        if (this.pos[1] - 1 <= 0) {
-            let penetrationDepth = Math.min(1 - this.pos[1], 0.2);
-            let springForce = ks * penetrationDepth; // F = kx
-            let dampingForce = kd * (-this.vel[1]); // F = -kv
-            let groundForce = springForce + dampingForce;
-            this.applyForce(vec3(0,groundForce, 0));
-        }
+        // cheese
     }
 
 }
@@ -153,4 +137,22 @@ export function isPointInsideRigidBody(point, rigidBody) {
   function normalizeQuaternion(quaternion) {
     let norm = Math.sqrt(quaternion[0] * quaternion[0] + quaternion[1] * quaternion[1] + quaternion[2] * quaternion[2] + quaternion[3] * quaternion[3]);
     return vec4(quaternion[0] / norm, quaternion[1] / norm, quaternion[2] / norm, quaternion[3] / norm);
+  }
+
+  function normalizeColumns(mat) {
+    // Iterate over each column
+    for (let col = 0; col < mat[0].length; col++) {
+      // Compute the norm of the column
+      let norm = 0;
+      for (let row = 0; row < mat.length; row++) {
+        norm += mat[row][col] ** 2;
+      }
+      norm = Math.sqrt(norm);
+  
+      // Normalize each element in the column
+      for (let row = 0; row < mat.length; row++) {
+        mat[row][col] /= norm;
+      }
+    }
+    return mat;
   }
