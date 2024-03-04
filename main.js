@@ -80,18 +80,14 @@ const Part_one_hermite_base = defs.Part_one_hermite_base =
         this.materials.flag_tex = { shader: tex_phong, ambient: .3, texture: new Texture("assets/skull.png"),  diffusivity: 0.6, specularity: 0.5, color: color( 1, 1, 1 ,1 )}
         this.materials.cloth_tex = { shader: tex_phong, ambient: .3, texture: new Texture("assets/cloth.jpg"),  diffusivity: 0.6, specularity: 0.5, color: color( 1, 1, 1 ,1 )}
         this.materials.wood = { shader: tex_phong, ambient: .3, texture: new Texture("assets/wood.jpg"),  diffusivity: 0.7, specularity: 0.3, color: color( 1, 1, 1 ,1 )}
-        this.materials.ocean = { shader: phong, ambient: .3, diffusivity: 1, specularity: .5, color: color( 0,0.62,0.77,1 ) }
-        this.materials.oceanfloor = { shader: phong, ambient: .3, diffusivity: 1, specularity: .5, color: color( 0.5,0.5,0.5,1 ) }
         
         const oceanConfig = {
           initPos : vec3(0,0,0),
-          density : 200,
-          size : 100,
-          material: this.materials.ocean,
+          density : 100,
+          size : 50,
           floorDensity : 20,
           floorMinY : -10,
           floorMaxY : -9,
-          floorMaterial: this.materials.oceanfloor
         }
 
         this.ocean = new Ocean(oceanConfig)
@@ -283,7 +279,9 @@ export class Part_one_hermite extends Part_one_hermite_base
     super.render_animation( caller );
     const sea_blue = color( 0,0.62,0.77,1 ), whiteish = color( .9,.9,1,1 ), brown = color(139/255, 69/255, 19/255,1);
     const t = this.t = this.uniforms.animation_time/1000;
-    this.ocean.simulate(this.t, this.dt)
+    
+    this.ocean.apply_rb_offset(this.ship.rb);
+
     this.ocean.show(this.shapes, caller, this.uniforms, this.materials)
 
     this.ocean.applyWaterForceOnRigidBody(this.ship.rb, t, this.dt, caller, this.uniforms, this.shapes.ball, {...this.materials.plastic, color:color(1,0,0,1)}, this.materials.metal, this.horizontal_input, this.vertical_input)

@@ -231,11 +231,11 @@ class Ocean {
         this.shapes.floor.flat_shade();
     }
 
-    simulate(t, dt){
-        // for (let i = 0; i < this.points.length; i++){
-        //     this.points[i].prevPos = this.points[i].pos.copy();
-        //     this.points[i].pos = this.gersrnerWave.gersrnerWave(this.points[i].originalPos, t);
-        // }
+    apply_rb_offset(rigidBody){
+        if(!rigidBody.position || isNaN(rigidBody.position[0]) || isNaN(rigidBody.position[2]))
+            return;
+        this.ocean_offset = vec3(rigidBody.position[0], 0, rigidBody.position[2]);
+
     }
 
     applyWaterForceOnRigidBody(rigidBody, t, dt, caller, uniforms, sphere, mat1, mat2, horizontal_input, vertical_input){
@@ -425,13 +425,9 @@ export const Ocean_Shader = defs.Ocean_Shader =
         super(num_lights);
         this.gersrnerWave = wave_obj;
     }
- 
-    vertex_glsl_code () {           // ********* VERTEX SHADER *********
-        return this.shared_glsl_code () + `
-        attribute vec3 position, normal;                            // Position is expressed in object coordinates.
 
-        uniform mat4 model_transform;
-        uniform mat4 projection_camera_model_transform;
+    shared_glsl_code () {           // ********* SHARED CODE, INCLUDED IN BOTH SHADERS *********
+        return super.shared_glsl_code() + `
         uniform float time;
         uniform float offset_x;
         uniform float offset_z;
@@ -494,6 +490,15 @@ export const Ocean_Shader = defs.Ocean_Shader =
 
             return normalize(cross(rz, rx));
         }
+        `;
+    }
+ 
+    vertex_glsl_code () {           // ********* VERTEX SHADER *********
+        return this.shared_glsl_code () + `
+        attribute vec3 position, normal;                            // Position is expressed in object coordinates.
+
+        uniform mat4 model_transform;
+        uniform mat4 projection_camera_model_transform;
 
         void main() {        
             if (!has_initialized_vars){
@@ -512,13 +517,16 @@ export const Ocean_Shader = defs.Ocean_Shader =
             vertex_worldspace = ( model_transform * vec4( p, 1.0 ) ).xyz;
         } `;
     }
+
     fragment_glsl_code () {          // ********* FRAGMENT SHADER *********
         return this.shared_glsl_code () + `
-      void main() {                          
+      void main() {                        
+          // compute the normal for each pixel
+        //    vec3 norm = get_gersrner_wave_normal( vertex_worldspace, time, offset_x, offset_z );
                                          // Compute an initial (ambient) color:
           gl_FragColor = vec4( shape_color.xyz * ambient, shape_color.w );
                                          // Compute the final color with contributions from lights:
-          gl_FragColor.xyz += phong_model_lights( normalize( N ), vertex_worldspace );
+          gl_FragColor.xyz += phong_model_lights( normalize(N), vertex_worldspace );
         } `;
     }
       update_GPU (context, gpu_addresses, uniforms, model_transform, material) {
