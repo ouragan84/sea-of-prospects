@@ -5,7 +5,7 @@ const { vec3, vec4, color, Mat4, Shape, Material, Shader, Texture, Component } =
 export
 const RigidBody = defs.RigidBody =
 class RigidBody {
-    constructor(mass=1, position = vec3(0, 1, 0), rotation = Mat4.identity(), scale = vec3(4,2,1), momentOfInertia = 1) {
+    constructor(mass=1, position = vec3(5, 1, 5), rotation = Mat4.identity(), scale = vec3(1,1,1), momentOfInertia = 1) {
         this.position = position;
         this.rotation = rotation; 
 
@@ -62,14 +62,16 @@ class RigidBody {
             }
         }
         this.rotation = normalizeColumns(this.rotation) // normalize to preserve orthagonality
-
         // reset forces and torques
         this.force = vec3(0, 0, 0);
         this.torque = vec3(0, 0, 0);
     }
 
     getTransformationMatrix() {
-        return Mat4.translation(this.position[0], this.position[1], this.position[2]).pre_multiply(this.rotation).times(Mat4.scale(this.scale[0], this.scale[1], this.scale[2]));
+        let transformationMatrix = this.rotation;
+        transformationMatrix = transformationMatrix.times(Mat4.scale(this.scale[0], this.scale[1], this.scale[2])); // Apply scale
+        transformationMatrix = Mat4.translation(this.position[0], this.position[1], this.position[2]).times(transformationMatrix); // Apply translation last
+        return transformationMatrix;
     }
 
     show(caller, uniforms) {
