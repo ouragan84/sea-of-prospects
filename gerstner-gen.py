@@ -2,13 +2,13 @@
 # PASTE OUTPUT INTO Ocean.js, line 25
 # can do `python gerstner-gen.py | pbcopy` to copy directly to clipboard
 
-n = 10
-max_steepness = 0.5
+n = 20
+max_steepness = 0.4
 min_steepness = 0.01
 max_length = 20.0
 min_length = 0.1
-min_vel = 1.0
-max_vel = 20.0
+min_vel = 0.5
+max_vel = 5.0
 
 import random
 import math
