@@ -83,7 +83,7 @@ const Part_one_hermite_base = defs.Part_one_hermite_base =
         
         const oceanConfig = {
           initPos : vec3(0,0,0),
-          density : 100,
+          density : 50,
           size : 50,
           floorDensity : 20,
           floorMinY : -10,
