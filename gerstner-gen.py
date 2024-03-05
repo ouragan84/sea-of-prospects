@@ -55,12 +55,12 @@ for center in rand_centers:
 str_out = ""
 
 str_out += "this.n = " + str(n) + ";\n"
-str_out += "this.s = [" + ", ".join([str(w[0]) for w in waves]) + "];\n"
-str_out += "this.l = [" + ", ".join([str(w[1]) for w in waves]) + "];\n"
-str_out += "this.v = [" + ", ".join([str(w[2]) for w in waves]) + "];\n"
-str_out += "this.dir = ["
+str_out += "\t\tthis.s = [" + ", ".join([str(w[0]) for w in waves]) + "];\n"
+str_out += "\t\tthis.l = [" + ", ".join([str(w[1]) for w in waves]) + "];\n"
+str_out += "\t\tthis.v = [" + ", ".join([str(w[2]) for w in waves]) + "];\n"
+str_out += "\t\tthis.dir = [\n"
 for w in waves:
-    str_out += "vec3(" + str(w[3]) + ", 0, " + str(w[4]) + "),\n"
-str_out += "];"
+    str_out += "\t\t\tvec3(" + str(w[3]) + ", 0, " + str(w[4]) + "),\n"
+str_out += "\t\t];"
 
 print(str_out)
