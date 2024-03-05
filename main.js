@@ -246,7 +246,7 @@ export class Part_one_hermite extends Part_one_hermite_base
     this.ship.update(this.t, this.dt, vec3(0,0,-20))
     this.ship.show(caller, this.uniforms)
 
-    // this.skybox.show(caller, this.uniforms, vec3(0,0,0), 10);
+    this.skybox.show(caller, this.uniforms, vec3(this.currentX, this.currentY, this.currentZ), this.render_distance);
     
 
     // let y = this.ocean.gersrnerWave.solveForY(5,5,this.t);

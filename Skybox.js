@@ -9,15 +9,15 @@ export const Skybox
 
         this.shape = new defs.Subdivision_Sphere(4);
         this.shader = new Skybox_Shader(this.top_color, this.bottom_color); 
-        this.material = {shader: new defs.Phong_Shader(1), ambient: 1, diffusivity: 0, specularity: 0, smoothness: 0, texture: null};
+        this.material = {shader: this.shader, ambient: 1, diffusivity: 0, specularity: 0, smoothness: 0, texture: null};
     }
 
     show(context, uniforms, camera_position, camera_distance) {
         const epsilon = 0.1;
-        const model_transform = Mat4.translation(camera_position).times(Mat4.scale([camera_distance-epsilon, camera_distance-epsilon, camera_distance-epsilon]));
+        const model_transform = Mat4.translation(camera_position[0], camera_position[1], camera_position[2]).times(Mat4.scale(camera_distance-epsilon, camera_distance-epsilon, camera_distance-epsilon));
         this.shape.draw(context, uniforms, model_transform, {... this.material});
 
-        // console.log(model_transform);
+        // console.log(Mat4.translation(camera_position));
     }
 }
 
@@ -60,8 +60,13 @@ const Skybox_Shader =
         //   gl_FragColor = vec4( shape_color.xyz * ambient, shape_color.w );
         //   gl_FragColor.xyz += phong_model_lights( normalize(N), vertex_worldspace );
         
-        // find angle of pixel along the sphere, shade in the interpolated color for now just top and bottom color
-        gl_FragColor = top_color;
+        // theta = acos(N.y);
+
+        float theta = acos(N.y);
+        vec4 color = mix(top_color, bottom_color, theta/3.14159);
+        gl_FragColor = vec4( color.xyz, 1.0 );
+        
+
         } `;
     }
       update_GPU (context, gpu_addresses, uniforms, model_transform, material) {
