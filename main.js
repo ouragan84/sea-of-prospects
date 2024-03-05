@@ -4,6 +4,8 @@ import {Shape_From_File}  from './examples/obj-file-demo.js';
 import { Ocean, Ocean_Shader } from './Ocean.js';
 import { RigidBody, isPointInsideRigidBody } from './RigidBody.js';
 import { Ship } from './ship.js';
+import { Skybox } from './Skybox.js';
+
 
 const { vec3, vec4, color, Mat4, Shape, Material, Shader, Texture, Component } = tiny;
 
@@ -109,6 +111,9 @@ const Part_one_hermite_base = defs.Part_one_hermite_base =
 
         this.rb = new RigidBody();
 
+        this.skybox = new Skybox({top_color: color(.2,.8,1,1), bottom_color: color(1,1,1,1)});
+
+        this.render_distance = 100;
       }
 
       getMousePos(canvas, evt) {
@@ -131,62 +136,14 @@ const Part_one_hermite_base = defs.Part_one_hermite_base =
 
           return vec3(x,y,z)
       }
-
-      forward_pressed()
-      {
-        this.vertical_input = 1;
-        // console.log('Forward Pressed', this.vertical_input)
-      }
-
-      forward_released()
-      {
-        this.vertical_input = 0;
-        // console.log('Forward Released', this.vertical_input)
-      }
-
-      bottom_pressed()
-      {
-        this.vertical_input = -1;
-        // console.log('Bottom Pressed', this.vertical_input)
-      }
-
-      bottom_released()
-      {
-        this.vertical_input = 0;
-        // console.log('Bottom Released', this.vertical_input)
-      }
-
-      left_pressed()
-      {
-        this.horizontal_input = -1;
-        // console.log('Left Pressed', this.horizontal_input)
-      }
-
-      left_released()
-      {  
-        this.horizontal_input = 0;
-        // console.log('Left Released', this.horizontal_input)
-      }
-
-      right_pressed()
-      {
-        this.horizontal_input = 1;
-        // console.log('Right Pressed', this.horizontal_input)
-      }
-
-      right_released()
-      {
-        this.horizontal_input = 0;
-        // console.log('Right Released', this.horizontal_input)
-      }
        
       render_controls () {
         this.control_panel.innerHTML += "Click and drag the scene to <br> spin your viewpoint around it.<br>";
-        this.key_triggered_button ("Forward", ["w"], () => this.forward_pressed(), undefined, () => this.forward_released());
-        this.key_triggered_button ("Right", ["d"], () => this.right_pressed(), undefined, () => this.right_released());
+        this.key_triggered_button ("Forward", ["w"], () => this.vertical_input = 1, undefined, () => this.vertical_input = 0);
+        this.key_triggered_button ("Right", ["d"], () => this.horizontal_input = 1, undefined, () => this.horizontal_input = 0);
         this.new_line ();
-        this.key_triggered_button ("Bottom", ["s"], () => this.bottom_pressed(), undefined, () => this.bottom_released());
-        this.key_triggered_button ("Left", ["a"], () => this.left_pressed(), undefined, () => this.left_released());
+        this.key_triggered_button ("Bottom", ["s"], () => this.vertical_input = -1, undefined, () => this.vertical_input = 0);
+        this.key_triggered_button ("Left", ["a"], () => this.horizontal_input = -1, undefined, () => this.horizontal_input = 0);
       }
 
       render_animation( caller )
@@ -220,7 +177,7 @@ const Part_one_hermite_base = defs.Part_one_hermite_base =
         // Assign the interpolated position to the camera
         Shader.assign_camera(Mat4.look_at(vec3(newX, newY, newZ), vec3(0,0,0), vec3(0, 1, 0)), this.uniforms);
 
-        this.uniforms.projection_transform = Mat4.perspective( Math.PI/4, caller.width/caller.height, 1, 100 );
+        this.uniforms.projection_transform = Mat4.perspective( Math.PI/4, caller.width/caller.height, 0.1, this.render_distance);
 
         const angle = Math.sin( t );
 
@@ -286,8 +243,10 @@ export class Part_one_hermite extends Part_one_hermite_base
 
     this.ocean.applyWaterForceOnRigidBody(this.ship.rb, t, this.dt, caller, this.uniforms, this.shapes.ball, {...this.materials.plastic, color:color(1,0,0,1)}, this.materials.metal, this.horizontal_input, this.vertical_input)
 
-    this.ship.update(this.t, this.dt)
+    this.ship.update(this.t, this.dt, vec3(0,0,-20))
     this.ship.show(caller, this.uniforms)
+
+    // this.skybox.show(caller, this.uniforms, vec3(0,0,0), 10);
     
 
     // let y = this.ocean.gersrnerWave.solveForY(5,5,this.t);

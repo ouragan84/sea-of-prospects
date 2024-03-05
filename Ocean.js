@@ -59,8 +59,6 @@ export class GerstnerWave{
 			vec3(0.8804761544259202, 0, 0.4740904359796168),
 		];
 
-
-
         for (let i = 0; i < this.n; i++){
             this.dir[i] = this.dir[i].normalized();
         }
@@ -273,13 +271,13 @@ class Ocean {
         const friction_coef_h = .9;
         const air_drag_coef = .2;
         const air_friction_coef = .1;
-        const torque_coef = 6000;
+        const torque_coef = 8000;
         const angular_drag_coef = 1200;
         const angular_friction_coef = 10;
         const air_angular_drag_coef = 100;
         const air_angular_friction_coef = 5;
-        const coef_force_applied = 4000;
-        const coef_torque_applied = 500;
+        const coef_force_applied = 6000;
+        const coef_torque_applied = 700;
         const max_ang_speed = 10;
 
         rigidBody.addForce(vec3(0, -gravity * rigidBody.mass, 0));
@@ -321,9 +319,15 @@ class Ocean {
         rigidBody.addForce(vertical_force);
 
         // Apply torque to make the boat align with the ocean normal
+
+        const clamp = (num, min, max) =>  (num <= min ? min : num >= max ? max : num);
+
+        const torque_towards_up = boat_normal.cross(vec3(0, 1, 0)).times( angle * 4000);
+        rigidBody.addTorque(torque_towards_up);
+
         if(percent_submerged > 0){
-            const torque = boat_normal.cross(ocean_normal).times(angle * torque_coef);
-            rigidBody.addTorque(torque);
+            const torque_towards_ocean_normal = boat_normal.cross(ocean_normal).times( angle * 5000);
+            rigidBody.addTorque(torque_towards_ocean_normal);
 
             // Apply torque for horizontal input
             const horizontal_torque = vec3(0, - horizontal_input * coef_torque_applied, 0);
@@ -349,15 +353,12 @@ class Ocean {
                 rigidBody.addTorque(air_angular_friction);
             }
         }
-        
+
 
         // limit the angular velocity to max_ang_speed
         if(rigidBody.angularVelocity.norm() > max_ang_speed){
             rigidBody.angularVelocity = rigidBody.angularVelocity.normalized().times(max_ang_speed);
         }
-
-        
-        
     }
 
     point_to_coord(i, gridSize){

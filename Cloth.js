@@ -133,9 +133,13 @@ class Cloth {
         
     }
 
-    simulate(t, dt) {
+    simulate(t, dt, wind) {
         const numOfIterations = 5
         const gravity = 9.8
+        const magnitude_noise = 10
+        const direction_noise = 1
+
+
         // const points = shuffle(this.points);
         const points = this.points
         for(let i = 0; i < points.length; i++){
@@ -144,7 +148,23 @@ class Cloth {
             points[i].pos = points[i].pos.plus(points[i].pos.minus(points[i].prevPos));
             points[i].pos = points[i].pos.plus(vec3(0,-gravity * dt * dt, 0));
             // points[i].pos = points[i].pos.plus(vec3(-100 * (Math.random()-0.2) * dt * dt,0, Math.sin(t) * 0.005));
-            points[i].pos = points[i].pos.plus(vec3(Math.sin(t) * 0.005, 0, -100 * (Math.random()-0.2) * dt * dt));
+            // points[i].pos = points[i].pos.plus(vec3(Math.sin(t) * 0.005, 0, -100 * (Math.random()-0.2) * dt * dt));
+
+            const mags_noise = (Math.random() - 0.5) * magnitude_noise
+
+            // direction noise
+            const dir = wind.normalized();
+            const dir_noise = vec3(
+              (Math.random() - 0.5) * direction_noise,
+              (Math.random() - 0.5) * direction_noise,
+              (Math.random() - 0.5) * direction_noise
+            );
+
+            const force = dir.plus(dir_noise).times(mags_noise + wind.norm());
+
+            // console.log(force)
+
+            points[i].pos = points[i].pos.plus(force.times(dt * dt));
 
             points[i].prevPos = initPos;
           }

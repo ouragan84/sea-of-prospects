@@ -60,15 +60,17 @@ class Ship {
     this.boatoffset = vec3(0,.6,.2)
 
     this.rb = new RigidBody(2000, init_pos, Mat4.identity(), vec3(1.7,1.2,4), 100);
+    // this.rb = new RigidBody(2000, init_pos, Mat4.identity(), vec3(1.7,2,4), 100);
+
 
     this.offsetMat = Mat4.translation(this.boatoffset[0], this.boatoffset[1], this.boatoffset[2])
     .times(Mat4.scale(this.boatscale[0]/this.rb.scale[0], this.boatscale[1]/this.rb.scale[1], this.boatscale[2]/this.rb.scale[2]))
   }
 
-  update(t, dt){
-    this.sail.simulate(t, dt)
-    this.flag.simulate(t, dt)
-    this.sail2.simulate(t, dt)
+  update(t, dt, wind){
+    this.sail.simulate(t, dt, wind)
+    this.flag.simulate(t, dt, wind)
+    this.sail2.simulate(t, dt, wind)
 
     // this.rb.applyForce(vec3(0,-gravity * this.rb.mass, 0)) 
     this.rb.update(dt)
@@ -90,7 +92,7 @@ class Ship {
     this.shapes.ship.draw( caller, uniforms, this.rb.getTransformationMatrix().times(this.offsetMat), this.materials.wood );
 
     // draw rigid body
-    // this.shapes.box.draw( caller, uniforms, this.rb.transform, this.materials.plastic );
+    // this.shapes.box.draw( caller, uniforms, this.rb.getTransformationMatrix(), this.materials.plastic );
   }
 
   computeSail1anchors(){
