@@ -130,8 +130,6 @@ export class GerstnerWave{
             dirInit: dirInit
         }
     }
-    
-
 
     solveForY(x, z, t){
         // solve for y at a given x, z, and t.
@@ -213,7 +211,7 @@ class Ocean {
 
     }
 
-    applyWaterForceOnRigidBody(rigidBody, t, dt, caller, uniforms, sphere, mat1, mat2, horizontal_input, vertical_input){
+    applyWaterForceOnRigidBody(rigidBody, t, dt, horizontal_input, vertical_input, wind){
 
         // const transform = Mat4.translation(rigidBody.pos[0], rigidBody.pos[1], rigidBody.pos[2]).times(Mat4.scale(rigidBody.scale[0],rigidBody.scale[1],rigidBody.scale[2])).times(Mat4.rotation(rigidBody.orientation[0], rigidBody.orientation[1], rigidBody.orientation[2], rigidBody.orientation[3]));
         const corner1_boat = rigidBody.getTransformationMatrix().times(vec4(-1, 1, 1, 1)).to3();

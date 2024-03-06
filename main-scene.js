@@ -28,7 +28,7 @@ import {Text_Demo}
 import {Transforms_Sandbox_Base, Transforms_Sandbox}
     from "./examples/transforms-sandbox.js";
 
-import {Part_one_hermite} from "./main.js";
+import {Sea_Of_Prospects_Scene} from "./main.js";
 
 Object.assign (defs,
     {Minimal_Webgl_Demo},
@@ -41,15 +41,15 @@ Object.assign (defs,
     {Scene_To_Texture_Demo},
     {Text_Demo},
     {Transforms_Sandbox_Base, Transforms_Sandbox},
-    {Part_one_hermite},
+    {Sea_Of_Prospects_Scene},
 );
 
 // ******************** SELECT THE DEMO TO DISPLAY:
 
-let scenes = {1: Part_one_hermite};
+let scenes = {1: Sea_Of_Prospects_Scene};
 const scene_selector = (i) => scenes[i];
 
-const main_scene        = Part_one_hermite; // default
+const main_scene        = Sea_Of_Prospects_Scene; // default
 const additional_scenes = [];
 
 export {main_scene, scene_selector, additional_scenes, defs};
