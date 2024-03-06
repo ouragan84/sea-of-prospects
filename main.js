@@ -1,13 +1,9 @@
-import { Cloth } from './Cloth.js';
 import {tiny, defs} from './examples/common.js';
-import {Shape_From_File}  from './examples/obj-file-demo.js';
-import { Ocean, Ocean_Shader } from './Ocean.js';
-import { RigidBody, isPointInsideRigidBody } from './RigidBody.js';
+import { Ocean } from './Ocean.js';
 import { Ship } from './ship.js';
 import { Skybox } from './Skybox.js';
 
-
-const { vec3, vec4, color, Mat4, Shape, Material, Shader, Texture, Component } = tiny;
+const { vec3, vec4, color, Mat4, Shader, Texture, Component } = tiny;
 
 export class Sea_Of_Prospects_Scene extends Component
 {       
@@ -26,16 +22,6 @@ export class Sea_Of_Prospects_Scene extends Component
     this.vertical_input = 0;
     this.horizontal_input = 0;
 
-    const phong = new defs.Phong_Shader(1);
-    const tex_phong = new defs.Textured_Phong(1);
-    this.materials = {};
-    this.materials.plastic = { shader: phong, ambient: .3, diffusivity: 1, specularity: .5, color: color( .9,.5,.9,1 )}
-    this.materials.shiny = { shader: phong, ambient: .3, diffusivity: 1, specularity: .9, color: color( .9,.5,.9,1 ) }
-    this.materials.metal   = { shader: phong, ambient: .3, diffusivity: 1, specularity:  1, color: color( .9,.5,.9,1 ) }
-    this.materials.flag_tex = { shader: tex_phong, ambient: .3, texture: new Texture("assets/skull.png"),  diffusivity: 0.6, specularity: 0.5, color: color( 1, 1, 1 ,1 )}
-    this.materials.cloth_tex = { shader: tex_phong, ambient: .3, texture: new Texture("assets/cloth.jpg"),  diffusivity: 0.6, specularity: 0.5, color: color( 1, 1, 1 ,1 )}
-    this.materials.wood = { shader: tex_phong, ambient: .3, texture: new Texture("assets/wood.jpg"),  diffusivity: 0.7, specularity: 0.3, color: color( 1, 1, 1 ,1 )}
-    
     const oceanConfig = {
       initPos : vec3(0,0,0),
       density : 200,
@@ -151,7 +137,7 @@ export class Sea_Of_Prospects_Scene extends Component
 
     this.ocean.apply_rb_offset(this.ship.rb);
 
-    this.ocean.show(this.shapes, caller, this.uniforms, this.materials)
+    this.ocean.show(this.shapes, caller, this.uniforms)
 
     this.update_wind();
     this.ocean.applyWaterForceOnRigidBody(this.ship.rb, t, this.dt, this.horizontal_input, this.vertical_input, this.wind)
