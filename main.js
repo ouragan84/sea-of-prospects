@@ -9,50 +9,6 @@ import { Skybox } from './Skybox.js';
 
 const { vec3, vec4, color, Mat4, Shape, Material, Shader, Texture, Component } = tiny;
 
-const gravity = defs.gravity = 9.8
-
-class Keyboard_Manager {
-  // See description at:
-  // https://github.com/encyclopedia-of-code/tiny-graphics-js/wiki/tiny-graphics-gui.js#keyboard_manager
-  constructor (target = document, callback_behavior = (callback, event) => callback (event)) {
-      this.saved_controls        = {};
-      this.actively_pressed_keys = new Set ();
-      this.callback_behavior     = callback_behavior;
-      target.addEventListener ("keydown", this.key_down_handler.bind (this));
-      target.addEventListener ("keyup", this.key_up_handler.bind (this));
-      // Deal with stuck keys during focus change:
-      window.addEventListener ("focus", () => this.actively_pressed_keys.clear ());
-  }
-  key_down_handler (event) {
-      if (["INPUT", "TEXTAREA"].includes (event.target.tagName)) return;    // Don't interfere with typing.
-      this.actively_pressed_keys.add (event.key);                              // Track the pressed key.
-      for (let saved of Object.values (this.saved_controls)) {         // Re-check all the keydown handlers.
-          if (saved.shortcut_combination.every (s => this.actively_pressed_keys.has (s))
-              && event.ctrlKey === saved.shortcut_combination.includes ("Control")
-              && event.shiftKey === saved.shortcut_combination.includes ("Shift")
-              && event.altKey === saved.shortcut_combination.includes ("Alt")
-              && event.metaKey === saved.shortcut_combination.includes ("Meta"))  // Modifiers must exactly match.
-              this.callback_behavior (saved.callback, event);       // The keys match, so fire the callback.
-      }
-  }
-  key_up_handler (event) {
-      const lower_symbols = "qwertyuiopasdfghjklzxcvbnm1234567890-=[]\\;',./",
-            upper_symbols = "QWERTYUIOPASDFGHJKLZXCVBNM!@#$%^&*()_+{}|:\"<>?";
-
-      const lifted_key_symbols = [event.key, upper_symbols[ lower_symbols.indexOf (event.key) ],
-                                  lower_symbols[ upper_symbols.indexOf (event.key) ]];
-      // Call keyup for any shortcuts
-      for (let saved of Object.values (this.saved_controls))                          // that depended on the released
-          if (lifted_key_symbols.some (s => saved.shortcut_combination.includes (s)))  // key or its shift-key counterparts.
-              this.callback_behavior (saved.keyup_callback, event);                  // The keys match, so fire the
-                                                                                     // callback.
-      lifted_key_symbols.forEach (k => this.actively_pressed_keys.delete (k));
-  }
-  add (shortcut_combination, callback = () => {}, keyup_callback = () => {}) {
-      this.saved_controls[ shortcut_combination.join ('+') ] = {shortcut_combination, callback, keyup_callback};
-  }
-}
-
 export
 const Part_one_hermite_base = defs.Part_one_hermite_base =
     class Part_one_hermite_base extends Component
@@ -74,7 +30,6 @@ const Part_one_hermite_base = defs.Part_one_hermite_base =
 
         const phong = new defs.Phong_Shader(1);
         const tex_phong = new defs.Textured_Phong(1);
-        const bump = new defs.Fake_Bump_Map(1);
         this.materials = {};
         this.materials.plastic = { shader: phong, ambient: .3, diffusivity: 1, specularity: .5, color: color( .9,.5,.9,1 )}
         this.materials.shiny = { shader: phong, ambient: .3, diffusivity: 1, specularity: .9, color: color( .9,.5,.9,1 ) }
@@ -111,7 +66,7 @@ const Part_one_hermite_base = defs.Part_one_hermite_base =
 
         this.rb = new RigidBody();
 
-        this.skybox = new Skybox({top_color: color(.2,.8,1,1), bottom_color: color(1,1,1,1)});
+        this.skybox = new Skybox({default_color: color(1,1,1,1), texture: new Texture("assets/skybox2.jpg")});
 
         this.render_distance = 100;
       }

@@ -4,12 +4,11 @@ const { vec3, vec4, color, Mat4, Shape, Material, Shader, Texture, Component, Ma
 export const Skybox 
 = class Skybox {
     constructor(config) {
-        this.top_color = config.top_color;
-        this.bottom_color = config.bottom_color;
+        this.default_color = config.default_color;
+        this.texture = config.texture;
 
-        this.shape = new defs.Subdivision_Sphere(4, this.top_color);
-        this.texture = new Texture("assets/skybox.jpg");
-        this.shader = new Skybox_Shader(1); 
+        this.shape = new defs.Subdivision_Sphere(4);
+        this.shader = new Skybox_Shader(1, this.default_color, 1.79495559215, 0.4, 0.5); 
         this.material = {shader: this.shader, texture: this.texture };
     }
 
@@ -22,9 +21,13 @@ export const Skybox
 
 const Skybox_Shader =
   class Skybox_Shader extends defs.Phong_Shader {
-        constructor(num_lights=2, default_color = color(1,1,1,1)) {
+        constructor(num_lights=2, default_color, angle_from_top, radius_blend_start, radius_blend_end) {
             super(num_lights);
             this.default_color = `vec4(${default_color[0]}, ${default_color[1]}, ${default_color[2]}, ${default_color[3]})`;
+            this.angle_from_top = angle_from_top;
+            this.radius_blend_start = radius_blend_start;
+            this.radius_blend_end = radius_blend_end;
+
         }
 
 
@@ -50,7 +53,12 @@ const Skybox_Shader =
 
         #define PI 3.1415926535897932384626433832795
 
+        float angle_from_top = ${this.angle_from_top};
+
         vec4 default_color = ${this.default_color};
+
+        float radius_blend_start = ${this.radius_blend_start};
+        float radius_blend_end = ${this.radius_blend_end};
 
         void main() {
             vec3 direction = normalize(vertex_worldspace);
@@ -59,7 +67,8 @@ const Skybox_Shader =
             float phi = atan(direction.z, direction.x);
             float theta = acos(direction.y);
 
-            float radius = theta / (2.0 * PI);
+            // when theta = angle_from_top, radius = 0.5
+            float radius = theta / (2.0 * angle_from_top);
 
             // (u,v) is point on the circle centered at (0.5, 0.5) with radius calculated above, with angle phi
             float u = radius * cos(phi) + 0.5;
@@ -67,7 +76,17 @@ const Skybox_Shader =
             
             // Sample the texture
             vec4 tex_color;
-            tex_color = texture2D(texture, vec2(u, v)); // Sample the texture at the calculated UV coordinates
+
+            if (radius >= radius_blend_end) {
+                tex_color = default_color;
+            } else {
+                tex_color = texture2D(texture, vec2(u, v)); // Sample the texture at the calculated UV coordinates
+
+                if (radius > radius_blend_start) {
+                    float blend = (radius - radius_blend_start) / (radius_blend_end - radius_blend_start);
+                    tex_color = mix(tex_color, default_color, blend);
+                }
+            }
             
             gl_FragColor = tex_color;
           } `;
