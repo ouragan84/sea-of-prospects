@@ -2,47 +2,6 @@ import {tiny, defs} from './examples/common.js';
 
 const { vec3, vec4, color, Mat4, Shape, Material, Shader, Texture, Component } = tiny;
 
-export
-const Line = defs.Line =
-class Line{
-    constructor() {
-      this.material = {
-        shader: new defs.Phong_Shader(),
-        ambient: 1.0,
-        color: color(1, 0, 0, 1)
-      };
-  
-      this.shapes = { 'box'  : new defs.Cube() };
-    }
-  
-    draw(webgl_manager, uniforms, a, b, line_thickness) {
-      const midpoint = a.plus(b).times(0.5);
-      const direction = b.minus(a);
-      const length = direction.norm();
-      const directionNormalized = direction.normalized();
-
-      const zAxis = vec3(0, 0, 1);
-
-      // updated rotation axis calc (perp to both dir and z) based on x axis
-      let rotationAxis = zAxis.cross(directionNormalized);
-      if (rotationAxis.norm() === 0) { 
-        rotationAxis = vec3(1, 0, 0); 
-      } else {
-        rotationAxis = rotationAxis.normalized();
-      }
-
-      const angle = Math.acos(directionNormalized.dot(zAxis));
-      const scaleFactors = vec3(line_thickness, line_thickness, length / 2);
-
-      this.transform = Mat4.identity()
-        .times(Mat4.translation(...midpoint))
-        .times(Mat4.rotation(angle, ...rotationAxis))
-        .times(Mat4.scale(...scaleFactors));
-
-      this.shapes.box.draw(webgl_manager, uniforms, this.transform, this.material);
-    }
-  }
-  
 
 class Point{
     constructor(pos){
@@ -50,16 +9,7 @@ class Point{
         this.prevPos = pos
         this.locked = false;
         this.r = 0.1;
-
-        // const phong = new defs.Phong_Shader( 1 );
-        // this.materials = {};
-        // this.materials.plastic = { shader: phong, ambient: 1, diffusivity: 0, specularity: 0, color: color( .9,.5,.9,1 ) }
     }
-
-    // show(shapes, caller, uniforms, mat) {       
-    //     let transform = Mat4.identity().times(Mat4.translation(this.pos[0], this.pos[1], this.pos[2])).times(Mat4.scale(this.r, this.r, this.r)); 
-    //     shapes.ball.draw( caller, uniforms, transform, {...this.materials.plastic, color: this.locked ? color(0, 0, 1, 1.0) : color(0.9,0.9,1,1.0)});
-    // }
 }
 
 class Segment{
@@ -67,12 +17,7 @@ class Segment{
         this.a = a;
         this.b = b;
         this.length = dist3D(this.a.pos, this.b.pos);
-        // this.line = new Line();
     }
-
-    // show(caller, uniforms){
-    //     this.line.draw(caller, uniforms, this.a.pos, this.b.pos, 0.02)
-    // }
 
 }
 
