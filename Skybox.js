@@ -7,69 +7,79 @@ export const Skybox
         this.top_color = config.top_color;
         this.bottom_color = config.bottom_color;
 
-        this.shape = new defs.Subdivision_Sphere(4);
-        this.shader = new Skybox_Shader(this.top_color, this.bottom_color); 
-        this.material = {shader: this.shader, ambient: 1, diffusivity: 0, specularity: 0, smoothness: 0, texture: null};
+        this.shape = new defs.Subdivision_Sphere(4, this.top_color);
+        this.texture = new Texture("assets/skybox.jpg");
+        this.shader = new Skybox_Shader(1); 
+        this.material = {shader: this.shader, texture: this.texture };
     }
 
     show(context, uniforms, camera_position, camera_distance) {
         const epsilon = 0.1;
         const model_transform = Mat4.translation(camera_position[0], camera_position[1], camera_position[2]).times(Mat4.scale(camera_distance-epsilon, camera_distance-epsilon, camera_distance-epsilon));
         this.shape.draw(context, uniforms, model_transform, {... this.material});
-
-        // console.log(Mat4.translation(camera_position));
     }
 }
 
 const Skybox_Shader =
-  class Skybox_Shader  extends defs.Phong_Shader {
+  class Skybox_Shader extends defs.Phong_Shader {
+        constructor(num_lights=2, default_color = color(1,1,1,1)) {
+            super(num_lights);
+            this.default_color = `vec4(${default_color[0]}, ${default_color[1]}, ${default_color[2]}, ${default_color[3]})`;
+        }
 
-    constructor(top_color, bottom_color) {
-        super();
-        this.top_color = `vec4(${top_color[0]}, ${top_color[1]}, ${top_color[2]}, 1.0)`; // `vec4(0.0, 0.0, 0.0, 1.0)`
-        this.bottom_color = `vec4(${bottom_color[0]}, ${bottom_color[1]}, ${bottom_color[2]}, 1.0)`; // `vec4(0.0, 0.0, 0.0, 1.0)`
-    }
 
-    shared_glsl_code () {           // ********* SHARED CODE, INCLUDED IN BOTH SHADERS *********
-        return super.shared_glsl_code() + `
-        vec4 top_color = ${this.top_color};
-        vec4 bottom_color = ${this.bottom_color};
-        `;
-    }
- 
-    vertex_glsl_code () {           // ********* VERTEX SHADER *********
-        return this.shared_glsl_code () + `
+      vertex_glsl_code () {         // ********* VERTEX SHADER *********
+          return this.shared_glsl_code () + `
         attribute vec3 position, normal;                            // Position is expressed in object coordinates.
+
         uniform mat4 model_transform;
         uniform mat4 projection_camera_model_transform;
 
-        void main() {        
-
+        void main() {
             gl_Position = projection_camera_model_transform * vec4( position, 1.0 );     // Move vertex to final space.
-                                            // The final normal vector in screen space.
-
+                                              // The final normal vector in screen space.
             N = normalize( mat3( model_transform ) * normal / squared_scale);
 
             vertex_worldspace = ( model_transform * vec4( position, 1.0 ) ).xyz;
-        } `;
-    }
+                                              // Turn the per-vertex texture coordinate into an interpolated variable.
+          } `;
+      }
+      fragment_glsl_code () {        // ********* FRAGMENT SHADER *********
+          return this.shared_glsl_code () + `
+        uniform sampler2D texture;
 
-    fragment_glsl_code () {          // ********* FRAGMENT SHADER *********
-        return this.shared_glsl_code () + `
-      void main() {
-        //   gl_FragColor = vec4( shape_color.xyz * ambient, shape_color.w );
-        //   gl_FragColor.xyz += phong_model_lights( normalize(N), vertex_worldspace );
-        
-        // theta = acos(N.y);
+        #define PI 3.1415926535897932384626433832795
 
-        float theta = acos(N.y);
-        vec4 color = mix(top_color, bottom_color, theta/3.14159);
-        gl_FragColor = vec4( color.xyz, 1.0 );
-        
+        vec4 default_color = ${this.default_color};
 
-        } `;
-    }
+        void main() {
+            vec3 direction = normalize(vertex_worldspace);
+
+            // Calculate spherical coordinates
+            float phi = atan(direction.z, direction.x);
+            float theta = acos(direction.y);
+
+            float radius = theta / (2.0 * PI);
+
+            // (u,v) is point on the circle centered at (0.5, 0.5) with radius calculated above, with angle phi
+            float u = radius * cos(phi) + 0.5;
+            float v = radius * sin(phi) + 0.5;
+            
+            // Sample the texture
+            vec4 tex_color;
+            tex_color = texture2D(texture, vec2(u, v)); // Sample the texture at the calculated UV coordinates
+            
+            gl_FragColor = tex_color;
+          } `;
+      }
       update_GPU (context, gpu_addresses, uniforms, model_transform, material) {
           super.update_GPU(context, gpu_addresses, uniforms, model_transform, material);
+
+          if (material.texture && material.texture.ready) {
+              // Select texture unit 0 for the fragment shader Sampler2D uniform called "texture":
+              context.uniform1i (gpu_addresses.texture, 0);
+              // For this draw, use the texture image from the correct GPU buffer:
+              material.texture.activate(context, 0);
+          }
       }
   };
