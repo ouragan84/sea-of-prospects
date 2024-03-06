@@ -65,7 +65,6 @@ export class GerstnerWave{
     }
 
     gersrnerWave(pos, t){
-
         let new_pos = vec3(pos[0], pos[1], pos[2]);
         
         for (let i = 0; i < this.n; i++){
@@ -82,7 +81,6 @@ export class GerstnerWave{
         }
 
         return new_pos;
-
     }
 
     gersrnerWaveNormal(pos, t){
@@ -107,7 +105,6 @@ export class GerstnerWave{
                 - d[2] * d[2] * a * k * Math.sin(f)
             ));
         }
-
 
         return rz.cross(rx).normalized();
     }
@@ -171,25 +168,13 @@ class Ocean {
     constructor(config) {
         this.pos = config.initPos;
         this.density = config.density
-        this.spacing = config.size / this.density
-        // this.material = config.material;
-        // this.floorMaterial = config.floorMaterial;
-        this.floorMinY = config.floorMinY;
-        this.floorMaxY = config.floorMaxY;
-        this.floorDensity = config.floorDensity;
-        this.floorSpacing = config.size / this.floorDensity;
-        // this.wave_amplitude = config.wave_amplitude;
-
+        this.spacing = config.size / this.density;
         this.gersrnerWave = new GerstnerWave();
 
-        console.log(this.gersrnerWave.get_glsl_strings())
-
-        const ocean = new Ocean_Shader(1, this.gersrnerWave.get_glsl_strings());
-        const floor = new defs.Phong_Shader(1);
+        const ocean_shader = new Ocean_Shader(1, this.gersrnerWave.get_glsl_strings());
 
         this.materials = {};
-        this.materials.ocean = { shader: ocean, ambient: 0.3, diffusivity: .3, specularity: .9, color: color( .35,.8,.95,1 ) }
-        this.materials.floor = { shader: floor, ambient: 0.3, diffusivity: .5, specularity: .4, color: color( .5,.5,.5,1 ) }
+        this.materials.ocean = { shader: ocean_shader, ambient: 0.3, diffusivity: .3, specularity: .9, color: color( .35,.8,.95,1 ) }
 
         this.points = []
         this.floorPoints = []
@@ -369,79 +354,10 @@ class Ocean {
         return x + y * gridSize
     }
 
-    shade (shape, gridSize) {
-        let normals = Array(shape.arrays.position.length).fill(vec3(0,0,0));
-
-        for (let counter = 0; counter < (shape.indices ? shape.indices.length : shape.arrays.position.length);
-               counter += 3) {
-
-                const p1 = shape.arrays.position[shape.indices[counter]];
-                const p2 = shape.arrays.position[shape.indices[counter+1]];
-                const p3 = shape.arrays.position[shape.indices[counter+2]];
-
-                const v1 = p2.minus(p1);
-                const v2 = p3.minus(p1);
-
-                const n1 = v1.cross(v2).normalized();
-
-                normals[shape.indices[counter]] = normals[shape.indices[counter]].plus(n1);
-                normals[shape.indices[counter+1]] = normals[shape.indices[counter+1]].plus(n1);
-                normals[shape.indices[counter+2]] = normals[shape.indices[counter+2]].plus(n1);
-          }
-
-        for (let i = 0; i < normals.length; i++){
-            normals[i] = normals[i].normalized();
-        }
-
-        for (let counter = 0; counter < (shape.indices ? shape.indices.length : shape.arrays.position.length);
-               counter += 1) {
-            const index = shape.indices[ counter ];
-            shape.arrays.normal[index] = normals[index];
-        }
-    }
-
     show(shapes, caller, uniforms, mat) {
         this.shapes.ocean.draw( caller, {...uniforms, offset: this.ocean_offset}, Mat4.identity(), this.materials.ocean);
-        // this.shapes.floor.draw( caller, uniforms, Mat4.identity(), this.materials.floor);
     }
 }
-
-function lerp(a, b, t) {
-    // Linear interpolate between a and b
-    return (1 - t) * a + t * b;
-}
-
-
-// Smoothstep function for smoother transitions
-function smoothstep(t) {
-    return t * t * (3 - 2 * t);
-}
-
-// Example "pseudo-random" gradient function
-function pseudoRandomGradient(x, y) {
-    return Math.sin(x * 12.9898 + y * 4.1414) * 43758.5453 % 1;
-}
-
-// The simplified Perlin-like 2D noise function
-function perlin2d(x, y, min, max) {
-    // Generate base pseudo-random values
-    let n0 = pseudoRandomGradient(Math.floor(x), Math.floor(y));
-    let n1 = pseudoRandomGradient(Math.ceil(x), Math.floor(y));
-    let n2 = pseudoRandomGradient(Math.floor(x), Math.ceil(y));
-    let n3 = pseudoRandomGradient(Math.ceil(x), Math.ceil(y));
-
-    // Smoothly interpolate between points
-    let ix0 = lerp(n0, n1, smoothstep(x - Math.floor(x)));
-    let ix1 = lerp(n2, n3, smoothstep(x - Math.floor(x)));
-    let value = lerp(ix0, ix1, smoothstep(y - Math.floor(y)));
-
-    // Normalize to 0-1
-    let normalized = (value + 1) / 2;
-
-    // Scale to min-max range
-    return min + (max - min) * normalized;
-}
-
 
 
 export const Ocean_Shader = defs.Ocean_Shader =

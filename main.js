@@ -41,10 +41,7 @@ const Part_one_hermite_base = defs.Part_one_hermite_base =
         const oceanConfig = {
           initPos : vec3(0,0,0),
           density : 200,
-          size : 150,
-          floorDensity : 20,
-          floorMinY : -10,
-          floorMaxY : -9,
+          size : 150
         }
 
         this.ocean = new Ocean(oceanConfig)
@@ -64,7 +61,11 @@ const Part_one_hermite_base = defs.Part_one_hermite_base =
         this.currentY = 10
         this.currentZ = 10
 
-        this.rb = new RigidBody();
+        this.wind_default_magnitude = 15;
+        this.wind_forward_magnitude = 35;
+        this.wind = vec3(0,0,-this.wind_default_magnitude);
+
+        // this.rb = new RigidBody();
 
         this.skybox = new Skybox({default_color: color(1,1,1,1), texture: new Texture("assets/skybox2.jpg")});
 
@@ -198,29 +199,19 @@ export class Part_one_hermite extends Part_one_hermite_base
 
     this.ocean.applyWaterForceOnRigidBody(this.ship.rb, t, this.dt, caller, this.uniforms, this.shapes.ball, {...this.materials.plastic, color:color(1,0,0,1)}, this.materials.metal, this.horizontal_input, this.vertical_input)
 
-    this.ship.update(this.t, this.dt, vec3(0,0,-20))
+    if (this.vertical_input == 1) {
+      const ship_forward = this.ship.rb.rotation.times(vec3(0,0,-1))
+      this.wind = ship_forward.times(this.wind_forward_magnitude);
+    } else if (this.wind.norm() != this.wind_default_magnitude) {
+      this.wind = this.wind.normalized().times(this.wind_default_magnitude);
+    }
+    
+    this.ship.update(this.t, this.dt, this.wind)
     this.ship.show(caller, this.uniforms)
 
     this.skybox.show(caller, this.uniforms, vec3(this.currentX, this.currentY, this.currentZ), this.render_distance);
     
-
-    // let y = this.ocean.gersrnerWave.solveForY(5,5,this.t);
-
-    // console.log(y)
-
-
-    // tester code
-    // this.rb.applyForce(vec3(0,10,0), vec3(0,0,0))
-    // this.rb.addTorque(vec3(0,1,0))
-    // this.rb.update(this.dt)
-    // this.rb.show(caller, this.uniforms)
-
-    // draw ball and debug floor
-    // this.shapes.ball.draw( caller, this.uniforms, Mat4.translation(0, 1, 0).times(Mat4.scale(0.2,0.2,0.2)), this.materials.plastic );
-    // this.shapes.box.draw( caller, this.uniforms, Mat4.translation(0, 0, 0).times(Mat4.scale(20,0.02,20)), this.materials.plastic );
   }
-
-
 }
 
 
