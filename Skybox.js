@@ -70,7 +70,7 @@ const Skybox_Shader =
         float rotation_y = ${this.rotation_y.toFixed(10)};
 
         void main() {
-            vec3 direction = normalize(vertex_worldspace);
+            vec3 direction = normalize(vertex_worldspace - camera_center);
 
             // Calculate spherical coordinates
             float phi = atan(direction.z, direction.x) + rotation_y;
