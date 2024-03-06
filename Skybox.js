@@ -38,7 +38,6 @@ const Skybox_Shader =
 
         }
 
-
       vertex_glsl_code () {         // ********* VERTEX SHADER *********
           return this.shared_glsl_code () + `
         attribute vec3 position, normal;                            // Position is expressed in object coordinates.
@@ -59,15 +58,15 @@ const Skybox_Shader =
           return this.shared_glsl_code () + `
         uniform sampler2D texture;
 
-        #define PI 3.1415926535897932384626433832795
+        #define PI 3.14159265359
 
-        float angle_from_top = ${this.angle_from_top};
+        float angle_from_top = ${this.angle_from_top.toFixed(10)};  
 
         vec4 default_color = ${this.default_color};
 
-        float radius_blend_start = ${this.radius_blend_start};
-        float radius_blend_end = ${this.radius_blend_end};
-        float rotation_y = ${this.rotation_y};
+        float radius_blend_start = ${this.radius_blend_start.toFixed(10)};
+        float radius_blend_end = ${this.radius_blend_end.toFixed(10)};
+        float rotation_y = ${this.rotation_y.toFixed(10)};
 
         void main() {
             vec3 direction = normalize(vertex_worldspace);

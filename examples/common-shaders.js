@@ -99,6 +99,8 @@ const Phong_Shader = defs.Phong_Shader =
         uniform vec4 shape_color;
         uniform vec3 squared_scale, camera_center;
 
+        // float dist
+
         varying vec3 N, vertex_worldspace;
                                              // ***** PHONG SHADING HAPPENS HERE: *****
         vec3 phong_model_lights( vec3 N, vec3 vertex_worldspace ) {
