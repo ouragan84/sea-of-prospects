@@ -70,7 +70,12 @@ export const Ocean_Shader =
                 );
             }
 
-            return normalize(cross(rz, rx));
+            vec3 n = normalize(cross(rz, rx));
+
+            if (n.y < 0.0)
+                return -n;
+
+            return n;
         }
         `;
     }

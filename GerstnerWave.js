@@ -89,7 +89,10 @@ export class GerstnerWave{
             ));
         }
 
-        return rz.cross(rx).normalized();
+        const n = rz.cross(rx).normalized();
+        if (n[1] < 0)
+            return n.times(-1);
+        return n;
     }
 
 

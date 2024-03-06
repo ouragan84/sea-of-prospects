@@ -69,8 +69,6 @@ export class Sea_Of_Prospects_Scene extends Component
 
     // Update theta and phi based on mouse input
     this.theta += this.mousev[0] * this.cameraConfig.sensitivity;
-
-
     this.phi = this.clamp(this.phi - this.mousev[1] * this.cameraConfig.sensitivity, 0.1, Math.PI/2 - 0.1);
 
     // Calculate target position
@@ -96,29 +94,25 @@ export class Sea_Of_Prospects_Scene extends Component
 
     // const light_position = Mat4.rotation( angle,   1,0,0 ).times( vec4( 0,-1,1,0 ) ); !!!
     // !!! Light changed here
-    const light_position = vec4(20, 20, -10, 1.0);
+    const light_position = vec3(20, 20, -10).plus(this.ship.rb.position).to4(1);
     
     this.uniforms.lights = [ defs.Phong_Shader.light_source( light_position, color( 1,1,1,1 ), 1000000 )];
 
     this.ocean.apply_rb_offset(this.ship.rb);
-
     this.ocean.show(this.shapes, caller, this.uniforms)
 
-    // this.update_wind();
+    this.ocean.applyWaterForceOnRigidBody(this.ship.rb, t, dt, this.horizontal_input, this.vertical_input, this.wind)
+    this.update_wind()
 
-
-    this.ocean.applyWaterForceOnRigidBody(this.ship.rb, t, this.dt, this.horizontal_input, this.vertical_input, this.wind)
-    
     this.ship.update(this.t, this.dt, this.wind)
     this.ship.show(caller, this.uniforms)
 
     this.skybox.show(caller, this.uniforms, cam_pos, this.render_distance);
-
   }
 
   update_wind() {
     if (this.vertical_input == 1) {
-      const ship_forward = this.ship.rb.orientation.times(vec3(0,0,-1))
+      const ship_forward = this.ship.rb.getTransformationMatrix().times(vec3(0,0,-1))
       this.wind = ship_forward.times(this.wind_forward_magnitude);
     } else if (this.wind.norm() != this.wind_default_magnitude) {
       this.wind = this.wind.normalized().times(this.wind_default_magnitude);
@@ -174,12 +168,12 @@ export class Sea_Of_Prospects_Scene extends Component
                 //console.log("mouse position: ", this.mouse.from_center)
             }, false)
 
-            canvas.addEventListener("mousedown", e => {
-                if(e.button == 2 || e.shiftKey || e.ctrlKey || e.altKey)
-                    this.shoot_projectile("orange");
-                else
-                    this.shoot_projectile("blue");
-            })
+            // canvas.addEventListener("mousedown", e => {
+            //     if(e.button == 2 || e.shiftKey || e.ctrlKey || e.altKey)
+            //         this.shoot_projectile("orange");
+            //     else
+            //         this.shoot_projectile("blue");
+            // })
 
         } else {
             // console.log('The pointer lock status is now unlocked');

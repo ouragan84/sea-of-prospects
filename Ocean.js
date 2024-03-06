@@ -67,63 +67,92 @@ class Ocean {
 
     applyWaterForceOnRigidBody(rigidBody, t, dt, horizontal_input, vertical_input, wind){
 
-        // const transform = Mat4.translation(rigidBody.pos[0], rigidBody.pos[1], rigidBody.pos[2]).times(Mat4.scale(rigidBody.scale[0],rigidBody.scale[1],rigidBody.scale[2])).times(Mat4.rotation(rigidBody.orientation[0], rigidBody.orientation[1], rigidBody.orientation[2], rigidBody.orientation[3]));
-        const corner1_boat = rigidBody.getTransformationMatrix().times(vec4(-1, 1, 1, 1)).to3();
-        const corner2_boat = rigidBody.getTransformationMatrix().times(vec4(1, 1, 1, 1)).to3();
-        const corner3_boat = rigidBody.getTransformationMatrix().times(vec4(0, 1, -1, 1)).to3();
+        const boat_transform = rigidBody.getTransformationMatrix();
+
+        const corner1_boat = boat_transform.times(vec4(-1, 1, 1, 1)).to3();
+        const corner2_boat = boat_transform.times(vec4(1, 1, 1, 1)).to3();
+        const corner3_boat = boat_transform.times(vec4(-1, 1, -1, 1)).to3();
+        const corner4_boat = boat_transform.times(vec4(1, 1, -1, 1)).to3();
 
         const corner1_ocean = vec3(corner1_boat[0], this.gersrnerWave.solveForY(corner1_boat[0], corner1_boat[2], t), corner1_boat[2]);
         const corner2_ocean = vec3(corner2_boat[0], this.gersrnerWave.solveForY(corner2_boat[0], corner2_boat[2], t), corner2_boat[2]);
         const corner3_ocean = vec3(corner3_boat[0], this.gersrnerWave.solveForY(corner3_boat[0], corner3_boat[2], t), corner3_boat[2]);
+        const corner4_ocean = vec3(corner4_boat[0], this.gersrnerWave.solveForY(corner4_boat[0], corner4_boat[2], t), corner4_boat[2]);
 
-        const boat_normal = corner3_boat.minus(corner2_boat).cross(corner1_boat.minus(corner2_boat)).normalized();
-        let ocean_normal = corner3_ocean.minus(corner2_ocean).cross(corner1_ocean.minus(corner2_ocean)).normalized();
+        const corner1_ocean_normal = this.gersrnerWave.gersrnerWaveNormal(corner1_ocean, t);
+        const corner2_ocean_normal = this.gersrnerWave.gersrnerWaveNormal(corner2_ocean, t);
+        const corner3_ocean_normal = this.gersrnerWave.gersrnerWaveNormal(corner3_ocean, t);
+        const corner4_ocean_normal = this.gersrnerWave.gersrnerWaveNormal(corner4_ocean, t);
 
-        let corner1_percent_submerged = (corner1_ocean[1] - corner1_boat[1]) / (2 * rigidBody.scale[1]) + 1;
-        if (corner1_percent_submerged < 0) corner1_percent_submerged = 0;
-        if (corner1_percent_submerged > 1) corner1_percent_submerged = 1;
+        const boat_forward = boat_transform.times(vec4(0, 0, -1, 0)).to3().normalized();
+        const boat_normal = boat_transform.times(vec4(0, 1, 0, 0)).to3().normalized();
+        let ocean_normal = corner1_ocean_normal.plus(corner2_ocean_normal).plus(corner3_ocean_normal).plus(corner4_ocean_normal).normalized();
 
-        let corner2_percent_submerged = (corner2_ocean[1] - corner2_boat[1]) / (2 * rigidBody.scale[1]) + 1;
-        if (corner2_percent_submerged < 0) corner2_percent_submerged = 0;
-        if (corner2_percent_submerged > 1) corner2_percent_submerged = 1;
+        const clamp = (num, min, max) => Math.min(Math.max(num, min), max);
 
-        let corner3_percent_submerged = (corner3_ocean[1] - corner3_boat[1]) / (2 * rigidBody.scale[1]) + 1;
-        if (corner3_percent_submerged < 0) corner3_percent_submerged = 0;
-        if (corner3_percent_submerged > 1) corner3_percent_submerged = 1;
+        let corner1_percent_submerged = clamp((corner1_ocean[1] - corner1_boat[1]) / (2 * rigidBody.scale[1]) + 1, 0, 1);
+        let corner2_percent_submerged = clamp((corner2_ocean[1] - corner2_boat[1]) / (2 * rigidBody.scale[1]) + 1, 0, 1);
+        let corner3_percent_submerged = clamp((corner3_ocean[1] - corner3_boat[1]) / (2 * rigidBody.scale[1]) + 1, 0, 1);
+        let corner4_percent_submerged = clamp((corner4_ocean[1] - corner4_boat[1]) / (2 * rigidBody.scale[1]) + 1, 0, 1);
 
-        let percent_submerged = (corner1_percent_submerged + corner2_percent_submerged + corner3_percent_submerged) / 3;
+        let percent_submerged = (corner1_percent_submerged + corner2_percent_submerged + corner3_percent_submerged + corner4_percent_submerged) / 4;
 
-        if (percent_submerged > 0.99)
-            ocean_normal = vec3(0, 1, 0);
+        const mult_f = 10000;
+        const mult_t = 200;
 
-        let angle = Math.acos(boat_normal.dot(ocean_normal));
-        if (isNaN(angle))
-            angle = 0;
+        const axis1 = boat_normal.cross(corner1_ocean_normal).normalized();
+        const angle1 = Math.acos(boat_normal.dot(corner1_ocean_normal));
+        rigidBody.addTorque(axis1.times(angle1 * mult_t));
+        rigidBody.addForce(vec3(0,1,0).times(mult_f * corner1_percent_submerged));
 
+        const axis2 = boat_normal.cross(corner2_ocean_normal).normalized();
+        const angle2 = Math.acos(boat_normal.dot(corner2_ocean_normal));
+        rigidBody.addTorque(axis2.times(angle2 * mult_t));
+        rigidBody.addForce(vec3(0,1,0).times(mult_f * corner2_percent_submerged));
+
+        const axis3 = boat_normal.cross(corner3_ocean_normal).normalized();
+        const angle3 = Math.acos(boat_normal.dot(corner3_ocean_normal));
+        rigidBody.addTorque(axis3.times(angle3 * mult_t));
+        rigidBody.addForce(vec3(0,1,0).times(mult_f * corner3_percent_submerged));
+
+        const axis4 = boat_normal.cross(corner4_ocean_normal).normalized();
+        const angle4 = Math.acos(boat_normal.dot(corner4_ocean_normal));
+        rigidBody.addTorque(axis4.times(angle4 * mult_t));
+        rigidBody.addForce(vec3(0,1,0).times(mult_f * corner4_percent_submerged));
+
+        const restore = 10000;
+        const res_start_angle = Math.PI/6;
+        if( Math.abs(boat_normal.normalized().dot(vec3(0,1,0))) < Math.cos(res_start_angle)){
+            const axis_res = boat_normal.cross(vec3(0,1,0)).normalized();
+            const angle_res = Math.acos(boat_normal.dot(vec3(0,1,0)));
+            rigidBody.addTorque(axis_res.times(angle_res * restore));
+        }
+        
+        // gravity
         const gravity = 9.8;
-        const boyancy_factor = 5;
+        rigidBody.addForce(vec3(0, -gravity * rigidBody.mass, 0));
+
+        // Vertical Input
+        const coef_force_applied = 10000;
+        rigidBody.addForce(boat_forward.times(coef_force_applied * vertical_input));
+
+        // Horizontal Input
+        const coef_torque_applied = 2000;
+        rigidBody.addTorque(vec3(0,1,0).times( - coef_torque_applied * horizontal_input));
+
+        // damping
+        this.applyLinearDamping(rigidBody, percent_submerged);
+        this.applyAngularDamping(rigidBody, percent_submerged);
+    }
+
+    applyLinearDamping(rigidBody, percent_submerged){
         const drag_coef_v = 1.1;
         const friction_coef_v = 1.5;
         const drag_coef_h = .5;
         const friction_coef_h = .9;
         const air_drag_coef = .2;
         const air_friction_coef = .1;
-        const torque_coef = 8000;
-        const angular_drag_coef = 1200;
-        const angular_friction_coef = 10;
-        const air_angular_drag_coef = 100;
-        const air_angular_friction_coef = 5;
-        const coef_force_applied = 6000;
-        const coef_torque_applied = 700;
-        const max_ang_speed = 10;
-
-        rigidBody.addForce(vec3(0, -gravity * rigidBody.mass, 0));
-
-        const boyancy_force = ocean_normal.times(boyancy_factor * gravity * rigidBody.mass * percent_submerged);
-        rigidBody.addForce(boyancy_force);
-
         
-
         if(percent_submerged > 0){
             // Apply drag force
             rigidBody.addForce(vec3(
@@ -148,28 +177,15 @@ class Ocean {
             if( rigidBody.velocity.norm() > 0)
                 rigidBody.addForce(rigidBody.velocity.normalized().times(-air_friction_coef).times(rigidBody.mass));
         }
+    }
 
-        // Apply vertcal force in the forward direction of the boat (rigidbody.orentation is a quaternion)
-        const forward = rigidBody.getTransformationMatrix().times(vec4(0, 0, -1, 0)).to3().normalized();
-
-        const vertical_force = forward.times(vertical_input * coef_force_applied);
-        rigidBody.addForce(vertical_force);
-
-        // Apply torque to make the boat align with the ocean normal
-
-        const clamp = (num, min, max) =>  (num <= min ? min : num >= max ? max : num);
-
-        const torque_towards_up = boat_normal.cross(vec3(0, 1, 0)).times( angle * 4000);
-        rigidBody.addTorque(torque_towards_up);
+    applyAngularDamping(rigidBody, percent_submerged){
+        const angular_drag_coef = 1200;
+        const angular_friction_coef = 100;
+        const air_angular_drag_coef = 100;
+        const air_angular_friction_coef = 5;
 
         if(percent_submerged > 0){
-            const torque_towards_ocean_normal = boat_normal.cross(ocean_normal).times( angle * 5000);
-            rigidBody.addTorque(torque_towards_ocean_normal);
-
-            // Apply torque for horizontal input
-            const horizontal_torque = vec3(0, - horizontal_input * coef_torque_applied, 0);
-            rigidBody.addTorque(horizontal_torque);
-
             // Apply angular drag
             const angular_drag = rigidBody.angularVelocity.times(-angular_drag_coef);
             rigidBody.addTorque(angular_drag);
@@ -190,13 +206,8 @@ class Ocean {
                 rigidBody.addTorque(air_angular_friction);
             }
         }
-
-
-        // limit the angular velocity to max_ang_speed
-        if(rigidBody.angularVelocity.norm() > max_ang_speed){
-            rigidBody.angularVelocity = rigidBody.angularVelocity.normalized().times(max_ang_speed);
-        }
     }
+
 
     point_to_coord(i, gridSize){
         return [i % gridSize, Math.floor(i / gridSize)]
