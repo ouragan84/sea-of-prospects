@@ -8,7 +8,14 @@ export const Skybox
         this.texture = config.texture;
 
         this.shape = new defs.Subdivision_Sphere(4);
-        this.shader = new Skybox_Shader(1, this.default_color, 1.79495559215, 0.4, 0.5); 
+        this.shader = new Skybox_Shader(
+            1, // num_lights
+            this.default_color, // default_color
+            1.79495559215, // angle_from_top
+            0.4, // radius_blend_start
+            0.5, // radius_blend_end
+            Math.PI // rotation_y
+        ); 
         this.material = {shader: this.shader, texture: this.texture };
     }
 
@@ -21,12 +28,13 @@ export const Skybox
 
 const Skybox_Shader =
   class Skybox_Shader extends defs.Phong_Shader {
-        constructor(num_lights=2, default_color, angle_from_top, radius_blend_start, radius_blend_end) {
+        constructor(num_lights=2, default_color, angle_from_top, radius_blend_start, radius_blend_end, rotation_y) {
             super(num_lights);
             this.default_color = `vec4(${default_color[0]}, ${default_color[1]}, ${default_color[2]}, ${default_color[3]})`;
             this.angle_from_top = angle_from_top;
             this.radius_blend_start = radius_blend_start;
             this.radius_blend_end = radius_blend_end;
+            this.rotation_y = rotation_y;
 
         }
 
@@ -59,12 +67,13 @@ const Skybox_Shader =
 
         float radius_blend_start = ${this.radius_blend_start};
         float radius_blend_end = ${this.radius_blend_end};
+        float rotation_y = ${this.rotation_y};
 
         void main() {
             vec3 direction = normalize(vertex_worldspace);
 
             // Calculate spherical coordinates
-            float phi = atan(direction.z, direction.x);
+            float phi = atan(direction.z, direction.x) + rotation_y;
             float theta = acos(direction.y);
 
             // when theta = angle_from_top, radius = 0.5
