@@ -1,5 +1,6 @@
 import {tiny, defs} from './examples/common.js';
 import { Ocean } from './Ocean.js';
+import { quaternionFromAngleAxis, RigidBody } from './RigidBody.js';
 import { Ship } from './ship.js';
 import { Skybox } from './Skybox.js';
 
@@ -51,7 +52,7 @@ export class Sea_Of_Prospects_Scene extends Component
     this.wind_forward_magnitude = 35;
     this.wind = vec3(0,0,-this.wind_default_magnitude);
 
-    // this.rb = new RigidBody();
+    // this.rb = new RigidBody(10, vec3(0,3,0), quaternionFromAngleAxis(0, vec3(0, 0, 1)), vec3(1,1,1), 1, fog_param);
     this.mousev = [0,0];
     
     this.skybox = new Skybox({default_color: color(1,1,1,1), texture: new Texture("assets/skybox2.jpg"), fog_param: fog_param});
@@ -103,7 +104,9 @@ export class Sea_Of_Prospects_Scene extends Component
 
     this.ocean.show(this.shapes, caller, this.uniforms)
 
-    this.update_wind();
+    // this.update_wind();
+
+
     this.ocean.applyWaterForceOnRigidBody(this.ship.rb, t, this.dt, this.horizontal_input, this.vertical_input, this.wind)
     
     this.ship.update(this.t, this.dt, this.wind)
@@ -115,7 +118,7 @@ export class Sea_Of_Prospects_Scene extends Component
 
   update_wind() {
     if (this.vertical_input == 1) {
-      const ship_forward = this.ship.rb.rotation.times(vec3(0,0,-1))
+      const ship_forward = this.ship.rb.orientation.times(vec3(0,0,-1))
       this.wind = ship_forward.times(this.wind_forward_magnitude);
     } else if (this.wind.norm() != this.wind_default_magnitude) {
       this.wind = this.wind.normalized().times(this.wind_default_magnitude);

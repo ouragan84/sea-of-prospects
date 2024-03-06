@@ -1,7 +1,7 @@
 import { Cloth } from './Cloth.js';
 import {tiny, defs} from './examples/common.js';
 import {Shape_From_File}  from './examples/obj-file-demo.js';
-import { RigidBody } from './RigidBody.js';
+import { quaternionFromAngleAxis, RigidBody } from './RigidBody.js';
 
 const { vec3, vec4, color, Mat4, Shape, Material, Shader, Texture, Component } = tiny;
 
@@ -59,7 +59,7 @@ class Ship {
     this.boatscale = vec3(2.3,2.3,2.3)
     this.boatoffset = vec3(0,.6,.2)
 
-    this.rb = new RigidBody(2000, init_pos, Mat4.identity(), vec3(1.7,1.2,4), 100, fog_param);
+    this.rb = new RigidBody(2000, init_pos, quaternionFromAngleAxis(0, vec3(0, 0, 1)), vec3(1.7,1.2,4), 100, fog_param);
     // this.rb = new RigidBody(2000, init_pos, Mat4.identity(), vec3(1.7,2,4), 100);
 
 
