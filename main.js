@@ -15,7 +15,7 @@ export class Sea_Of_Prospects_Scene extends Component
     this.hover = this.swarm = false;
 
     this.render_distance = 80;
-    const fog_param = { color: color(.8,.9,1,1), start: this.render_distance-25, end: this.render_distance };
+    const fog_param = { color: color(.8,.9,1,1), start: this.render_distance-20, end: this.render_distance };
 
     this.shapes = { 'box'  : new defs.Cube(),
       'ball' : new defs.Subdivision_Sphere( 4 ),
@@ -28,7 +28,7 @@ export class Sea_Of_Prospects_Scene extends Component
     this.ocean = new Ocean({
       initPos : vec3(0,0,0),
       density : 200,
-      size : 150,
+      size : 160,
       fog_param: fog_param
     });
 
@@ -37,7 +37,7 @@ export class Sea_Of_Prospects_Scene extends Component
     // camera config
     this.cameraConfig = {
       distanceFromSubject: 20,
-      sensitivity: .0001,
+      sensitivity: .02,
     }
     this.mouseVelX = 0;
     this.mouseVelY = 0;
@@ -52,19 +52,25 @@ export class Sea_Of_Prospects_Scene extends Component
     this.wind = vec3(0,0,-this.wind_default_magnitude);
 
     // this.rb = new RigidBody();
-
+    this.mousev = [0,0];
+    
     this.skybox = new Skybox({default_color: color(1,1,1,1), texture: new Texture("assets/skybox2.jpg"), fog_param: fog_param});
     
   }
+
+  clamp = (x, min, max) => Math.min(Math.max(x, min), max);
      
   render_animation( caller )
-  {                      
+  {                     
+
     const t = this.t = this.uniforms.animation_time/1000;
     const dt = this.dt = 0.02
 
     // Update theta and phi based on mouse input
-    this.theta += this.mouseVelX * this.cameraConfig.sensitivity;
-    this.phi = Math.max(0.1, Math.min(Math.PI - 0.1, this.phi - this.mouseVelY * this.cameraConfig.sensitivity));
+    this.theta += this.mousev[0] * this.cameraConfig.sensitivity;
+
+
+    this.phi = this.clamp(this.phi - this.mousev[1] * this.cameraConfig.sensitivity, 0.1, Math.PI/2 - 0.1);
 
     // Calculate target position
     const r = this.cameraConfig.distanceFromSubject;
@@ -73,68 +79,25 @@ export class Sea_Of_Prospects_Scene extends Component
     const targetZ = r * Math.sin(this.phi) * Math.sin(this.theta);
 
     // Interpolation factor (t)
-    const a = 0.1; // Adjust this value to control the smoothness (smaller values result in smoother movement)
+    const a = .2; // Adjust this value to control the smoothness (smaller values result in smoother movement)
 
     // Interpolate the camera position
-    const newX = lerp(this.currentX, targetX, a);
-    const newY = lerp(this.currentY, targetY, a);
-    const newZ = lerp(this.currentZ, targetZ, a);
+    this.currentX = lerp(this.currentX, targetX, a);
+    this.currentY = lerp(this.currentY, targetY, a);
+    this.currentZ = lerp(this.currentZ, targetZ, a);
 
-    // Update the current camera position
-    this.currentX = newX;
-    this.currentY = newY;
-    this.currentZ = newZ;
+    const cam_pos = vec3(this.currentX, this.currentY, this.currentZ).plus(this.ship.rb.position);
 
     // Assign the interpolated position to the camera
-    Shader.assign_camera(Mat4.look_at(vec3(newX, newY, newZ), vec3(0,0,0), vec3(0, 1, 0)), this.uniforms);
+    Shader.assign_camera(Mat4.look_at(cam_pos, this.ship.rb.position, vec3(0, 1, 0)), this.uniforms);
 
     this.uniforms.projection_transform = Mat4.perspective( Math.PI/4, caller.width/caller.height, 0.1, this.render_distance);
-
-    const angle = Math.sin( t );
 
     // const light_position = Mat4.rotation( angle,   1,0,0 ).times( vec4( 0,-1,1,0 ) ); !!!
     // !!! Light changed here
     const light_position = vec4(20, 20, -10, 1.0);
     
     this.uniforms.lights = [ defs.Phong_Shader.light_source( light_position, color( 1,1,1,1 ), 1000000 )];
-
-    // draw axis arrows.
-
-    // Initialization
-    let lastMousePos = null;
-    let lastTime = Date.now();
-
-    caller.canvas.addEventListener("mousemove", e => {
-        e.preventDefault();
-        const newMousePos = this.getMousePos(caller.canvas, e);
-        const currentTime = Date.now();
-
-        // Initialize lastMousePos if it's not set
-        if (!lastMousePos) {
-            lastMousePos = newMousePos;
-        }
-
-        // Calculate time difference in seconds
-        const timeDiff = (currentTime - lastTime) / 1000; // Convert to seconds
-
-        // Initialize velocity
-        let velocity = { x: 0, y: 0 };
-
-        // Only calculate velocity if timeDiff is greater than zero
-        if (timeDiff > 0) {
-            // Calculate instantaneous velocity
-            velocity.x = (newMousePos[0] - lastMousePos[0]) / timeDiff;
-            velocity.y = (newMousePos[1] - lastMousePos[1]) / timeDiff;
-        }
-        
-        // console.log(`Instantaneous Mouse Velocity - X: ${isFinite(velocity.x) ? velocity.x.toFixed(2) : 0}px/s, Y: ${isFinite(velocity.y) ? velocity.y.toFixed(2) : 0}px/s`);
-        this.mouseVelX = velocity.x
-        this.mouseVelY = velocity.y
-        // Update last position and time for the next calculation
-        lastMousePos = newMousePos;
-        lastTime = currentTime;
-
-    });
 
     this.ocean.apply_rb_offset(this.ship.rb);
 
@@ -146,7 +109,7 @@ export class Sea_Of_Prospects_Scene extends Component
     this.ship.update(this.t, this.dt, this.wind)
     this.ship.show(caller, this.uniforms)
 
-    this.skybox.show(caller, this.uniforms, vec3(this.currentX, this.currentY, this.currentZ), this.render_distance);
+    this.skybox.show(caller, this.uniforms, cam_pos, this.render_distance);
 
   }
 
@@ -187,6 +150,44 @@ export class Sea_Of_Prospects_Scene extends Component
     this.new_line ();
     this.key_triggered_button ("Bottom", ["s"], () => this.vertical_input = -1, undefined, () => this.vertical_input = 0);
     this.key_triggered_button ("Left", ["a"], () => this.horizontal_input = -1, undefined, () => this.horizontal_input = 0);
+
+    const canvas = document.getElementsByTagName("canvas")[0];
+
+    // setting up pointer lock for mouse control
+    canvas.requestPointerLock = canvas.requestPointerLock || canvas.mozRequestPointerLock;
+    document.exitPointerLock = document.exitPointerLock || document.mozExitPointerLock;
+
+    canvas.onclick = function(e){
+        canvas.requestPointerLock();
+    };
+
+    let changeCallback =  function() {
+
+        if (document.pointerLockElement === canvas || document.mozPointerLockElement === canvas) {
+            // console.log('The pointer lock status is now locked');
+            canvas.addEventListener("mousemove", (e) => {
+                // this.mouse.from_center = mouse_position(e);
+                this.mousev = [e.movementX, e.movementY];
+                //console.log("mouse position: ", this.mouse.from_center)
+            }, false)
+
+            canvas.addEventListener("mousedown", e => {
+                if(e.button == 2 || e.shiftKey || e.ctrlKey || e.altKey)
+                    this.shoot_projectile("orange");
+                else
+                    this.shoot_projectile("blue");
+            })
+
+        } else {
+            // console.log('The pointer lock status is now unlocked');
+            canvas.addEventListener("mouseout", (e) => {
+                this.mousev = [0,0];
+            }, false)
+        };
+    }
+
+    document.addEventListener('pointerlockchange', changeCallback.bind(this), false);
+    document.addEventListener('mozpointerlockchange', changeCallback.bind(this),false);
   }
 }
 
