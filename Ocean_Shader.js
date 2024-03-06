@@ -3,8 +3,8 @@ import {tiny, defs} from './examples/common.js';
 export const Ocean_Shader =
   class Ocean_Shader extends defs.Phong_Shader {
 
-    constructor(num_lights, wave_obj) {
-        super(num_lights);
+    constructor(num_lights, wave_obj, fog) {
+        super(num_lights, fog);
         this.gersrnerWave = wave_obj;
     }
 
@@ -109,6 +109,10 @@ export const Ocean_Shader =
           gl_FragColor = vec4( shape_color.xyz * ambient, shape_color.w );
                                          // Compute the final color with contributions from lights:
           gl_FragColor.xyz += phong_model_lights( normalize(N), vertex_worldspace );
+
+          float distance = length(camera_center - vertex_worldspace);
+          float fog_amount = smoothstep(fog_start_dist, fog_end_dist, distance);
+          gl_FragColor = mix(fog_color, gl_FragColor, 1.0-fog_amount);
         } `;
     }
       update_GPU (context, gpu_addresses, uniforms, model_transform, material) {

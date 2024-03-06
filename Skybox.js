@@ -14,7 +14,8 @@ export const Skybox
             1.79495559215, // angle_from_top
             0.4, // radius_blend_start
             0.5, // radius_blend_end
-            Math.PI // rotation_y
+            Math.PI, // rotation_y
+            config.fog_param
         ); 
         this.material = {shader: this.shader, texture: this.texture };
     }
@@ -28,8 +29,8 @@ export const Skybox
 
 const Skybox_Shader =
   class Skybox_Shader extends defs.Phong_Shader {
-        constructor(num_lights=2, default_color, angle_from_top, radius_blend_start, radius_blend_end, rotation_y) {
-            super(num_lights);
+        constructor(num_lights=2, default_color, angle_from_top, radius_blend_start, radius_blend_end, rotation_y, fog_param) {
+            super(num_lights, fog_param);
             this.default_color = `vec4(${default_color[0]}, ${default_color[1]}, ${default_color[2]}, ${default_color[3]})`;
             this.angle_from_top = angle_from_top;
             this.radius_blend_start = radius_blend_start;

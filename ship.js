@@ -10,7 +10,7 @@ const gravity = 9.8
 export
 const Ship = defs.Ship =
 class Ship {
-  constructor() {  
+  constructor(fog_param) {  
     this.shapes = {
       'box'  : new defs.Cube(),
       'ball' : new defs.Subdivision_Sphere( 4 ),
@@ -19,8 +19,8 @@ class Ship {
 
     const init_pos = vec3(0, 5, 0);
 
-    const tex_phong = new defs.Textured_Phong(1);
-    const phong = new defs.Phong_Shader(1);
+    const tex_phong = new defs.Textured_Phong(1, fog_param);
+    const phong = new defs.Phong_Shader(1, fog_param);
     this.materials = {};
     this.materials.flag_tex = { shader: tex_phong, ambient: .3, texture: new Texture("assets/skull.png"),  diffusivity: 0.6, specularity: 0.5, color: color( 1, 1, 1 ,1 )}
     this.materials.cloth_tex = { shader: tex_phong, ambient: .3, texture: new Texture("assets/cloth.jpg"),  diffusivity: 0.6, specularity: 0.5, color: color( 1, 1, 1 ,1 )}
@@ -35,14 +35,14 @@ class Ship {
       density : 10,
       size : 4,
       lockedPoints: get_corners(11),
-      material: this.materials.cloth_tex,
+      material: this.materials.cloth_tex
     }
     const sailConfig2 = {
       initPos : vec3(0,3.25,2.75).plus(init_pos),
       density : 10,
       size : 2,
       lockedPoints: get_corners(11),
-      material: this.materials.cloth_tex,
+      material: this.materials.cloth_tex
     }
     const flagConfig = {
       initPos : vec3(1,8,-.2).plus(init_pos),
@@ -59,7 +59,7 @@ class Ship {
     this.boatscale = vec3(2.3,2.3,2.3)
     this.boatoffset = vec3(0,.6,.2)
 
-    this.rb = new RigidBody(2000, init_pos, Mat4.identity(), vec3(1.7,1.2,4), 100);
+    this.rb = new RigidBody(2000, init_pos, Mat4.identity(), vec3(1.7,1.2,4), 100, fog_param);
     // this.rb = new RigidBody(2000, init_pos, Mat4.identity(), vec3(1.7,2,4), 100);
 
 

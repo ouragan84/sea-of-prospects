@@ -14,6 +14,9 @@ export class Sea_Of_Prospects_Scene extends Component
     // constructor(): Scenes begin by populating initial values like the Shapes and Materials they'll need.
     this.hover = this.swarm = false;
 
+    this.render_distance = 80;
+    const fog_param = { color: color(.8,.9,1,1), start: this.render_distance-25, end: this.render_distance };
+
     this.shapes = { 'box'  : new defs.Cube(),
       'ball' : new defs.Subdivision_Sphere( 4 ),
       'axis' : new defs.Axis_Arrows(),
@@ -22,15 +25,14 @@ export class Sea_Of_Prospects_Scene extends Component
     this.vertical_input = 0;
     this.horizontal_input = 0;
 
-    const oceanConfig = {
+    this.ocean = new Ocean({
       initPos : vec3(0,0,0),
       density : 200,
-      size : 150
-    }
+      size : 150,
+      fog_param: fog_param
+    });
 
-    this.ocean = new Ocean(oceanConfig)
-
-    this.ship = new Ship()
+    this.ship = new Ship(fog_param)
 
     // camera config
     this.cameraConfig = {
@@ -51,9 +53,8 @@ export class Sea_Of_Prospects_Scene extends Component
 
     // this.rb = new RigidBody();
 
-    this.skybox = new Skybox({default_color: color(1,1,1,1), texture: new Texture("assets/skybox2.jpg")});
-
-    this.render_distance = 100;
+    this.skybox = new Skybox({default_color: color(1,1,1,1), texture: new Texture("assets/skybox2.jpg"), fog_param: fog_param});
+    
   }
      
   render_animation( caller )

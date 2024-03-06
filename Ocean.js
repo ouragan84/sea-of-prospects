@@ -23,7 +23,7 @@ class Ocean {
         this.spacing = config.size / this.density;
         this.gersrnerWave = new GerstnerWave();
 
-        const ocean_shader = new Ocean_Shader(1, this.gersrnerWave.get_glsl_strings());
+        const ocean_shader = new Ocean_Shader(1, this.gersrnerWave.get_glsl_strings(), config.fog_param);
 
         this.materials = {};
         this.materials.ocean = { shader: ocean_shader, ambient: 0.3, diffusivity: .3, specularity: .9, color: color( .35,.8,.95,1 ) }
