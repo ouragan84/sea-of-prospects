@@ -85,9 +85,12 @@ const Funny_Shader = defs.Funny_Shader =
 
 const Phong_Shader = defs.Phong_Shader =
   class Phong_Shader extends Shader {
-      constructor (num_lights = 2) {
+      constructor (num_lights = 2, fog) {
           super ();
           this.num_lights = num_lights;
+          this.fog_color = `vec4( ${fog.color[0]}, ${fog.color[1]}, ${fog.color[2]}, ${fog.color[3]} )`;
+          this.fog_start =  fog.start;
+          this.fog_end = fog.end;
       }
       shared_glsl_code () {          // ********* SHARED CODE, INCLUDED IN BOTH SHADERS *********
           return ` 
@@ -98,10 +101,10 @@ const Phong_Shader = defs.Phong_Shader =
         uniform float light_attenuation_factors[N_LIGHTS];
         uniform vec4 shape_color;
         uniform vec3 squared_scale, camera_center;
-        uniform vec4 background_color_top, background_color_bottom;
-        uniform vec4 fog_color;
-        uniform float fog_min_distance, fog_max_distance, fog_intensity;
 
+        float fog_start_dist = ${this.fog_start.toFixed(2)};
+        float fog_end_dist = ${this.fog_end.toFixed(2)};
+        vec4 fog_color = ${this.fog_color};
 
         varying vec3 N, vertex_worldspace;
                                              // ***** PHONG SHADING HAPPENS HERE: *****
@@ -152,6 +155,10 @@ const Phong_Shader = defs.Phong_Shader =
             gl_FragColor = vec4( shape_color.xyz * ambient, shape_color.w );
                                            // Compute the final color with contributions from lights:
             gl_FragColor.xyz += phong_model_lights( normalize( N ), vertex_worldspace );
+
+            float distance = length(camera_center - vertex_worldspace);
+            float fog_amount = smoothstep(fog_start_dist, fog_end_dist, distance);
+            gl_FragColor = mix(fog_color, gl_FragColor, 1.0-fog_amount);
           } `;
       }
       static light_source (position, color, size) {
@@ -236,6 +243,10 @@ const Textured_Phong = defs.Textured_Phong =
             vec3 phong_lighting = phong_model_lights( normalize( N ), vertex_worldspace );
                                                                      // Modulate the texture color with the Phong lighting model result
             gl_FragColor = vec4( (tex_color.xyz * phong_lighting) + ambient_color.xyz, tex_color.w );
+
+            float distance = length(camera_center - vertex_worldspace);
+            float fog_amount = smoothstep(fog_start_dist, fog_end_dist, distance);
+            gl_FragColor = mix(fog_color, gl_FragColor, 1.0-fog_amount);
           } `;
       }
       update_GPU (context, gpu_addresses, uniforms, model_transform, material) {

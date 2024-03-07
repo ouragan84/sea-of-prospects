@@ -2,47 +2,6 @@ import {tiny, defs} from './examples/common.js';
 
 const { vec3, vec4, color, Mat4, Shape, Material, Shader, Texture, Component } = tiny;
 
-export
-const Line = defs.Line =
-class Line{
-    constructor() {
-      this.material = {
-        shader: new defs.Phong_Shader(),
-        ambient: 1.0,
-        color: color(1, 0, 0, 1)
-      };
-  
-      this.shapes = { 'box'  : new defs.Cube() };
-    }
-  
-    draw(webgl_manager, uniforms, a, b, line_thickness) {
-      const midpoint = a.plus(b).times(0.5);
-      const direction = b.minus(a);
-      const length = direction.norm();
-      const directionNormalized = direction.normalized();
-
-      const zAxis = vec3(0, 0, 1);
-
-      // updated rotation axis calc (perp to both dir and z) based on x axis
-      let rotationAxis = zAxis.cross(directionNormalized);
-      if (rotationAxis.norm() === 0) { 
-        rotationAxis = vec3(1, 0, 0); 
-      } else {
-        rotationAxis = rotationAxis.normalized();
-      }
-
-      const angle = Math.acos(directionNormalized.dot(zAxis));
-      const scaleFactors = vec3(line_thickness, line_thickness, length / 2);
-
-      this.transform = Mat4.identity()
-        .times(Mat4.translation(...midpoint))
-        .times(Mat4.rotation(angle, ...rotationAxis))
-        .times(Mat4.scale(...scaleFactors));
-
-      this.shapes.box.draw(webgl_manager, uniforms, this.transform, this.material);
-    }
-  }
-  
 
 class Point{
     constructor(pos){
@@ -50,15 +9,6 @@ class Point{
         this.prevPos = pos
         this.locked = false;
         this.r = 0.1;
-
-        const phong = new defs.Phong_Shader( 1 );
-        this.materials = {};
-        this.materials.plastic = { shader: phong, ambient: 1, diffusivity: 0, specularity: 0, color: color( .9,.5,.9,1 ) }
-    }
-
-    show(shapes, caller, uniforms, mat) {       
-        let transform = Mat4.identity().times(Mat4.translation(this.pos[0], this.pos[1], this.pos[2])).times(Mat4.scale(this.r, this.r, this.r)); 
-        shapes.ball.draw( caller, uniforms, transform, {...this.materials.plastic, color: this.locked ? color(0, 0, 1, 1.0) : color(0.9,0.9,1,1.0)});
     }
 }
 
@@ -67,11 +17,6 @@ class Segment{
         this.a = a;
         this.b = b;
         this.length = dist3D(this.a.pos, this.b.pos);
-        this.line = new Line();
-    }
-
-    show(caller, uniforms){
-        this.line.draw(caller, uniforms, this.a.pos, this.b.pos, 0.02)
     }
 
 }
@@ -93,8 +38,6 @@ class Cloth {
             : initial_corner_point;
         const column_operation = (t,p) =>  Mat4.translation( .2,0,0 ).times(p.to4(1)).to3();
         this.shapes = { sheet : new defs.Grid_Patch( config.density, config.density, row_operation, column_operation ) };
-
-        
 
         // initialize points
         for (let i = -config.size/2; i <= config.size/2; i+=this.spacing){
@@ -133,9 +76,13 @@ class Cloth {
         
     }
 
-    simulate(t, dt) {
+    simulate(t, dt, wind) {
         const numOfIterations = 5
         const gravity = 9.8
+        const magnitude_noise = 10
+        const direction_noise = 1
+
+
         // const points = shuffle(this.points);
         const points = this.points
         for(let i = 0; i < points.length; i++){
@@ -144,7 +91,23 @@ class Cloth {
             points[i].pos = points[i].pos.plus(points[i].pos.minus(points[i].prevPos));
             points[i].pos = points[i].pos.plus(vec3(0,-gravity * dt * dt, 0));
             // points[i].pos = points[i].pos.plus(vec3(-100 * (Math.random()-0.2) * dt * dt,0, Math.sin(t) * 0.005));
-            points[i].pos = points[i].pos.plus(vec3(Math.sin(t) * 0.005, 0, -100 * (Math.random()-0.2) * dt * dt));
+            // points[i].pos = points[i].pos.plus(vec3(Math.sin(t) * 0.005, 0, -100 * (Math.random()-0.2) * dt * dt));
+
+            const mags_noise = (Math.random() - 0.5) * magnitude_noise
+
+            // direction noise
+            const dir = wind.normalized();
+            const dir_noise = vec3(
+              (Math.random() - 0.5) * direction_noise,
+              (Math.random() - 0.5) * direction_noise,
+              (Math.random() - 0.5) * direction_noise
+            );
+
+            const force = dir.plus(dir_noise).times(mags_noise + wind.norm());
+
+            // console.log(force)
+
+            points[i].pos = points[i].pos.plus(force.times(dt * dt));
 
             points[i].prevPos = initPos;
           }
@@ -180,35 +143,10 @@ class Cloth {
     }
 
     flat_shade (shape, gridSize) {
-      /*
-
-        3  7 11  15
-        2  6 10  14
-        1  5  9  13
-        0  4  8  12
-
-
-        
-      */
-
-      
 
       // First, iterate through the index or position triples:
       for (let counter = 0; counter < (shape.indices ? shape.indices.length : shape.arrays.position.length);
            counter += 1) {
-          // const indices      = shape.indices.length ?
-          //                      [shape.indices[ counter ], shape.indices[ counter + 1 ], shape.indices[ counter + 2 ]]
-          //                                          : [counter, counter + 1, counter + 2];
-          // const [p1, p2, p3] = indices.map (i => shape.arrays.position[ i ]);
-          // // Cross the two edge vectors of this triangle together to get its normal:
-          // let n1           = p1.minus (p2).cross (p3.minus (p1)).normalized ();
-          // // Flip the normal if adding it to the triangle brings it closer to the origin:
-          // if (n1.times (.1).plus (p1).norm () < p1.norm ()) n1.scale_by (-1);
-
-          // // n1 = n1.normalized();
-
-          // // Propagate this normal to the 3 vertices:
-          // for (let i of indices) shape.arrays.normal[ i ] = tiny.Vector3.from (n1);
 
           const index = shape.indices[ counter ];
           const pc = shape.arrays.position[ index ];

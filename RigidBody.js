@@ -5,96 +5,87 @@ const { vec3, vec4, color, Mat4, Shape, Material, Shader, Texture, Component } =
 export
 const RigidBody = defs.RigidBody =
 class RigidBody {
-    constructor(initalPos, initialVelocity, mass, scale, orientation, momentOfInertia) {
-        this.pos = initalPos || vec3(0,0,0)
-        this.vel = initialVelocity || vec3(0,0,0)
-        this.acc = vec3(0,0,0)
-        this.scale = scale || vec3(1,1,1)
+    constructor(mass=1, position = vec3(5, 1, 5), orientation = quaternionFromAngleAxis(0, vec3(0, 0, 1)), scale = vec3(1,1,1), momentOfInertia = 1, fog_param) {
+        this.position = position;
+        this.orientation = orientation; 
 
-        this.angularDragPercent = 0.95 // closer this is to 1, less energy lost to drag
+        this.velocity = vec3(0, 0, 0); 
+        this.angularVelocity = vec3(0, 0, 0);
 
-        this.angularVel = vec3(0, 0, 0); // Angular velocity in radians per second
-        this.angularAcc = vec3(0, 0, 0); // Angular acceleration
-        this.orientation = orientation || vec4(0, 0, 1, 0); // position equivalent of rotation
+        this.force = vec3(0, 0, 0);
+        this.torque = vec3(0, 0, 0); 
 
-        this.mass = mass || 1
-        this.transform = Mat4.translation(this.pos[0], this.pos[1], this.pos[2]).times(Mat4.scale(this.scale[0], this.scale[1], this.scale[2])).times(Mat4.rotation(this.orientation[0], this.orientation[1], this.orientation[2], this.orientation[3] ));
+        this.mass = mass
+        this.momentOfInertia = momentOfInertia
+        this.scale = scale
+    
         this.shapes = {
             'box'  : new defs.Cube()
         }
-        this.def_mat = { shader: new defs.Phong_Shader(1), ambient: .3, diffusivity: 1, specularity: .5, color: color( .9,.1,.1,1 ) }
-
-        this.momentOfInertia = momentOfInertia;
-        // console.log(this.momentOfInertia)
+        this.def_mat = { shader: new defs.Phong_Shader(1, fog_param), ambient: .3, diffusivity: 1, specularity: .5, color: color( .9,.1,.1,1 ) }
     }
 
-    applyForce(f) {
-        this.acc = this.acc.plus(vec3(f[0] / this.mass, f[1] / this.mass, f[2] / this.mass))
+    // apply a force at a point in world coordinates
+    addForceAtPoint(force, point) {
+        this.force.add_by(force);
+        const torque = point.minus(this.position).cross(force);
+        this.torque.add_by(torque);
     }
 
-    applyTorque(torque) {
-        // let momentOfInertia = 5;
-        // let momentOfInertia = 10;
-        this.angularAcc = this.angularAcc.plus(torque.times(1 / this.momentOfInertia));
+    addForce(force) {
+        this.force.add_by(force);
     }
-    
-    applyForceAtPosition(force, position) {
-        // apply linear force
-        this.applyForce(force);
-    
-        // calc the vector from the center of mass to the point of force application
-        // the center of mass is at this.pos for simplicity
-        let r = position.minus(this.pos);
-    
-        // Calculate the torque: torque = r x F
-        let torque = r.cross(force);
-    
-        this.applyTorque(torque);
+
+    addTorque(torque) {
+        this.torque.add_by(torque);
     }
 
     update(dt) {
-        this.vel = this.vel.plus(this.acc.times(dt));
-        this.pos = this.pos.plus(this.vel.times(dt));
-    
-        // Angular motion updates
-        this.angularVel = this.angularVel.plus(this.angularAcc.times(dt));
-    
-        // Update orientation quaternion based on angular velocity
-        if (this.angularVel.norm() > 0) {
-            // Convert angular velocity to a quaternion
-            let angle = this.angularVel.norm() * dt;
-            let axis = this.angularVel.normalized();
-            let deltaOrientation = quaternionFromAngleAxis(angle, axis);
-    
-            // Multiply current orientation quaternion by deltaOrientation
-            this.orientation = quaternionMultiply(this.orientation, deltaOrientation);
-    
-            // Normalize the orientation quaternion to avoid scaling effects
-            this.orientation = normalizeQuaternion(this.orientation);
-        }
-    
-        this.transform = Mat4.identity().times(Mat4.translation(this.pos[0], this.pos[1], this.pos[2])).times(Mat4.scale(this.scale[0],this.scale[1],this.scale[2]));
-        this.transform = this.transform.times(Mat4.rotation(this.orientation[0], this.orientation[1], this.orientation[2], this.orientation[3]));
-    
-        this.angularVel = this.angularVel.times(this.angularDragPercent);
-    
-        this.acc = vec3(0, 0, 0);
-        this.angularAcc = vec3(0, 0, 0);
-    }
-    
+      // linear motion
+      const acceleration = this.force.times(1 / this.mass);
+      this.velocity.add_by(acceleration.times(dt));
+      this.position.add_by(this.velocity.times(dt));
+
+      // Update angular velocity
+      const angularAcceleration = this.torque.times(1 / this.momentOfInertia);
+      this.angularVelocity.add_by(angularAcceleration.times(dt));
+
+      // Update orientation using quaternion
+      let omega = vec4(0, this.angularVelocity[0], this.angularVelocity[1], this.angularVelocity[2]);
+      let qDot = quaternionMultiply(this.orientation, omega).times(0.5);
+      this.orientation = vec4(
+          this.orientation[0] + qDot[0] * dt,
+          this.orientation[1] + qDot[1] * dt,
+          this.orientation[2] + qDot[2] * dt,
+          this.orientation[3] + qDot[3] * dt
+      );
+      this.orientation = normalizeQuaternion(this.orientation);
+
+      // Reset forces and torques
+      this.force = vec3(0, 0, 0);
+      this.torque = vec3(0, 0, 0);
+  }
+
+  getTransformationMatrix() {
+    // Convert quaternion to rotation matrix
+    let rotationMatrix = quaternionToRotationMatrix(this.orientation);
+
+    // Apply scale
+    let scaleMatrix = Mat4.scale(this.scale[0], this.scale[1], this.scale[2]);
+    let transformationMatrix = rotationMatrix.times(scaleMatrix);
+
+    // Apply translation
+    transformationMatrix = Mat4.translation(this.position[0], this.position[1], this.position[2]).times(transformationMatrix);
+
+    return transformationMatrix;
+  }  
 
     show(caller, uniforms) {
-        this.shapes.box.draw( caller, uniforms, this.transform, this.def_mat );
+        this.shapes.box.draw( caller, uniforms, this.getTransformationMatrix(), this.def_mat );
     }
 
     checkCollissionWithGroundPlane(ks, kd) {
-        if (this.pos[1] - 1 <= 0) {
-            let penetrationDepth = Math.min(1 - this.pos[1], 0.2);
-            let springForce = ks * penetrationDepth; // F = kx
-            let dampingForce = kd * (-this.vel[1]); // F = -kv
-            let groundForce = springForce + dampingForce;
-            this.applyForce(vec3(0,groundForce, 0));
-        }
+        // cheese
     }
 
 }
@@ -117,41 +108,70 @@ export function isPointInsideRigidBody(point, rigidBody) {
     return Math.abs(localPoint[0]) <= halfScale[0] &&
            Math.abs(localPoint[1]) <= halfScale[1] &&
            Math.abs(localPoint[2]) <= halfScale[2];
-  }
-  
-  // Helper function to create a quaternion from an angle and an axis
-  export function quaternionFromAngleAxis(angle, axis) {
-    let halfAngle = angle * 0.5;
-    let s = Math.sin(halfAngle);
-    return vec4(Math.cos(halfAngle), axis[0] * s, axis[1] * s, axis[2] * s);
-  }
-  
-  // Helper function to rotate a vector by a quaternion
-  function rotateVectorByQuaternion(vector, quaternion) {
-    // Convert the vector into a quaternion with a w-value of 0
-    let vQuat = vec4(0, vector[0], vector[1], vector[2]);
-    
-    // Calculate the conjugate of the quaternion
-    let qConj = vec4(quaternion[0], -quaternion[1], -quaternion[2], -quaternion[3]);
-    
-    // Rotate the vector quaternion: q * v * q^-1
-    let rotatedQuat = quaternionMultiply(quaternionMultiply(quaternion, vQuat), qConj);
-    
-    // Return the rotated vector, ignoring the w component
-    return vec3(rotatedQuat[1], rotatedQuat[2], rotatedQuat[3]);
-  }
-  
-  // Helper function to multiply two quaternions
-  export function quaternionMultiply(q1, q2) {
-    return vec4(
-        q1[0] * q2[0] - q1[1] * q2[1] - q1[2] * q2[2] - q1[3] * q2[3],
-        q1[0] * q2[1] + q1[1] * q2[0] + q1[2] * q2[3] - q1[3] * q2[2],
-        q1[0] * q2[2] - q1[1] * q2[3] + q1[2] * q2[0] + q1[3] * q2[1],
-        q1[0] * q2[3] + q1[1] * q2[2] - q1[2] * q2[1] + q1[3] * q2[0]
-    );
-  }
+}
 
-  function normalizeQuaternion(quaternion) {
-    let norm = Math.sqrt(quaternion[0] * quaternion[0] + quaternion[1] * quaternion[1] + quaternion[2] * quaternion[2] + quaternion[3] * quaternion[3]);
-    return vec4(quaternion[0] / norm, quaternion[1] / norm, quaternion[2] / norm, quaternion[3] / norm);
+// Helper function to create a quaternion from an angle and an axis
+export function quaternionFromAngleAxis(angle, axis) {
+  let halfAngle = angle * 0.5;
+  let s = Math.sin(halfAngle);
+  return vec4(Math.cos(halfAngle), axis[0] * s, axis[1] * s, axis[2] * s);
+}
+
+// Helper function to rotate a vector by a quaternion
+function rotateVectorByQuaternion(vector, quaternion) {
+  // Convert the vector into a quaternion with a w-value of 0
+  let vQuat = vec4(0, vector[0], vector[1], vector[2]);
+  
+  // Calculate the conjugate of the quaternion
+  let qConj = vec4(quaternion[0], -quaternion[1], -quaternion[2], -quaternion[3]);
+  
+  // Rotate the vector quaternion: q * v * q^-1
+  let rotatedQuat = quaternionMultiply(quaternionMultiply(quaternion, vQuat), qConj);
+  
+  // Return the rotated vector, ignoring the w component
+  return vec3(rotatedQuat[1], rotatedQuat[2], rotatedQuat[3]);
+}
+
+// Helper function to multiply two quaternions
+export function quaternionMultiply(q1, q2) {
+  return vec4(
+      q1[0] * q2[0] - q1[1] * q2[1] - q1[2] * q2[2] - q1[3] * q2[3],
+      q1[0] * q2[1] + q1[1] * q2[0] + q1[2] * q2[3] - q1[3] * q2[2],
+      q1[0] * q2[2] - q1[1] * q2[3] + q1[2] * q2[0] + q1[3] * q2[1],
+      q1[0] * q2[3] + q1[1] * q2[2] - q1[2] * q2[1] + q1[3] * q2[0]
+  );
+}
+
+function normalizeQuaternion(quaternion) {
+  let norm = Math.sqrt(quaternion[0] * quaternion[0] + quaternion[1] * quaternion[1] + quaternion[2] * quaternion[2] + quaternion[3] * quaternion[3]);
+  return vec4(quaternion[0] / norm, quaternion[1] / norm, quaternion[2] / norm, quaternion[3] / norm);
+}
+
+function normalizeColumns(mat) {
+  // Iterate over each column
+  for (let col = 0; col < mat[0].length; col++) {
+    // Compute the norm of the column
+    let norm = 0;
+    for (let row = 0; row < mat.length; row++) {
+      norm += mat[row][col] ** 2;
+    }
+    norm = Math.sqrt(norm);
+
+    // Normalize each element in the column
+    for (let row = 0; row < mat.length; row++) {
+      mat[row][col] /= norm;
+    }
   }
+  return mat;
+}
+
+// Helper function to convert a quaternion to a rotation matrix
+function quaternionToRotationMatrix(q) {
+  let [w, x, y, z] = [q[0], q[1], q[2], q[3]];
+  return new Mat4(
+      [1 - 2 * (y * y + z * z),     2 * (x * y - z * w),     2 * (x * z + y * w), 0],
+      [    2 * (x * y + z * w), 1 - 2 * (x * x + z * z),     2 * (y * z - x * w), 0],
+      [    2 * (x * z - y * w),     2 * (y * z + x * w), 1 - 2 * (x * x + y * y), 0],
+      [                      0,                       0,                       0, 1]
+  );
+}
