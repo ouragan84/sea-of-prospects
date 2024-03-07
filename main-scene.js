@@ -46,10 +46,10 @@ Object.assign (defs,
 
 // ******************** SELECT THE DEMO TO DISPLAY:
 
-let scenes = {1: Sea_Of_Prospects_Scene};
+let scenes = {1: Sea_Of_Prospects_Scene, 2: Text_Demo};
 const scene_selector = (i) => scenes[i];
 
-const main_scene        = Sea_Of_Prospects_Scene; // default
+const main_scene     = Sea_Of_Prospects_Scene; // default
 const additional_scenes = [];
 
 export {main_scene, scene_selector, additional_scenes, defs};

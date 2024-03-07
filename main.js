@@ -3,6 +3,7 @@ import { Ocean } from './Ocean.js';
 import { quaternionFromAngleAxis, RigidBody } from './RigidBody.js';
 import { Ship } from './ship.js';
 import { Skybox } from './Skybox.js';
+import { Text } from './text.js';
 
 const { vec3, vec4, color, Mat4, Shader, Texture, Component } = tiny;
 
@@ -22,6 +23,25 @@ export class Sea_Of_Prospects_Scene extends Component
       'ball' : new defs.Subdivision_Sphere( 4 ),
       'axis' : new defs.Axis_Arrows(),
     };
+
+    this.start = false
+    this.start_text = "Start Game"
+    this.start_audio = new Audio('assets/start.mp3')
+    this.game_audio = new Audio('assets/game.mp3')
+    this.mute = false
+
+    // Keeps track of whether the game was started and was paused
+    this.started = false
+
+    // Text obj for start screen
+    this.start_obj = new Text(fog_param, this.start_text)
+    this.start_text_transform = Mat4.identity().times(Mat4.rotation(Math.PI/4, 0,1,0)).times(Mat4.translation(-6,5,0))
+
+    this.score = 0
+    this.reset = 0
+
+    this.score_text_obj = new Text(fog_param, `${'Score: ' + this.score}`)
+    this.score_text_transform = Mat4.identity().times(Mat4.rotation(Math.PI/4, 0,1,0)).times(Mat4.translation(-6,0,0))
 
     this.vertical_input = 0;
     this.horizontal_input = 0;
@@ -62,7 +82,7 @@ export class Sea_Of_Prospects_Scene extends Component
   clamp = (x, min, max) => Math.min(Math.max(x, min), max);
      
   render_animation( caller )
-  {                     
+  {                    
 
     const t = this.t = this.uniforms.animation_time/1000;
     const dt = this.dt = 0.02
@@ -94,20 +114,68 @@ export class Sea_Of_Prospects_Scene extends Component
 
     // const light_position = Mat4.rotation( angle,   1,0,0 ).times( vec4( 0,-1,1,0 ) ); !!!
     // !!! Light changed here
-    const light_position = vec3(20, 20, -10).plus(this.ship.rb.position).to4(1);
+    if(this.start)
+    {
+      if(this.mute)
+      {
+          this.start_audio.pause()
+          this.game_audio.pause()
+      }
+      else
+      {
+          this.start_audio.pause()
+          this.game_audio.play()
+      }
+      const light_position = vec3(20, 20, -10).plus(this.ship.rb.position).to4(1);
     
-    this.uniforms.lights = [ defs.Phong_Shader.light_source( light_position, color( 1,1,1,1 ), 1000000 )];
+      this.uniforms.lights = [ defs.Phong_Shader.light_source( light_position, color( 1,1,1,1 ), 1000000 )];
+  
+      this.ocean.apply_rb_offset(this.ship.rb);
+      this.ocean.show(this.shapes, caller, this.uniforms)
+  
+      this.ocean.applyWaterForceOnRigidBody(this.ship.rb, t, dt, this.horizontal_input, this.vertical_input, this.wind)
+      this.update_wind()
+  
+      this.ship.update(this.t, this.dt, this.wind)
+      this.ship.show(caller, this.uniforms)
+  
+      this.skybox.show(caller, this.uniforms, cam_pos, this.render_distance);
 
-    this.ocean.apply_rb_offset(this.ship.rb);
-    this.ocean.show(this.shapes, caller, this.uniforms)
+      let temp = vec3(20, 20, -10).plus(this.ship.rb.position)
+      this.score_text_obj.update_string("Score: " + this.score)
+      this.score_text_obj.draw(caller, this.uniforms, this.score_text_transform.times(Mat4.translation(10,10,0)))
 
-    this.ocean.applyWaterForceOnRigidBody(this.ship.rb, t, dt, this.horizontal_input, this.vertical_input, this.wind)
-    this.update_wind()
+    }
+    else
+    {
+      if(this.mute)
+      {
+          this.start_audio.pause()
+          this.game_audio.pause()
+      }
+      else
+      {
+          this.game_audio.pause()
+          this.start_audio.play()
+      }
+      const start_screen_transform = Mat4.identity().times( Mat4.scale( 10,10, 1) );
+      const start_screen_material = { shader: new defs.Basic_Shader(), ambient: .2, diffusivity: 1, specularity:  1, color: color( .9,.5,.9,1 ) }
+      this.shapes.ball.draw( caller, this.uniforms, start_screen_transform, start_screen_material );
 
-    this.ship.update(this.t, this.dt, this.wind)
-    this.ship.show(caller, this.uniforms)
+      if(this.started)
+      {
+          this.start_obj.update_string("Paused")
+      }
+      else
+      {
+          this.start_obj.update_string("Start Game")
+      }
 
-    this.skybox.show(caller, this.uniforms, cam_pos, this.render_distance);
+      this.score_text_obj.update_string("Score: " + this.score)
+
+      this.start_obj.draw(caller, this.uniforms, this.start_text_transform)
+      this.score_text_obj.draw(caller, this.uniforms, this.score_text_transform)
+    }
   }
 
   update_wind() {
@@ -139,9 +207,48 @@ export class Sea_Of_Prospects_Scene extends Component
 
       return vec3(x,y,z)
   }
+
+  handle_reset()
+  {
+    if(this.start)
+    {
+        this.start = false
+        this.started = false
+        this.score = 0
+    }
+  }
+
+  handle_audio()
+  {
+      this.mute = !this.mute
+
+      if(this.mute)
+      {
+          this.start_audio.pause()
+          this.game_audio.pause()
+      }
+      else
+      {
+          if(this.start)
+          {
+              this.game_audio.play()
+          }
+          else
+          {
+              this.start_audio.play()
+          }
+      }
+  }
   
   render_controls () {
     this.control_panel.innerHTML += "Click and drag the scene to <br> spin your viewpoint around it.<br>";
+    this.key_triggered_button ("Start/Pause Game", [" "], () => {this.start = !this.start; this.started = true});
+    this.key_triggered_button ("Reset", ["r"], () => this.handle_reset());
+    //this.key_triggered_button ("Pause Game", [" "], () => this.start = 0);
+    this.new_line();
+    this.key_triggered_button ("Mute/Unmute", ["m"], () => this.mute=!this.mute);
+    this.key_triggered_button ("Increase Score", ["i"], () => this.score+=1);
+    this.new_line();
     this.key_triggered_button ("Forward", ["w"], () => this.vertical_input = 1, undefined, () => this.vertical_input = 0);
     this.key_triggered_button ("Right", ["d"], () => this.horizontal_input = 1, undefined, () => this.horizontal_input = 0);
     this.new_line ();
@@ -163,9 +270,12 @@ export class Sea_Of_Prospects_Scene extends Component
         if (document.pointerLockElement === canvas || document.mozPointerLockElement === canvas) {
             // console.log('The pointer lock status is now locked');
             canvas.addEventListener("mousemove", (e) => {
-                // this.mouse.from_center = mouse_position(e);
-                this.mousev = [e.movementX, e.movementY];
-                //console.log("mouse position: ", this.mouse.from_center)
+              if(this.start)
+              {
+                  // this.mouse.from_center = mouse_position(e);
+                  this.mousev = [e.movementX, e.movementY];
+                  //console.log("mouse position: ", this.mouse.from_center)
+              }
             }, false)
 
             // canvas.addEventListener("mousedown", e => {

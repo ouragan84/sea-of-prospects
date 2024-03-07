@@ -85,8 +85,9 @@ const Funny_Shader = defs.Funny_Shader =
 
 const Phong_Shader = defs.Phong_Shader =
   class Phong_Shader extends Shader {
-      constructor (num_lights = 2, fog) {
+      constructor (num_lights = 2, fog={ color: color(.8,.9,1,1), start: 80-20, end: 80 }) {
           super ();
+          console.log('fog: ', fog)
           this.num_lights = num_lights;
           this.fog_color = `vec4( ${fog.color[0]}, ${fog.color[1]}, ${fog.color[2]}, ${fog.color[3]} )`;
           this.fog_start =  fog.start;
