@@ -379,6 +379,30 @@ const Rounded_Capped_Cylinder = defs.Rounded_Capped_Cylinder =
       }
   };
 
+const Arrow = defs.Arrow =
+class Arrow extends Shape {
+    constructor () {
+        super ("position", "normal", "texture_coord");
+        var stack = [];
+        Subdivision_Sphere.insert_transformed_copy_into (this, [3], Mat4.rotation (Math.PI / 2, 0, 1, 0)
+                                                                        .times (Mat4.scale (.25, .25, .25)));
+        this.drawOneAxis (Mat4.identity (), [[.67, 1], [0, 1]]);
+    }
+    drawOneAxis (transform, tex) {
+        // Use a different texture coordinate range for each of the three axes, so they show up differently
+        Closed_Cone.insert_transformed_copy_into (this, [4, 10, tex], transform.times (Mat4.translation (0, 0, 2))
+                                                                               .times (Mat4.scale (.25, .25, .25)));
+        // Cube.insert_transformed_copy_into (this, [], transform.times (Mat4.translation (.95, .95, .45))
+        //                                                       .times (Mat4.scale (.05, .05, .45)));
+        // Cube.insert_transformed_copy_into (this, [], transform.times (Mat4.translation (.95, 0, .5))
+        //                                                       .times (Mat4.scale (.05, .05, .4)));
+        // Cube.insert_transformed_copy_into (this, [], transform.times (Mat4.translation (0, .95, .5))
+        //                                                       .times (Mat4.scale (.05, .05, .4)));
+        Cylindrical_Tube.insert_transformed_copy_into (this, [7, 7, tex], transform.times (Mat4.translation (0, 0, 1))
+                                                                                   .times (Mat4.scale (.1, .1, 2)));
+    }
+};
+
 
 const Axis_Arrows = defs.Axis_Arrows =
   class Axis_Arrows extends Shape {

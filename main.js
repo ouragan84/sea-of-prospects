@@ -22,6 +22,7 @@ export class Sea_Of_Prospects_Scene extends Component
     this.shapes = { 'box'  : new defs.Cube(),
       'ball' : new defs.Subdivision_Sphere( 4 ),
       'axis' : new defs.Axis_Arrows(),
+      'arrow': new defs.Arrow(),
     };
 
     this.phong = new defs.Phong_Shader(1, fog_param);
@@ -51,7 +52,7 @@ export class Sea_Of_Prospects_Scene extends Component
     this.ocean = new Ocean({
       initPos : vec3(0,0,0),
       density : 4,
-      size : 160,
+      size : this.render_distance * 2,
       fog_param: fog_param,
       preset: 'calm' // 'calm', 'agitated', 'stormy'
     });
@@ -138,20 +139,26 @@ export class Sea_Of_Prospects_Scene extends Component
       this.ocean.apply_rb_offset(this.ship.rb);
       this.ocean.show(this.shapes, caller, this.uniforms)
   
-      this.ocean.applyWaterForceOnRigidBody(this.ship.rb, t, dt, this.horizontal_input, this.vertical_input, this.wind)
+      this.ocean.applyWaterForceOnRigidBody(this.ship.rb, t, dt, this.horizontal_input, this.vertical_input, this.wind, 
+        (pos, size, color) => this.draw_debug_sphere(caller, pos, size, color),
+        (pos, dir, length, width, color) => this.draw_debug_arrow(caller, pos, dir, length, width, color)
+      );
+
       this.update_wind()
   
       this.ship.update(this.t, this.dt, this.wind)
       this.ship.show(caller, this.uniforms)
   
+
       this.skybox.show(caller, this.uniforms, cam_pos, this.render_distance);
 
-      this.score_text_obj.update_string("Score: " + this.score)
+      this.score_text_obj.update_string(`Score: ${this.score} - FPS: ${Math.round(1000/this.uniforms.animation_delta_time)}`)
       this.score_text_obj.draw(caller, this.uniforms, cam_Mat_inv.times(Mat4.translation(-.14, .075, -0.2)).times(Mat4.scale(.004, .004, .1)))
 
       // 'floating' ball
       // this.shapes.ball.draw( caller, this.uniforms, Mat4.translation(5, this.ocean.gersrnerWave.solveForY(5, 5, t)+2, 5).times( Mat4.scale( 2, 2, 2) ), { shader: this.phong, ambient: .2, diffusivity: 1, specularity:  1, color: color( .9,.5,.9,1 ) } )
 
+      this.shapes.axis.draw( caller, this.uniforms, Mat4.identity(), { shader: this.phong, ambient: .2, diffusivity: 1, specularity:  1, color: color( 1,1,1,1 ) } )
     }
     else
     {
@@ -302,6 +309,24 @@ export class Sea_Of_Prospects_Scene extends Component
 
     document.addEventListener('pointerlockchange', changeCallback.bind(this), false);
     document.addEventListener('mozpointerlockchange', changeCallback.bind(this),false);
+  }
+
+  draw_debug_sphere = (caller, pos, size=0.2, sphere_color=color(1,0,0,1)) => {
+    this.shapes.ball.draw( caller, this.uniforms, Mat4.translation(pos[0], pos[1], pos[2]).times( Mat4.scale( size, size, size) ), { shader: this.phong, ambient: .3, diffusivity: .8, specularity:  .5, color: sphere_color } )
+  }
+
+  draw_debug_arrow = (caller, pos, dir, length=1, width=1, arrow_color=color(1,0,0,1)) => {
+    const d = dir.normalized();
+
+    const angle_y = Math.atan2(d[0], d[2]);
+    const angle_x = -Math.asin(d[1]);
+
+    const rotMat = Mat4.rotation(angle_y, 0, 1, 0).times(Mat4.rotation(angle_x, 1, 0, 0));
+
+    const transform = Mat4.translation(pos[0], pos[1], pos[2]).times(rotMat).times(Mat4.scale(length, width, width));
+
+    this.shapes.arrow.draw(caller, this.uniforms, transform, { shader: this.phong, ambient: .3, diffusivity: .8, specularity: .5, color: arrow_color });
+
   }
 }
 
