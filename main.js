@@ -43,7 +43,7 @@ export class Sea_Of_Prospects_Scene extends Component
     this.reset = 0
 
     this.score_text_obj = new Text(fog_param, `${'Score: ' + this.score}`)
-    this.score_text_transform = Mat4.identity().times(Mat4.rotation(Math.PI/4, 0,1,0)).times(Mat4.translation(-6,0,0))
+    // this.score_text_transform = Mat4.identity().times(Mat4.rotation(Math.PI/4, 0,1,0)).times(Mat4.translation(-6,0,0))
 
     this.vertical_input = 0;
     this.horizontal_input = 0;
@@ -109,9 +109,11 @@ export class Sea_Of_Prospects_Scene extends Component
     this.currentZ = lerp(this.currentZ, targetZ, a);
 
     const cam_pos = vec3(this.currentX, this.currentY, this.currentZ).plus(this.ship.rb.position);
+    const cam_Mat = Mat4.look_at(cam_pos, this.ship.rb.position, vec3(0, 1, 0));
+    const cam_Mat_inv = Mat4.inverse(cam_Mat);
 
     // Assign the interpolated position to the camera
-    Shader.assign_camera(Mat4.look_at(cam_pos, this.ship.rb.position, vec3(0, 1, 0)), this.uniforms);
+    Shader.assign_camera(cam_Mat, this.uniforms);
 
     this.uniforms.projection_transform = Mat4.perspective( Math.PI/4, caller.width/caller.height, 0.1, this.render_distance);
 
@@ -144,9 +146,8 @@ export class Sea_Of_Prospects_Scene extends Component
   
       this.skybox.show(caller, this.uniforms, cam_pos, this.render_distance);
 
-      let temp = vec3(20, 20, -10).plus(this.ship.rb.position)
       this.score_text_obj.update_string("Score: " + this.score)
-      this.score_text_obj.draw(caller, this.uniforms, this.score_text_transform.times(Mat4.translation(10,10,0)))
+      this.score_text_obj.draw(caller, this.uniforms, cam_Mat_inv.times(Mat4.translation(-.14, .075, -0.2)).times(Mat4.scale(.004, .004, .1)))
 
       // 'floating' ball
       // this.shapes.ball.draw( caller, this.uniforms, Mat4.translation(5, this.ocean.gersrnerWave.solveForY(5, 5, t)+2, 5).times( Mat4.scale( 2, 2, 2) ), { shader: this.phong, ambient: .2, diffusivity: 1, specularity:  1, color: color( .9,.5,.9,1 ) } )

@@ -12,6 +12,8 @@ export const Ocean_Shader =
         return super.shared_glsl_code() + `
         uniform float time;
         uniform float offset_x;
+
+        #define PI 3.14159265359
         uniform float offset_z;
 
         ${this.gersrnerWave.num_waves}
@@ -37,7 +39,8 @@ export const Ocean_Shader =
             for (int i = 0; i < num_waves; i++) {
                 float w = frequencies[i];
                 vec3 d = directions[i];
-                float f = w * (d.x * (pos.x + offset_x) + d.z * (pos.z + offset_z)) - (speeds[i] * t) + phases[i];
+                float l = 2.0 * PI / w;
+                float f = w * (d.x * (pos.x + offset_x) + d.z * (pos.z + offset_z)) - (speeds[i] * 2.0 / l  * t) + phases[i];
                 float a = amplitudes[i];
                 new_pos = new_pos + vec3(
                     d.x * a * cos(f), 
@@ -55,7 +58,8 @@ export const Ocean_Shader =
             for (int i = 0; i < num_waves; i++) {
                 float w = frequencies[i];
                 vec3 d = directions[i];
-                float f = w * (d.x * (pos.x + offset_x) + d.z * (pos.z + offset_z)) - (speeds[i] * t) + phases[i];
+                float l = 2.0 * PI / w;
+                float f = w * (d.x * (pos.x + offset_x) + d.z * (pos.z + offset_z)) - (speeds[i] * 2.0 / l  * t) + phases[i];
                 float a = amplitudes[i];
 
                 rx += vec3(
@@ -74,6 +78,7 @@ export const Ocean_Shader =
 
             return n;
         }
+
         `;
     }
  
@@ -108,13 +113,18 @@ export const Ocean_Shader =
           // compute the normal for each pixel
         //    vec3 norm = get_gersrner_wave_normal( vertex_worldspace, time, offset_x, offset_z );
                                          // Compute an initial (ambient) color:
-          gl_FragColor = vec4( shape_color.xyz * ambient, shape_color.w );
-                                         // Compute the final color with contributions from lights:
-          gl_FragColor.xyz += phong_model_lights( normalize(N), vertex_worldspace );
 
-          float distance = length(camera_center - vertex_worldspace);
-          float fog_amount = smoothstep(fog_start_dist, fog_end_dist, distance);
-          gl_FragColor = mix(fog_color, gl_FragColor, 1.0-fog_amount);
+        gl_FragColor = vec4( shape_color.xyz * ambient, shape_color.w );
+                                        // Compute the final color with contributions from lights:
+        gl_FragColor.xyz += phong_model_lights( normalize(N), vertex_worldspace );
+
+        float distance = length(camera_center - vertex_worldspace);
+        float fog_amount = smoothstep(fog_start_dist, fog_end_dist, distance);
+        gl_FragColor = mix(fog_color, gl_FragColor, 1.0-fog_amount);
+          
+
+
+          
         } `;
     }
       update_GPU (context, gpu_addresses, uniforms, model_transform, material) {

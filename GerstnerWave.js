@@ -81,7 +81,8 @@ export class GerstnerWave{
             const a = this.amplitudes[i];
             const d = this.directions[i];
             const w = this.frequencies[i];
-            const f = w * (pos[0] * d[0] + pos[2] * d[2]) - (this.speeds[i] * t)  + this.phases[i];
+            const l = 2 * Math.PI / w;
+            const f = w * (pos[0] * d[0] + pos[2] * d[2]) - (this.speeds[i] * 2 / l * t)  + this.phases[i];
 
 
             new_pos = new_pos.plus(vec3(
@@ -102,7 +103,8 @@ export class GerstnerWave{
             const a = this.amplitudes[i];
             const d = this.directions[i];
             const w = this.frequencies[i];
-            const f = w * (pos[0] * d[0] + pos[2] * d[2]) - (this.speeds[i] * t) + this.phases[i];
+            const l = 2 * Math.PI / w;
+            const f = w * (pos[0] * d[0] + pos[2] * d[2]) - (this.speeds[i] * 2 / l * t)  + this.phases[i];
 
             rx = rx.plus(vec3(
                 - d[0] * d[0] * a * w * Math.sin(f),
