@@ -24,6 +24,8 @@ export class Sea_Of_Prospects_Scene extends Component
       'axis' : new defs.Axis_Arrows(),
     };
 
+    this.phong = new defs.Phong_Shader(1, fog_param);
+
     this.start = true
     this.start_text = "Start Game"
     this.start_audio = new Audio('assets/start.mp3')
@@ -48,9 +50,10 @@ export class Sea_Of_Prospects_Scene extends Component
 
     this.ocean = new Ocean({
       initPos : vec3(0,0,0),
-      density : 200,
+      density : 4,
       size : 160,
-      fog_param: fog_param
+      fog_param: fog_param,
+      preset: 'calm' // 'calm', 'agitated', 'stormy'
     });
 
     this.ship = new Ship(fog_param)
@@ -144,6 +147,9 @@ export class Sea_Of_Prospects_Scene extends Component
       let temp = vec3(20, 20, -10).plus(this.ship.rb.position)
       this.score_text_obj.update_string("Score: " + this.score)
       this.score_text_obj.draw(caller, this.uniforms, this.score_text_transform.times(Mat4.translation(10,10,0)))
+
+      // 'floating' ball
+      // this.shapes.ball.draw( caller, this.uniforms, Mat4.translation(5, this.ocean.gersrnerWave.solveForY(5, 5, t)+2, 5).times( Mat4.scale( 2, 2, 2) ), { shader: this.phong, ambient: .2, diffusivity: 1, specularity:  1, color: color( .9,.5,.9,1 ) } )
 
     }
     else

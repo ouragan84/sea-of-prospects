@@ -20,8 +20,12 @@ class Ocean {
     constructor(config) {
         this.pos = config.initPos;
         this.density = config.density
-        this.spacing = config.size / this.density;
-        this.gersrnerWave = new GerstnerWave();
+        this.size = config.size
+        this.spacing = 1 / this.density;
+
+        this.gersrnerWave = new GerstnerWave(config.preset);
+
+        const points_across = this.size * this.density + 1;
 
         const ocean_shader = new Ocean_Shader(1, this.gersrnerWave.get_glsl_strings(), config.fog_param);
 
@@ -39,17 +43,20 @@ class Ocean {
         const row_operation = (s,p) => p ? Mat4.translation( 0,0,.2 ).times(p.to4(1)).to3()
             : initial_corner_point;
         const column_operation = (t,p) =>  Mat4.translation( .2,0,0 ).times(p.to4(1)).to3();
-        this.shapes.ocean =  new defs.Grid_Patch( config.density, config.density, row_operation, column_operation );
+        this.shapes.ocean =  new defs.Grid_Patch( points_across - 1, points_across - 1, row_operation, column_operation );
 
         // initialize points
-        for (let i = -config.size/2; i <= config.size/2; i+=this.spacing){
-            for (let j = -config.size/2; j <= config.size/2; j += this.spacing){
-                this.points.push(new Point(vec3(i,0,j).plus(this.pos)))
+        for (let i = 0; i < points_across; i+=1){
+            for (let j = 0; j < points_across; j+=1){
+                const pos = vec3(i * this.spacing - this.size / 2, 0, j * this.spacing - this.size / 2);
+                this.points.push(new Point(pos));
             }
         }
 
+        console.log(this.points.length);
+
         // initialize segments
-        this.gridSize = Math.sqrt(this.points.length); // Calculate the grid size
+        this.gridSize = points_across;
 
         this.shapes.ocean.arrays.position.forEach( (p,i,a) =>{
             a[i] = this.points[i].pos
@@ -102,22 +109,26 @@ class Ocean {
 
         const axis1 = boat_normal.cross(corner1_ocean_normal).normalized();
         const angle1 = Math.acos(boat_normal.dot(corner1_ocean_normal));
-        rigidBody.addTorque(axis1.times(angle1 * mult_t));
+        if(Math.abs(angle1) > 0.01)
+            rigidBody.addTorque(axis1.times(angle1 * mult_t));
         rigidBody.addForce(vec3(0,1,0).times(mult_f * corner1_percent_submerged));
 
         const axis2 = boat_normal.cross(corner2_ocean_normal).normalized();
         const angle2 = Math.acos(boat_normal.dot(corner2_ocean_normal));
-        rigidBody.addTorque(axis2.times(angle2 * mult_t));
+        if(Math.abs(angle2) > 0.01)
+            rigidBody.addTorque(axis2.times(angle2 * mult_t));
         rigidBody.addForce(vec3(0,1,0).times(mult_f * corner2_percent_submerged));
 
         const axis3 = boat_normal.cross(corner3_ocean_normal).normalized();
         const angle3 = Math.acos(boat_normal.dot(corner3_ocean_normal));
-        rigidBody.addTorque(axis3.times(angle3 * mult_t));
+        if(Math.abs(angle3) > 0.01)
+            rigidBody.addTorque(axis3.times(angle3 * mult_t));
         rigidBody.addForce(vec3(0,1,0).times(mult_f * corner3_percent_submerged));
 
         const axis4 = boat_normal.cross(corner4_ocean_normal).normalized();
         const angle4 = Math.acos(boat_normal.dot(corner4_ocean_normal));
-        rigidBody.addTorque(axis4.times(angle4 * mult_t));
+        if(Math.abs(angle4) > 0.01)
+            rigidBody.addTorque(axis4.times(angle4 * mult_t));
         rigidBody.addForce(vec3(0,1,0).times(mult_f * corner4_percent_submerged));
 
         const restore = 10000;

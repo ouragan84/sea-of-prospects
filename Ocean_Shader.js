@@ -14,31 +14,31 @@ export const Ocean_Shader =
         uniform float offset_x;
         uniform float offset_z;
 
-        ${this.gersrnerWave.n}
-        ${this.gersrnerWave.s}
-        ${this.gersrnerWave.l}
-        ${this.gersrnerWave.v}
-        ${this.gersrnerWave.dir}
+        ${this.gersrnerWave.num_waves}
+        ${this.gersrnerWave.amplitudes}
+        ${this.gersrnerWave.frequencies}
+        ${this.gersrnerWave.speeds}
+        ${this.gersrnerWave.directions}
+        ${this.gersrnerWave.phases}
 
         void init_waves(){
-            ${this.gersrnerWave.sInit}
-            ${this.gersrnerWave.lInit}
-            ${this.gersrnerWave.vInit}
-            ${this.gersrnerWave.dirInit}
+            ${this.gersrnerWave.amplitudesInit}
+            ${this.gersrnerWave.frequenciesInit}
+            ${this.gersrnerWave.speedsInit}
+            ${this.gersrnerWave.directionsInit}
+            ${this.gersrnerWave.phasesInit}
         }
 
         bool has_initialized_vars = false;
 
-        const int MAX_WAVES = 10;
-
         vec3 get_gersrner_wave_position(vec3 pos, float t, float offset_x, float offset_z){
             vec3 new_pos = vec3(pos.x + offset_x, pos.y, pos.z + offset_z);
-            for (int i = 0; i < MAX_WAVES; i++) {
-                if (i >= num_waves) break;
-                float k = 2.0 * 3.14159 / wave_length[i];
-                vec3 d = direction[i];
-                float f = k * (d.x * (pos.x + offset_x) + d.z * (pos.z + offset_z)) - (speed[i] * t);
-                float a = steepness[i] / k;
+
+            for (int i = 0; i < num_waves; i++) {
+                float w = frequencies[i];
+                vec3 d = directions[i];
+                float f = w * (d.x * (pos.x + offset_x) + d.z * (pos.z + offset_z)) - (speeds[i] * t) + phases[i];
+                float a = amplitudes[i];
                 new_pos = new_pos + vec3(
                     d.x * a * cos(f), 
                     a * sin(f), 
@@ -52,28 +52,25 @@ export const Ocean_Shader =
             vec3 rx = vec3(1.0,0.0,0.0);
             vec3 rz = vec3(0.0,0.0,1.0);
 
-            for (int i = 0; i < MAX_WAVES; i++) {
-                if (i >= num_waves) break;
-                float k = 2.0 * 3.14159 / wave_length[i];
-                vec3 d = direction[i];
-                float f = k * (d.x * (pos.x + offset_x) + d.z * (pos.z + offset_z)) - (speed[i] * t);
-                float a = steepness[i] / k;
+            for (int i = 0; i < num_waves; i++) {
+                float w = frequencies[i];
+                vec3 d = directions[i];
+                float f = w * (d.x * (pos.x + offset_x) + d.z * (pos.z + offset_z)) - (speeds[i] * t) + phases[i];
+                float a = amplitudes[i];
+
                 rx += vec3(
-                    - d.x * d.x * a * k * sin(f),
-                    d.x * a * k * cos(f),
-                    - d.x * d.z * a * k * sin(f)
+                    - d.x * d.x * a * w * sin(f),
+                    d.x * a * w * cos(f),
+                    - d.x * d.z * a * w * sin(f)
                 );
                 rz += vec3(
-                    - d.z * d.x * a * k * sin(f),
-                    d.z * a * k * cos(f),
-                    - d.z * d.z * a * k * sin(f)
+                    - d.z * d.x * a * w * sin(f),
+                    d.z * a * w * cos(f),
+                    - d.z * d.z * a * w * sin(f)
                 );
             }
 
             vec3 n = normalize(cross(rz, rx));
-
-            if (n.y < 0.0)
-                return -n;
 
             return n;
         }

@@ -322,7 +322,7 @@ const Mat4 = math.Mat4 =
           // Check for NaN, indicating a degenerate cross product, which happens if eye == at, or if
           // at minus eye is parallel to up.
           if ( !x.every (i => i == i))
-              throw "Two parallel vectors were given";
+              return 23/0;
           z.scale_by (-1);                               // Enforce right-handed coordinate system.
           return Mat4.translation (-x.dot (eye), -y.dot (eye), -z.dot (eye))
                      .times (Matrix.of (x.to4 (0), y.to4 (0), z.to4 (0), vec4 (0, 0, 0, 1)));
