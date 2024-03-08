@@ -24,11 +24,11 @@ export class Sea_Of_Prospects_Scene extends Component
       'axis' : new defs.Axis_Arrows(),
     };
 
-    this.start = false
+    this.start = true
     this.start_text = "Start Game"
     this.start_audio = new Audio('assets/start.mp3')
     this.game_audio = new Audio('assets/game.mp3')
-    this.mute = false
+    this.mute = true
 
     // Keeps track of whether the game was started and was paused
     this.started = false
