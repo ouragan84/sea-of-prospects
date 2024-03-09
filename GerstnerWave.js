@@ -141,6 +141,7 @@ export class GerstnerWave{
             speedsInit: this.speeds.map((value, index) => `speeds[${index}] = ${value.toFixed(1)};`).join("\n    "),
             directionsInit: this.directions.map((vec, index) => `directions[${index}] = vec3(${vec.map(v => v.toFixed(1)).join(", ")});`).join("\n    "),
             phasesInit: this.phases.map((value, index) => `phases[${index}] = ${value.toFixed(1)};`).join("\n    "),
+            obj: this
         }
     }
 

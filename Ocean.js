@@ -61,6 +61,8 @@ class Ocean {
         this.shapes.ocean.arrays.position.forEach( (p,i,a) =>{
             a[i] = this.points[i].pos
         });
+
+        this.showed_once = false;
     }
 
     apply_rb_offset(rigidBody){
