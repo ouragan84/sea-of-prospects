@@ -16,13 +16,16 @@ export class Sea_Of_Prospects_Scene extends Component
     // constructor(): Scenes begin by populating initial values like the Shapes and Materials they'll need.
     this.hover = this.swarm = false;
 
+    this.light_color = color(1,0.91,0.62,1)
+
     this.render_distance = 80;
-    const fog_param = { color: color(.8,.9,1,1), start: this.render_distance-20, end: this.render_distance };
+    const fog_param = { color: color(1,1,1,1), start: this.render_distance-20, end: this.render_distance };
 
     this.shapes = { 'box'  : new defs.Cube(),
       'ball' : new defs.Subdivision_Sphere( 4 ),
       'axis' : new defs.Axis_Arrows(),
       'arrow': new defs.Arrow(),
+      'box'  : new defs.Cube()
     };
 
     this.phong = new defs.Phong_Shader(1, fog_param);
@@ -49,11 +52,14 @@ export class Sea_Of_Prospects_Scene extends Component
     this.vertical_input = 0;
     this.horizontal_input = 0;
 
+    this.skybox = new Skybox({default_color: fog_param.color, texture: new Texture("assets/skybox2.jpg"), fog_param: fog_param});
+
     this.ocean = new Ocean({
       initPos : vec3(0,0,0),
       density : 4,
       size : this.render_distance * 2,
       fog_param: fog_param,
+      skybox: this.skybox,
       preset: 'calm' // 'calm', 'agitated', 'stormy'
     });
 
@@ -77,10 +83,7 @@ export class Sea_Of_Prospects_Scene extends Component
     this.wind = vec3(0,0,-this.wind_default_magnitude);
 
     // this.rb = new RigidBody(10, vec3(0,3,0), quaternionFromAngleAxis(0, vec3(0, 0, 1)), vec3(1,1,1), 1, fog_param);
-    this.mousev = [0,0];
-    
-    this.skybox = new Skybox({default_color: color(1,1,1,1), texture: new Texture("assets/skybox2.jpg"), fog_param: fog_param});
-    
+    this.mousev = [0,0];    
   }
 
   clamp = (x, min, max) => Math.min(Math.max(x, min), max);
@@ -134,14 +137,15 @@ export class Sea_Of_Prospects_Scene extends Component
       }
       const light_position = vec3(20, 20, -10).plus(this.ship.rb.position).to4(1);
     
-      this.uniforms.lights = [ defs.Phong_Shader.light_source( light_position, color( 1,1,1,1 ), 1000000 )];
+      this.uniforms.lights = [ defs.Phong_Shader.light_source( light_position, this.light_color, 1000000 )];
   
       this.ocean.apply_rb_offset(this.ship.rb);
       this.ocean.show(this.shapes, caller, this.uniforms)
   
       this.ocean.applyWaterForceOnRigidBody(this.ship.rb, t, dt, this.horizontal_input, this.vertical_input, this.wind, 
         (pos, size, color) => this.draw_debug_sphere(caller, pos, size, color),
-        (pos, dir, length, width, color) => this.draw_debug_arrow(caller, pos, dir, length, width, color)
+        (pos, dir, length, width, color) => this.draw_debug_arrow(caller, pos, dir, length, width, color),
+        (start, end, color) => this.draw_debug_line(caller, start, end, color)
       );
 
       this.update_wind()
@@ -323,10 +327,25 @@ export class Sea_Of_Prospects_Scene extends Component
 
     const rotMat = Mat4.rotation(angle_y, 0, 1, 0).times(Mat4.rotation(angle_x, 1, 0, 0));
 
-    const transform = Mat4.translation(pos[0], pos[1], pos[2]).times(rotMat).times(Mat4.scale(length, width, width));
+    const transform = Mat4.translation(pos[0], pos[1], pos[2]).times(rotMat).times(Mat4.scale(width/2, width/2, length/2));
 
     this.shapes.arrow.draw(caller, this.uniforms, transform, { shader: this.phong, ambient: .3, diffusivity: .8, specularity: .5, color: arrow_color });
 
+  }
+
+  draw_debug_line = (caller, start, end, thickness=0.05, line_color=color(1,0,0,1)) => {
+    const dir = end.minus(start);
+    const length = dir.norm();
+    const d = dir.normalized();
+
+    const angle_y = Math.atan2(d[0], d[2]);
+    const angle_x = -Math.asin(d[1]);
+
+    const rotMat = Mat4.rotation(angle_y, 0, 1, 0).times(Mat4.rotation(angle_x, 1, 0, 0));
+
+    const transform = Mat4.translation(start[0], start[1], start[2]).times(rotMat).times(Mat4.scale(thickness, thickness, length/2)).times(Mat4.translation(0, 0, 1));
+
+    this.shapes.box.draw(caller, this.uniforms, transform, { shader: this.phong, ambient: .3, diffusivity: .8, specularity: .5, color: line_color });
   }
 }
 

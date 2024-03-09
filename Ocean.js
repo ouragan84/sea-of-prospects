@@ -27,10 +27,10 @@ class Ocean {
 
         const points_across = this.size * this.density + 1;
 
-        const ocean_shader = new Ocean_Shader(1, this.gersrnerWave.get_glsl_strings(), config.fog_param);
+        const ocean_shader = new Ocean_Shader(1, this.gersrnerWave.get_glsl_strings(), config.skybox, config.fog_param);
 
         this.materials = {};
-        this.materials.ocean = { shader: ocean_shader, ambient: 0.3, diffusivity: .3, specularity: .9, color: color( .35,.8,.95,1 ) }
+        this.materials.ocean = { shader: ocean_shader, ambient: 0.55, diffusivity: 1, specularity: .2, smoothness: 10, color: color(0.07,0.06,0.79,1 ), skyTexture: config.skybox.texture};
 
         this.points = []
         this.floorPoints = []
@@ -72,7 +72,7 @@ class Ocean {
 
     }
 
-    applyWaterForceOnRigidBody(rigidBody, t, dt, horizontal_input, vertical_input, wind, draw_debug_sphere, draw_debug_arrow){
+    applyWaterForceOnRigidBody(rigidBody, t, dt, horizontal_input, vertical_input, wind, draw_debug_sphere, draw_debug_arrow, draw_debug_line){
 
         const boat_transform = rigidBody.getTransformationMatrix();
 
@@ -86,20 +86,10 @@ class Ocean {
         const corner3_ocean = vec3(corner3_boat[0], this.gersrnerWave.solveForY(corner3_boat[0], corner3_boat[2], t), corner3_boat[2]);
         const corner4_ocean = vec3(corner4_boat[0], this.gersrnerWave.solveForY(corner4_boat[0], corner4_boat[2], t), corner4_boat[2]);
 
-        // draw_debug_sphere(corner1_ocean, 0.2, color(.5,1,.5,1));
-        // draw_debug_sphere(corner2_ocean, 0.2, color(.5,1,.5,1));
-        // draw_debug_sphere(corner3_ocean, 0.2, color(.5,1,.5,1));
-        // draw_debug_sphere(corner4_ocean, 0.2, color(.5,1,.5,1));
-
         const corner1_ocean_normal = this.gersrnerWave.gersrnerWaveNormal(corner1_ocean, t);
         const corner2_ocean_normal = this.gersrnerWave.gersrnerWaveNormal(corner2_ocean, t);
         const corner3_ocean_normal = this.gersrnerWave.gersrnerWaveNormal(corner3_ocean, t);
         const corner4_ocean_normal = this.gersrnerWave.gersrnerWaveNormal(corner4_ocean, t);
-
-        draw_debug_arrow(corner1_ocean, corner1_ocean_normal, 1, 1, color(1,0,0,1));
-        draw_debug_arrow(corner2_ocean, corner2_ocean_normal, 1, 1, color(1,0,0,1));
-        draw_debug_arrow(corner3_ocean, corner3_ocean_normal, 1, 1, color(1,0,0,1));
-        draw_debug_arrow(corner4_ocean, corner4_ocean_normal, 1, 1, color(1,0,0,1));
 
         const boat_forward = boat_transform.times(vec4(0, 0, -1, 0)).to3().normalized();
         const boat_normal = boat_transform.times(vec4(0, 1, 0, 0)).to3().normalized();
@@ -107,12 +97,29 @@ class Ocean {
 
         const clamp = (num, min, max) => Math.min(Math.max(num, min), max);
 
-        let corner1_percent_submerged = clamp((corner1_ocean[1] - corner1_boat[1]) / (2 * rigidBody.scale[1]) + 1, 0, 1);
-        let corner2_percent_submerged = clamp((corner2_ocean[1] - corner2_boat[1]) / (2 * rigidBody.scale[1]) + 1, 0, 1);
-        let corner3_percent_submerged = clamp((corner3_ocean[1] - corner3_boat[1]) / (2 * rigidBody.scale[1]) + 1, 0, 1);
-        let corner4_percent_submerged = clamp((corner4_ocean[1] - corner4_boat[1]) / (2 * rigidBody.scale[1]) + 1, 0, 1);
+        let corner1_percent_submerged = clamp(corner1_ocean.minus(corner1_boat).dot(vec3(0,1,0)) / (2 * rigidBody.scale[1]) + 1, 0, 1);
+        let corner2_percent_submerged = clamp(corner2_ocean.minus(corner2_boat).dot(vec3(0,1,0)) / (2 * rigidBody.scale[1]) + 1, 0, 1);
+        let corner3_percent_submerged = clamp(corner3_ocean.minus(corner3_boat).dot(vec3(0,1,0)) / (2 * rigidBody.scale[1]) + 1, 0, 1);
+        let corner4_percent_submerged = clamp(corner4_ocean.minus(corner4_boat).dot(vec3(0,1,0)) / (2 * rigidBody.scale[1]) + 1, 0, 1);
 
         let percent_submerged = (corner1_percent_submerged + corner2_percent_submerged + corner3_percent_submerged + corner4_percent_submerged) / 4;
+
+
+        draw_debug_sphere(corner1_boat, 0.2, color(0,1,0,1));
+        draw_debug_sphere(corner2_boat, 0.2, color(0,1,0,1));
+        draw_debug_sphere(corner3_boat, 0.2, color(0,1,0,1));
+        draw_debug_sphere(corner4_boat, 0.2, color(0,1,0,1));
+
+        draw_debug_line(corner1_boat, corner1_boat.plus(vec3(0,-4,0)), .02, color(1,0,0,1));
+        draw_debug_line(corner2_boat, corner2_boat.plus(vec3(0,-4,0)), .02, color(1,0,0,1));
+        draw_debug_line(corner3_boat, corner3_boat.plus(vec3(0,-4,0)), .02, color(1,0,0,1));
+        draw_debug_line(corner4_boat, corner4_boat.plus(vec3(0,-4,0)), .02, color(1,0,0,1));
+
+        draw_debug_arrow(corner1_ocean, corner1_ocean_normal, 1.5, 1.5, color(1,0,0,1));
+        draw_debug_arrow(corner2_ocean, corner2_ocean_normal, 1.5, 1.5, color(1,0,0,1));
+        draw_debug_arrow(corner3_ocean, corner3_ocean_normal, 1.5, 1.5, color(1,0,0,1));
+        draw_debug_arrow(corner4_ocean, corner4_ocean_normal, 1.5, 1.5, color(1,0,0,1));
+
 
         const mult_f = 20000;
         const mult_t = 1000;

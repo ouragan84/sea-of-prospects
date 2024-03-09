@@ -11,13 +11,13 @@ export const Skybox
         this.shader = new Skybox_Shader(
             1, // num_lights
             this.default_color, // default_color
-            1.79495559215, // angle_from_top
+            1.7, // angle_from_top
             0.4, // radius_blend_start
             0.5, // radius_blend_end
             Math.PI, // rotation_y
             config.fog_param
         ); 
-        this.material = {shader: this.shader, texture: this.texture };
+        this.material = {shader: this.shader, skyTexture: this.texture };
     }
 
     show(context, uniforms, camera_position, camera_distance) {
@@ -57,7 +57,7 @@ const Skybox_Shader =
       }
       fragment_glsl_code () {        // ********* FRAGMENT SHADER *********
           return this.shared_glsl_code () + `
-        uniform sampler2D texture;
+        uniform sampler2D skyTexture;
 
         #define PI 3.14159265359
 
@@ -69,9 +69,8 @@ const Skybox_Shader =
         float radius_blend_end = ${this.radius_blend_end.toFixed(10)};
         float rotation_y = ${this.rotation_y.toFixed(10)};
 
-        void main() {
-            vec3 direction = normalize(vertex_worldspace - camera_center);
 
+        vec4 get_skycolor(vec3 direction) {
             // Calculate spherical coordinates
             float phi = atan(direction.z, direction.x) + rotation_y;
             float theta = acos(direction.y);
@@ -89,25 +88,31 @@ const Skybox_Shader =
             if (radius >= radius_blend_end) {
                 tex_color = default_color;
             } else {
-                tex_color = texture2D(texture, vec2(u, v)); // Sample the texture at the calculated UV coordinates
+                tex_color = texture2D(skyTexture, vec2(u, v)); // Sample the texture at the calculated UV coordinates
 
                 if (radius > radius_blend_start) {
                     float blend = (radius - radius_blend_start) / (radius_blend_end - radius_blend_start);
                     tex_color = mix(tex_color, default_color, blend);
                 }
             }
-            
-            gl_FragColor = tex_color;
+
+            return tex_color;
+        }
+
+
+        void main() {
+            vec3 direction = normalize(vertex_worldspace - camera_center);
+            gl_FragColor = get_skycolor(direction);
           } `;
       }
       update_GPU (context, gpu_addresses, uniforms, model_transform, material) {
           super.update_GPU(context, gpu_addresses, uniforms, model_transform, material);
 
-          if (material.texture && material.texture.ready) {
+          if (material.skyTexture && material.skyTexture.ready) {
               // Select texture unit 0 for the fragment shader Sampler2D uniform called "texture":
-              context.uniform1i (gpu_addresses.texture, 0);
+              context.uniform1i (gpu_addresses.skyTexture, 0);
               // For this draw, use the texture image from the correct GPU buffer:
-              material.texture.activate(context, 0);
+              material.skyTexture.activate(context, 0);
           }
       }
   };
