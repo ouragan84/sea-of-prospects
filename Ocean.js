@@ -30,7 +30,7 @@ class Ocean {
         const ocean_shader = new Ocean_Shader(1, this.gersrnerWave, config.skybox, config.fog_param);
 
         this.materials = {};
-        this.materials.ocean = { shader: ocean_shader, ambient: 0.3, diffusivity: 0.9, specularity: 0.5, smoothness: 10, color: color(0.07,0.06,0.79,1 ), skyTexture: config.skybox.texture};
+        this.materials.ocean = { shader: ocean_shader, ambient: 0.4, diffusivity: 0.9, specularity: 0.4, smoothness: 10, color: color(0.27,0.46,0.95,1 ), skyTexture: config.skybox.texture};
 
         this.points = []
         this.floorPoints = []

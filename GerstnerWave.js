@@ -8,13 +8,13 @@ export class GerstnerWave{
         switch(preset){
             case 'calm':
                 this.createWaves(
-                    32,              // num_waves
-                    .15,              // starting_amplitude
-                    0.2,            // starting_frequency
+                    40,              // num_waves
+                    .20,              // starting_amplitude
+                    0.25,            // starting_frequency
                     2.5,             // speed
                     vec3(0,0,1),    // starting_dir
-                    0.92,            // max_amplitude_decay
-                    1.14,           // max_frequency_decay
+                    0.0010,            // end_amplitude
+                    50,           // end_frequency
                     "poor"          // seed_str
                 );
                 break;
@@ -27,7 +27,7 @@ export class GerstnerWave{
         console.log(`Frequency range: ${this.frequencies[0]} to ${this.frequencies[this.frequencies.length - 1]}`);
     }
 
-    createWaves(num_waves, starting_steepness, starting_frequency, speed, starting_dir, max_amplitudes_decay, max_frequencies_decay, seed_str){
+    createWaves(num_waves, starting_steepness, starting_frequency, speed, starting_dir, end_amplitude, end_frequency, seed_str){
 
         const seed = cyrb128(seed_str.toString());
         const rand = sfc32(seed[0], seed[1], seed[2], seed[3]);
@@ -41,10 +41,10 @@ export class GerstnerWave{
         this.directions = [starting_dir];
         this.phases = [rand() * 2 * Math.PI];
 
-        for (let i = 1; i < this.num_waves; i++){
-            const amplitudes_decay =  max_amplitudes_decay;
-            const frequencies_decay =  max_frequencies_decay;
+        const amplitudes_decay = Math.pow(end_amplitude / starting_steepness, 1 / (num_waves - 1));
+        const frequencies_decay = Math.pow(end_frequency / starting_frequency, 1 / (num_waves - 1));
 
+        for (let i = 1; i < this.num_waves; i++){
             this.amplitudes.push(this.amplitudes[i-1] * amplitudes_decay);
             this.frequencies.push(this.frequencies[i-1] * frequencies_decay);
             this.speeds.push(speed);
