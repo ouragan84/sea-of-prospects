@@ -11,10 +11,11 @@ export class GerstnerWave{
                     40,              // num_waves
                     .2,              // starting_amplitude
                     0.2,            // starting_frequency
-                    5,             // speed
+                    2.5,             // starting_speed
                     vec3(0,0,1),    // starting_dir
                     0.0005,            // end_amplitude
                     50,           // end_frequency
+                    10,            // end_speed
                     "poor"          // seed_str
                 );
                 break;
@@ -25,9 +26,10 @@ export class GerstnerWave{
         console.log(this);
         console.log(`Amplidude range: ${this.amplitudes[0]} to ${this.amplitudes[this.amplitudes.length - 1]}`);
         console.log(`Frequency range: ${this.frequencies[0]} to ${this.frequencies[this.frequencies.length - 1]}`);
+        console.log(`Speed range: ${this.speeds[0]} to ${this.speeds[this.speeds.length - 1]}`);
     }
 
-    createWaves(num_waves, starting_steepness, starting_frequency, speed, starting_dir, end_amplitude, end_frequency, seed_str){
+    createWaves(num_waves, starting_steepness, starting_frequency, starting_speed, starting_dir, end_amplitude, end_frequency, end_speed, seed_str){
 
         const seed = cyrb128(seed_str.toString());
         const rand = sfc32(seed[0], seed[1], seed[2], seed[3]);
@@ -37,17 +39,18 @@ export class GerstnerWave{
         this.num_waves = num_waves;
         this.amplitudes = [starting_steepness];
         this.frequencies = [starting_frequency];
-        this.speeds = [speed];
+        this.speeds = [starting_speed];
         this.directions = [starting_dir];
         this.phases = [rand() * 2 * Math.PI];
 
         const amplitudes_decay = Math.pow(end_amplitude / starting_steepness, 1 / (num_waves - 1));
         const frequencies_decay = Math.pow(end_frequency / starting_frequency, 1 / (num_waves - 1));
+        const speeds_decay = Math.pow(end_speed / starting_speed, 1 / (num_waves - 1));
 
         for (let i = 1; i < this.num_waves; i++){
             this.amplitudes.push(this.amplitudes[i-1] * amplitudes_decay);
             this.frequencies.push(this.frequencies[i-1] * frequencies_decay);
-            this.speeds.push(speed);
+            this.speeds.push(this.speeds[i-1] * speeds_decay);
             this.directions.push(get_random_dir());
             this.phases.push(rand() * 2 * Math.PI);
         }
