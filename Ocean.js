@@ -27,10 +27,10 @@ class Ocean {
 
         const points_across = this.size * this.density + 1;
 
-        const ocean_shader = new Ocean_Shader(1, this.gersrnerWave.get_glsl_strings(), config.skybox, config.fog_param);
+        const ocean_shader = new Ocean_Shader(1, this.gersrnerWave, config.skybox, config.fog_param);
 
         this.materials = {};
-        this.materials.ocean = { shader: ocean_shader, ambient: 0.55, diffusivity: 1, specularity: .2, smoothness: 10, color: color(0.07,0.06,0.79,1 ), skyTexture: config.skybox.texture};
+        this.materials.ocean = { shader: ocean_shader, ambient: 0.3, diffusivity: 0.9, specularity: 0.5, smoothness: 10, color: color(0.07,0.06,0.79,1 ), skyTexture: config.skybox.texture};
 
         this.points = []
         this.floorPoints = []

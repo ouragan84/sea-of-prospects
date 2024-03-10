@@ -20,12 +20,13 @@ export const Ocean_Shader =
         #define PI 3.14159265359
         uniform float offset_z;
 
-        ${this.gersrnerWave.num_waves}
-        uniform ${this.gersrnerWave.amplitudes}
-        uniform ${this.gersrnerWave.frequencies}
-        uniform ${this.gersrnerWave.speeds}
-        uniform ${this.gersrnerWave.directions}
-        uniform ${this.gersrnerWave.phases}
+        const int num_waves = ${this.gersrnerWave.num_waves};
+
+        uniform float amplitudes[num_waves];
+        uniform float frequencies[num_waves];
+        uniform float speeds[num_waves];
+        uniform vec3 directions[num_waves];
+        uniform float phases[num_waves];
 
         vec3 get_gersrner_wave_position(vec3 pos, float t, float offset_x, float offset_z){
             vec3 new_pos = vec3(pos.x + offset_x, pos.y, pos.z + offset_z);
@@ -198,14 +199,9 @@ export const Ocean_Shader =
         vec3 direction = normalize(vertex_worldspace - camera_center);
         vec3 reflection = reflect(direction, norm);
 
-        float fernel_coeff = pow2(1.0 - dot(-direction, norm)); // Schlick's approximation, usually ^5, but ^3 looks better 
+        float fernel_coeff = pow3(1.0 - dot(-direction, norm)); // Schlick's approximation, usually ^5, but ^3 looks better 
 
         gl_FragColor = mix(gl_FragColor, get_skycolor(reflection), fernel_coeff);
-
-        float val = get_value(original_position, time, offset_x, offset_z);
-        val = clamp(1.0-pow4(val), 0.0, 1.0);
-
-        gl_FragColor = mix(gl_FragColor, vec4(1.0, 1.0, 1.0, 1.0), val);
 
         float distance = length(camera_center - vertex_worldspace);
         float fog_amount = smoothstep(fog_start_dist, fog_end_dist, distance);
@@ -225,48 +221,20 @@ export const Ocean_Shader =
     }
 
     update_GPU (context, gpu_addresses, uniforms, model_transform, material) {
-        context.uniform1fv(gpu_addresses.amplitudes, this.gersrnerWave.obj.amplitudes);
-        context.uniform1fv(gpu_addresses.frequencies, this.gersrnerWave.obj.frequencies);
-        context.uniform1fv(gpu_addresses.speeds, this.gersrnerWave.obj.speeds);
-        context.uniform1fv(gpu_addresses.phases, this.gersrnerWave.obj.phases);
-        context.uniform3fv(gpu_addresses.directions, this.flatten_vec_array(this.gersrnerWave.obj.directions));
-
-
+        if (!this.initialized_waves) {
+            context.uniform1fv(gpu_addresses.amplitudes, this.gersrnerWave.amplitudes);
+            context.uniform1fv(gpu_addresses.frequencies, this.gersrnerWave.frequencies);
+            context.uniform1fv(gpu_addresses.speeds, this.gersrnerWave.speeds);
+            context.uniform1fv(gpu_addresses.phases, this.gersrnerWave.phases);
+            context.uniform3fv(gpu_addresses.directions, this.flatten_vec_array(this.gersrnerWave.directions));
+            this.initialized_waves = true;
+        }
 
         super.update_GPU(context, gpu_addresses, uniforms, model_transform, material);
 
         context.uniform1f(gpu_addresses.time, uniforms.animation_time / 1000);
         context.uniform1f(gpu_addresses.offset_x, uniforms.offset[0]);
         context.uniform1f(gpu_addresses.offset_z, uniforms.offset[2]);
-
-
-
-        // if(!this.initialized_waves){
-        //     for(let i = 0; i < this.gersrnerWave.num_waves; i++){
-        //         context.uniform1f(gpu_addresses.amplitudes + i, this.gersrnerWave.amplitudes[i]);
-        //         context.uniform1f(gpu_addresses.frequencies + i, this.gersrnerWave.frequencies[i]);
-        //         context.uniform1f(gpu_addresses.speeds + i, this.gersrnerWave.speeds[i]);
-        //         context.uniform3fv(gpu_addresses.directions + i, this.gersrnerWave.directions[i]);
-        //         context.uniform1f(gpu_addresses.phases + i, this.gersrnerWave.phases[i]);
-        //     }
-        //     this.initialized_waves = true;
-
-        //     console.log("Initialized waves", gpu_addresses, context);
-        // }
-
-        // context.uniform1f(gpu_addresses.amplitudes, 2);
-        // context.uniform1f(gpu_addresses.frequencies, .5);
-        // context.uniform1f(gpu_addresses.speeds, 5);
-        // context.uniform3fv(gpu_addresses.directions, tiny.vec3(1,0,0));
-        // context.uniform1f(gpu_addresses.phases, 0);
-
-        // context.uniform1f(gpu_addresses.amplitudes + 1, 1);
-        // context.uniform1f(gpu_addresses.frequencies + 1, 2);
-        // context.uniform1f(gpu_addresses.speeds + 1, 10);
-        // context.uniform3fv(gpu_addresses.directions + 1, tiny.vec3(0,0,1));
-        // context.uniform1f(gpu_addresses.phases + 1, 1.4);
-
-
 
 
         if (material.skyTexture && material.skyTexture.ready) {

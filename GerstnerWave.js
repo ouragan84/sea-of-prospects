@@ -9,42 +9,22 @@ export class GerstnerWave{
             case 'calm':
                 this.createWaves(
                     32,              // num_waves
-                    .3,              // starting_amplitude
+                    .15,              // starting_amplitude
                     0.2,            // starting_frequency
                     2.5,             // speed
                     vec3(0,0,1),    // starting_dir
-                    0.83,           // max_amplitude_decay
-                    1.21,           // max_frequency_decay
-                    "gsdg"          // seed_str
+                    0.92,            // max_amplitude_decay
+                    1.14,           // max_frequency_decay
+                    "poor"          // seed_str
                 );
                 break;
-            case 'agitated':
-                this.createWaves(
-                    32,              // num_waves
-                    .5,              // starting_amplitude
-                    0.2,            // starting_frequency
-                    4,             // speed
-                    vec3(0,0,1),    // starting_dir
-                    0.78,           // max_amplitude_decay
-                    1.29,           // max_frequency_decay
-                    "sdge"          // seed_str
-                );
-                break;
-            case 'stormy':
-                this.createWaves(
-                    32,              // num_waves
-                    .5,              // starting_amplitude
-                    0.2,            // starting_frequency
-                    6,             // speed
-                    vec3(0,0,1),    // starting_dir
-                    0.78,           // max_amplitude_decay
-                    1.29,           // max_frequency_decay
-                    "sdgh"          // seed_str
-                );
-                break;
+            default:
+                throw new Error('Invalid preset');
         }
 
         console.log(this);
+        console.log(`Amplidude range: ${this.amplitudes[0]} to ${this.amplitudes[this.amplitudes.length - 1]}`);
+        console.log(`Frequency range: ${this.frequencies[0]} to ${this.frequencies[this.frequencies.length - 1]}`);
     }
 
     createWaves(num_waves, starting_steepness, starting_frequency, speed, starting_dir, max_amplitudes_decay, max_frequencies_decay, seed_str){
@@ -62,8 +42,8 @@ export class GerstnerWave{
         this.phases = [rand() * 2 * Math.PI];
 
         for (let i = 1; i < this.num_waves; i++){
-            const amplitudes_decay =  max_amplitudes_decay + rand() * (1 - max_amplitudes_decay);
-            const frequencies_decay =  max_frequencies_decay + rand() * (1 - max_frequencies_decay);
+            const amplitudes_decay =  max_amplitudes_decay;
+            const frequencies_decay =  max_frequencies_decay;
 
             this.amplitudes.push(this.amplitudes[i-1] * amplitudes_decay);
             this.frequencies.push(this.frequencies[i-1] * frequencies_decay);
@@ -123,26 +103,6 @@ export class GerstnerWave{
         if (n[1] < 0)
             return n.times(-1);
         return n;
-    }
-
-
-
-    get_glsl_strings(){
-        // Ensure all numeric values have a decimal point to be treated as floats in GLSL
-        return {
-            num_waves: `const int num_waves = ${this.num_waves};`,
-            amplitudes: `float amplitudes[${this.num_waves}];`,
-            frequencies: `float frequencies[${this.num_waves}];`,
-            speeds: `float speeds[${this.num_waves}];`,
-            directions: `vec3 directions[${this.num_waves}];`,
-            phases: `float phases[${this.num_waves}];`,
-            amplitudesInit: this.amplitudes.map((value, index) => `amplitudes[${index}] = ${value.toFixed(1)};`).join("\n    "),
-            frequenciesInit: this.frequencies.map((value, index) => `frequencies[${index}] = ${value.toFixed(1)};`).join("\n    "),
-            speedsInit: this.speeds.map((value, index) => `speeds[${index}] = ${value.toFixed(1)};`).join("\n    "),
-            directionsInit: this.directions.map((vec, index) => `directions[${index}] = vec3(${vec.map(v => v.toFixed(1)).join(", ")});`).join("\n    "),
-            phasesInit: this.phases.map((value, index) => `phases[${index}] = ${value.toFixed(1)};`).join("\n    "),
-            obj: this
-        }
     }
 
     solveForY(x, z, t){
