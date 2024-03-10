@@ -188,24 +188,54 @@ export const Ocean_Shader =
         }
 
 
-      void main() {  
+        float get_fernel_coeff(vec3 direction, vec3 norm) {
+            return pow3(1.0 - dot(-direction, norm));
+        }
+
+
+        vec3 phong_model_lights_water( vec3 N, vec3 vertex_worldspace ) {
+            vec3 E = normalize( camera_center - vertex_worldspace );
+            vec3 result = vec3( 0.0 );
+            for(int i = 0; i < N_LIGHTS; i++) {
+                vec3 surface_to_light_vector = light_positions_or_vectors[i].xyz -
+                                               light_positions_or_vectors[i].w * vertex_worldspace;
+                float distance_to_light = length( surface_to_light_vector );
+
+                vec3 L = normalize( surface_to_light_vector );
+                vec3 H = normalize( L + E );
+                
+                  // Compute diffuse and specular components of Phong Reflection Model.
+                float diffuse  =      max( dot( N, L ), 0.0 );
+                float specular = pow( max( dot( N, H ), 0.0 ), smoothness ) * get_fernel_coeff(L, N);     // Use Blinn's "halfway vector" method.
+                float attenuation = 1.0 / (1.0 + light_attenuation_factors[i] * distance_to_light * distance_to_light );
+
+
+                vec3 light_contribution = shape_color.xyz * light_colors[i].xyz * diffusivity * diffuse
+                                                          + light_colors[i].xyz * specularity * specular;
+
+                result += attenuation * light_contribution;
+            }
+            return result;
+        }
+
+
+        void main() {  
         
-        vec3 norm = normalize(get_gersrner_wave_normal(original_position, time, offset_x, offset_z));
-        // vec3 norm = normalize(N);
+            vec3 norm = normalize(get_gersrner_wave_normal(original_position, time, offset_x, offset_z));
+            // vec3 norm = normalize(N);
 
-        gl_FragColor = vec4( shape_color.xyz * ambient, shape_color.w );
-        gl_FragColor.xyz += phong_model_lights( norm, vertex_worldspace );
+            gl_FragColor = vec4( shape_color.xyz * ambient, shape_color.w );
 
-        vec3 direction = normalize(vertex_worldspace - camera_center);
-        vec3 reflection = reflect(direction, norm);
+            gl_FragColor.xyz += phong_model_lights( norm, vertex_worldspace );
 
-        float fernel_coeff = pow3(1.0 - dot(-direction, norm)); // Schlick's approximation, usually ^5, but ^3 looks better 
+            vec3 direction = normalize(vertex_worldspace - camera_center);
+            vec3 reflection = reflect(direction, norm);
 
-        gl_FragColor = mix(gl_FragColor, get_skycolor(reflection), fernel_coeff);
+            gl_FragColor = mix(gl_FragColor, get_skycolor(reflection), get_fernel_coeff(direction, norm));
 
-        float distance = length(camera_center - vertex_worldspace);
-        float fog_amount = smoothstep(fog_start_dist, fog_end_dist, distance);
-        gl_FragColor = mix(gl_FragColor, fog_color, fog_amount);
+            float distance = length(camera_center - vertex_worldspace);
+            float fog_amount = smoothstep(fog_start_dist, fog_end_dist, distance);
+            gl_FragColor = mix(gl_FragColor, fog_color, fog_amount);
         } `;
     }
 

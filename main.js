@@ -56,7 +56,7 @@ export class Sea_Of_Prospects_Scene extends Component
 
     this.ocean = new Ocean({
       initPos : vec3(0,0,0),
-      density : 4,
+      density : 5,
       size : this.render_distance * 2,
       fog_param: fog_param,
       skybox: this.skybox,

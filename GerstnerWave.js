@@ -9,11 +9,11 @@ export class GerstnerWave{
             case 'calm':
                 this.createWaves(
                     40,              // num_waves
-                    .20,              // starting_amplitude
-                    0.25,            // starting_frequency
-                    2.5,             // speed
+                    .2,              // starting_amplitude
+                    0.2,            // starting_frequency
+                    5,             // speed
                     vec3(0,0,1),    // starting_dir
-                    0.0010,            // end_amplitude
+                    0.0005,            // end_amplitude
                     50,           // end_frequency
                     "poor"          // seed_str
                 );
