@@ -1,4 +1,5 @@
 import {tiny, defs} from './examples/common.js';
+import { Island, Islands } from './island.js';
 import { Ocean } from './Ocean.js';
 import { quaternionFromAngleAxis, RigidBody } from './RigidBody.js';
 import { Ship } from './ship.js';
@@ -83,7 +84,9 @@ export class Sea_Of_Prospects_Scene extends Component
     this.wind = vec3(0,0,-this.wind_default_magnitude);
 
     // this.rb = new RigidBody(10, vec3(0,3,0), quaternionFromAngleAxis(0, vec3(0, 0, 1)), vec3(1,1,1), 1, fog_param);
-    this.mousev = [0,0];    
+    this.mousev = [0,0];  
+    
+    this.islands = new Islands(fog_param, 100)
   }
 
   clamp = (x, min, max) => Math.min(Math.max(x, min), max);
@@ -159,6 +162,7 @@ export class Sea_Of_Prospects_Scene extends Component
       this.score_text_obj.update_string(`Score: ${this.score} - FPS: ${Math.round(1000/this.uniforms.animation_delta_time)}`)
       this.score_text_obj.draw(caller, this.uniforms, cam_Mat_inv.times(Mat4.translation(-.14, .075, -0.2)).times(Mat4.scale(.004, .004, .1)))
 
+      this.islands.show(caller, this.uniforms)
       // 'floating' ball
       // this.shapes.ball.draw( caller, this.uniforms, Mat4.translation(5, this.ocean.gersrnerWave.solveForY(5, 5, t)+2, 5).times( Mat4.scale( 2, 2, 2) ), { shader: this.phong, ambient: .2, diffusivity: 1, specularity:  1, color: color( .9,.5,.9,1 ) } )
 
