@@ -8,6 +8,8 @@ import { Text } from './text.js';
 
 const { vec3, vec4, color, Mat4, Shader, Texture, Component } = tiny;
 
+let explosionTimer = 100
+
 export class Sea_Of_Prospects_Scene extends Component
 {       
   init()
@@ -122,8 +124,7 @@ export class Sea_Of_Prospects_Scene extends Component
     // Assign the interpolated position to the camera
     Shader.assign_camera(cam_Mat, this.uniforms);
 
-    this.uniforms.projection_transform = Mat4.perspective( Math.PI/4, caller.width/caller.height, 0.1, this.render_distance);
-
+    this.uniforms.projection_transform = Mat4.perspective( Math.PI/4, caller.width/caller.height, 0.1, this.render_distance).times(Mat4.rotation(Math.sin(40*explosionTimer)*.04*Math.exp(-explosionTimer), .2,1,.2))
     // const light_position = Mat4.rotation( angle,   1,0,0 ).times( vec4( 0,-1,1,0 ) ); !!!
     // !!! Light changed here
     if(this.start)
@@ -167,6 +168,8 @@ export class Sea_Of_Prospects_Scene extends Component
       // this.shapes.ball.draw( caller, this.uniforms, Mat4.translation(5, this.ocean.gersrnerWave.solveForY(5, 5, t)+2, 5).times( Mat4.scale( 2, 2, 2) ), { shader: this.phong, ambient: .2, diffusivity: 1, specularity:  1, color: color( .9,.5,.9,1 ) } )
 
       this.shapes.axis.draw( caller, this.uniforms, Mat4.identity(), { shader: this.phong, ambient: .2, diffusivity: 1, specularity:  1, color: color( 1,1,1,1 ) } )
+      
+      explosionTimer+=dt*1.5
     }
     else
     {
@@ -269,7 +272,11 @@ export class Sea_Of_Prospects_Scene extends Component
     //this.key_triggered_button ("Pause Game", [" "], () => this.start = 0);
     this.new_line();
     this.key_triggered_button ("Mute/Unmute", ["m"], () => this.mute=!this.mute);
-    this.key_triggered_button ("Increase Score", ["i"], () => this.score+=1);
+    this.key_triggered_button ("Increase Score", ["i"], () => {
+      this.score+=1
+      explosionTimer = 0
+      this.ship.explode()
+    });
     this.new_line();
     this.key_triggered_button ("Forward", ["w"], () => this.vertical_input = 1, undefined, () => this.vertical_input = 0);
     this.key_triggered_button ("Right", ["d"], () => this.horizontal_input = 1, undefined, () => this.horizontal_input = 0);

@@ -128,9 +128,16 @@ class Cloth {
     }
 
     updatePosition(anchors) {
-      // console.log(anchors)
-      for (let i = 0; i < this.config.lockedPoints.length; i++) {
-        this.points[this.config.lockedPoints[i]].pos = anchors[i]
+      if (anchors.length == 0) {
+        for (let i = 0; i < this.points.length; i++) {
+          this.points[i].locked = false;
+        }
+      } else {
+        for (let i = 0; i < this.config.lockedPoints.length; i++) {
+          if (i < anchors.length) { // To ensure we don't go out of bounds of the anchors array
+            this.points[this.config.lockedPoints[i]].pos = anchors[i];
+          }
+        }
       }
     }
 
