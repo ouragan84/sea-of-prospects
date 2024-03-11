@@ -5,6 +5,7 @@ import { quaternionFromAngleAxis, RigidBody } from './RigidBody.js';
 import { Ship } from './ship.js';
 import { Skybox } from './Skybox.js';
 import { Text } from './text.js';
+import { ShaderMaterial } from './ShaderMaterial.js';
 
 const { vec3, vec4, color, Mat4, Shader, Texture, Component } = tiny;
 
@@ -139,12 +140,15 @@ export class Sea_Of_Prospects_Scene extends Component
     this.mousev = [0,0];  
     
     this.islands = new Islands(fog_param, 100)
+
+    this.sample_shader_material = new ShaderMaterial();
   }
 
   clamp = (x, min, max) => Math.min(Math.max(x, min), max);
      
   render_animation( caller )
   {                    
+    this.sample_shader_material.update(caller, this.uniforms);
 
     const t = this.t = this.uniforms.animation_time/1000;
     const dt = this.dt = 0.02
