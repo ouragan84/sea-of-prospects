@@ -175,3 +175,18 @@ function quaternionToRotationMatrix(q) {
       [                      0,                       0,                       0, 1]
   );
 }
+
+export function quaternionToAngleAxis(quaternion) {
+  let angle = 2 * Math.acos(quaternion[0]);
+  let sinHalfTheta = Math.sqrt(1 - quaternion[0] * quaternion[0]);
+
+  let axis;
+  if (sinHalfTheta > 0.001) { // To avoid division by zero
+      axis = vec3(quaternion[1] / sinHalfTheta, quaternion[2] / sinHalfTheta, quaternion[3] / sinHalfTheta);
+  } else {
+      // If the angle is 0, the axis does not matter. We can choose any unit vector.
+      axis = vec3(1, 0, 0);
+  }
+
+  return { angle, axis };
+}
