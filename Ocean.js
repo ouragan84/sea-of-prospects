@@ -68,9 +68,12 @@ class Ocean {
     apply_rb_offset(rigidBody){
         if(!rigidBody.position || isNaN(rigidBody.position[0]) || isNaN(rigidBody.position[2]))
             return;
-        let new_x = rigidBody.position[0] - (rigidBody.position[0] % this.spacing);
-        let new_z = rigidBody.position[2] - (rigidBody.position[2] % this.spacing);
-        this.ocean_offset = vec3(new_x, 0, new_z);
+        // let new_x = rigidBody.position[0] - (rigidBody.position[0] % this.spacing);
+        // let new_z = rigidBody.position[2] - (rigidBody.position[2] % this.spacing);
+        // this.ocean_offset = vec3(new_x, 0, new_z);
+
+        this.ocean_offset = rigidBody.position;
+        this.ocean_offset[1] = 0;
 
     }
 
@@ -264,7 +267,21 @@ class Ocean {
         return x + y * gridSize
     }
 
-    show(shapes, caller, uniforms) {
-        this.shapes.ocean.draw( caller, {...uniforms, offset: this.ocean_offset}, Mat4.identity(), this.materials.ocean);
+    show(shapes, caller, uniforms, camera_direction) {
+
+
+
+        // rotate the ocean to rotate the ocean by the amount of degrees (only rotate about y axis) from <1,0,1> to the camera direction
+        const angle =  Math.atan2(camera_direction[0], camera_direction[2]) % (2 * Math.PI);
+        const rotation = Mat4.rotation(angle - Math.PI / 4, 0, 1, 0);
+
+        const transform = Mat4.translation(this.ocean_offset[0], 0, this.ocean_offset[2]).times(rotation);
+
+        // console.log( `CamDir = <${camera_direction[0].toFixed(2)}, ${camera_direction[2].toFixed(2)}>, Angle = ${angle.toFixed(2) * 180 / Math.PI}` );
+
+        this.shapes.ocean.draw( caller, {...uniforms, offset: this.ocean_offset, angle_offset: angle}, transform, this.materials.ocean);
+
+
+        // this.shapes.ocean.draw( caller, {...uniforms, offset: this.ocean_offset}, Mat4.identity(), this.materials.ocean);
     }
 }

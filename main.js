@@ -16,7 +16,7 @@ export class Sea_Of_Prospects_Scene extends Component
   {
     console.log("init")
 
-    this.preset = "calm";
+    this.preset = "stormy";
 
     // constructor(): Scenes begin by populating initial values like the Shapes and Materials they'll need.
     this.hover = this.swarm = false;
@@ -84,7 +84,7 @@ export class Sea_Of_Prospects_Scene extends Component
           skybox_texture = new Texture("assets/sunny_sky.jpg");
           break;
       case 'stormy':
-          skybox_texture = new Texture("assets/stormy_sky.jpg");
+          skybox_texture = new Texture("assets/stormy_sky2.jpg");
           break;
       default:
           skybox_texture = new Texture("assets/sunny_sky.jpg");
@@ -194,7 +194,8 @@ export class Sea_Of_Prospects_Scene extends Component
       this.uniforms.lights = [ defs.Phong_Shader.light_source( light_position, this.light_color, 1000000 )];
   
       this.ocean.apply_rb_offset(this.ship.rb);
-      this.ocean.show(this.shapes, caller, this.uniforms)
+      const camera_direction_xz = vec3(this.ship.rb.position[0] - cam_pos[0], 0, this.ship.rb.position[2] - cam_pos[2]).normalized();
+      this.ocean.show(this.shapes, caller, this.uniforms, camera_direction_xz);
   
       this.ocean.applyWaterForceOnRigidBody(this.ship.rb, t, dt, this.horizontal_input, this.vertical_input, this.wind, 
         (pos, size, color) => this.draw_debug_sphere(caller, pos, size, color),

@@ -19,6 +19,7 @@ export const Ocean_Shader =
 
         #define PI 3.14159265359
         uniform float offset_z;
+        uniform float angle_offset;
 
         const int num_waves = ${this.gersrnerWave.num_waves};
 
@@ -29,24 +30,44 @@ export const Ocean_Shader =
         uniform float phases[num_waves];
 
         vec3 get_gersrner_wave_position(vec3 pos, float t, float offset_x, float offset_z){
-            vec3 new_pos = vec3(pos.x + offset_x, pos.y, pos.z + offset_z);
+
+            vec3 p = pos;
+
+            // calculate p_sample, position but roated -angle_offset about (offset_x, offset_z)
+            vec3 p_sample = vec3(
+                pos.x * cos(-angle_offset) - pos.z * sin(-angle_offset),
+                pos.y,
+                pos.x * sin(-angle_offset) + pos.z * cos(-angle_offset)
+            );
+
+            p_sample = p_sample + vec3(offset_x, 0.0, offset_z);
 
             for (int i = 0; i < num_waves; i++) {
                 float w = frequencies[i];
                 vec3 d = directions[i];
                 float l = 2.0 * PI / w;
-                float f = w * (d.x * (pos.x + offset_x) + d.z * (pos.z + offset_z)) - (speeds[i] * 2.0 / l  * t) + phases[i];
+                float f = w * (d.x * p_sample.x + d.z * p_sample.z) - (speeds[i] * 2.0 / l  * t) + phases[i];
                 float a = amplitudes[i];
-                new_pos = new_pos + vec3(
+                p = p + vec3(
                     d.x * a * cos(f), 
                     a * sin(f), 
                     d.z * a * cos(f)
                 );
             }
-            return new_pos;
+
+            
+            return p;
         }
 
         vec3 get_gersrner_wave_normal(vec3 pos, float t, float offset_x, float offset_z) {
+            vec3 p_sample = vec3(
+                pos.x * cos(-angle_offset) - pos.z * sin(-angle_offset),
+                pos.y,
+                pos.x * sin(-angle_offset) + pos.z * cos(-angle_offset)
+            );
+
+            p_sample = p_sample + vec3(offset_x, 0.0, offset_z);
+
             vec3 rx = vec3(1.0,0.0,0.0);
             vec3 rz = vec3(0.0,0.0,1.0);
 
@@ -54,7 +75,7 @@ export const Ocean_Shader =
                 float w = frequencies[i];
                 vec3 d = directions[i];
                 float l = 2.0 * PI / w;
-                float f = w * (d.x * (pos.x + offset_x) + d.z * (pos.z + offset_z)) - (speeds[i] * 2.0 / l  * t) + phases[i];
+                float f = w * (d.x * p_sample.x + d.z * p_sample.z) - (speeds[i] * 2.0 / l  * t) + phases[i];
                 float a = amplitudes[i];
 
                 rx += vec3(
@@ -71,10 +92,6 @@ export const Ocean_Shader =
 
             vec3 n = normalize(cross(rz, rx));
 
-            if (n.y < 0.0)
-                return n * -1.0;
-            
-
             return n;
         }
 
@@ -90,7 +107,6 @@ export const Ocean_Shader =
 
         void main() {
             vec3 p = get_gersrner_wave_position(position, time, offset_x, offset_z);
-            
             gl_Position = projection_camera_model_transform * vec4( p, 1.0 );     // Move vertex to final space.
                                             // The final normal vector in screen space.
 
@@ -157,40 +173,6 @@ export const Ocean_Shader =
             return tex_color;
         }
 
-        // pseudorandom number generator based on 2 float inputs
-        float random (in vec2 st) {
-            return fract(sin(dot(st.xy,
-                                 vec2(12.9898,78.233)))*
-                43758.5453123);
-        }
-
-        
-        float get_value(vec3 pos, float t, float offset_x, float offset_z) {
-            vec3 rx = vec3(1.0,0.0,0.0);
-            vec3 rz = vec3(0.0,0.0,1.0);
-
-            for (int i = 0; i < num_waves; i++) {
-                float w = frequencies[i];
-                vec3 d = directions[i];
-                float l = 2.0 * PI / w;
-                float f = w * (d.x * (pos.x + offset_x) + d.z * (pos.z + offset_z)) - (speeds[i] * 2.0 / l  * t) + phases[i];
-                float a = amplitudes[i];
-
-                rx += vec3(
-                    - d.x * d.x * a * w * sin(f),
-                    d.x * a * w * cos(f),
-                    - d.x * d.z * a * w * sin(f)
-                );
-                rz += vec3(
-                    - d.z * d.x * a * w * sin(f),
-                    d.z * a * w * cos(f),
-                    - d.z * d.z * a * w * sin(f)
-                );
-            }
-
-            return rx.x;
-        }
-
 
         float get_fernel_coeff(vec3 direction, vec3 norm) {
             return pow3(1.0 - dot(-direction, norm));
@@ -228,7 +210,11 @@ export const Ocean_Shader =
             vec3 norm = normalize(get_gersrner_wave_normal(original_position, time, offset_x, offset_z));
             // vec3 norm = normalize(N);
 
-            gl_FragColor = vec4( shape_color.xyz * ambient, shape_color.w );
+            // gl_FragColor = vec4( shape_color.xyz * ambient, shape_color.w );
+
+            gl_FragColor = vec4(vertex_worldspace.x/10.0, vertex_worldspace.z/10.0, vertex_worldspace.y/10.0, 1.0);
+
+            // gl_FragColor = vec4(original_position.x/10.0, original_position.z/10.0, original_position.y/10.0, 1.0);
 
             gl_FragColor.xyz += phong_model_lights( norm, vertex_worldspace );
 
@@ -269,6 +255,10 @@ export const Ocean_Shader =
         context.uniform1f(gpu_addresses.time, uniforms.animation_time / 1000);
         context.uniform1f(gpu_addresses.offset_x, uniforms.offset[0]);
         context.uniform1f(gpu_addresses.offset_z, uniforms.offset[2]);
+
+        context.uniform1f(gpu_addresses.angle_offset, uniforms.angle_offset);
+
+        console.log(uniforms.angle_offset.toFixed(2) * 180 / Math.PI);
 
 
         if (material.skyTexture && material.skyTexture.ready) {
