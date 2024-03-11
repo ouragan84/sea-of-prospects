@@ -16,13 +16,32 @@ export class Sea_Of_Prospects_Scene extends Component
   {
     console.log("init")
 
+    this.preset = "stormy";
+
     // constructor(): Scenes begin by populating initial values like the Shapes and Materials they'll need.
     this.hover = this.swarm = false;
 
-    this.light_color = color(1,0.91,0.62,1)
-
     this.render_distance = 80;
-    const fog_param = { color: color(1,1,1,1), start: this.render_distance-20, end: this.render_distance };
+
+    let fog_param;
+
+    switch(this.preset){
+      case 'calm':
+          this.light_color = color(1,0.91,0.62,1)
+          fog_param = { color: color(1,1,1,1), start: this.render_distance-20, end: this.render_distance };
+          break;
+      case 'agitated':
+          this.light_color = color(1,0.91,0.62,1)
+          fog_param = { color: color(1,1,1,1), start: this.render_distance-20, end: this.render_distance };
+          break;
+      case 'stormy':
+          this.light_color = color(1,0.91,0.62,1)
+          fog_param = { color: color(.8,.8,.8,1), start: this.render_distance-30, end: this.render_distance };
+          break;
+      default:
+          this.light_color = color(1,0.91,0.62,1)
+    }
+
 
     this.shapes = { 'box'  : new defs.Cube(),
       'ball' : new defs.Subdivision_Sphere( 4 ),
@@ -55,7 +74,23 @@ export class Sea_Of_Prospects_Scene extends Component
     this.vertical_input = 0;
     this.horizontal_input = 0;
 
-    this.skybox = new Skybox({default_color: fog_param.color, texture: new Texture("assets/skybox2.jpg"), fog_param: fog_param});
+    let skybox_texture;
+
+    switch(this.preset){
+      case 'calm':
+          skybox_texture = new Texture("assets/sunny_sky.jpg");
+          break;
+      case 'agitated':
+          skybox_texture = new Texture("assets/sunny_sky.jpg");
+          break;
+      case 'stormy':
+          skybox_texture = new Texture("assets/stormy_sky.jpg");
+          break;
+      default:
+          skybox_texture = new Texture("assets/sunny_sky.jpg");
+    }
+
+    this.skybox = new Skybox({default_color: fog_param.color, texture: skybox_texture, fog_param: fog_param});
 
     this.ocean = new Ocean({
       initPos : vec3(0,0,0),
@@ -63,7 +98,7 @@ export class Sea_Of_Prospects_Scene extends Component
       size : this.render_distance * 2,
       fog_param: fog_param,
       skybox: this.skybox,
-      preset: 'calm' // 'calm', 'agitated', 'stormy'
+      preset: this.preset // 'calm', 'agitated', 'stormy'
     });
 
     this.ship = new Ship(fog_param)

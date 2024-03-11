@@ -29,8 +29,22 @@ class Ocean {
 
         const ocean_shader = new Ocean_Shader(1, this.gersrnerWave, config.skybox, config.fog_param);
 
+        let base_water_color = color(0.27,0.46,0.95,1 );
+
+        if(config.preset == 'agitated'){
+            const avg = (base_water_color[0] + base_water_color[1] + base_water_color[2]) / 3;
+            const f = 0.2;
+            base_water_color = base_water_color.plus((color(avg, avg, avg, 0).minus(base_water_color)).times(f));
+        }
+
+        if(config.preset == 'stormy'){
+            const avg = (base_water_color[0] + base_water_color[1] + base_water_color[2]) / 3;
+            const f = 0.2;
+            base_water_color = base_water_color.plus((color(avg, avg, avg, 0).minus(base_water_color)).times(f));
+        }
+
         this.materials = {};
-        this.materials.ocean = { shader: ocean_shader, ambient: 0.4, diffusivity: 0.9, specularity: 0.4, smoothness: 10, color: color(0.27,0.46,0.95,1 ), skyTexture: config.skybox.texture};
+        this.materials.ocean = { shader: ocean_shader, ambient: 0.4, diffusivity: 0.9, specularity: 0.4, smoothness: 10, color: base_water_color, skyTexture: config.skybox.texture};
 
         this.points = []
         this.floorPoints = []

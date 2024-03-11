@@ -13,12 +13,41 @@ export class GerstnerWave{
                     0.2,            // starting_frequency
                     2.5,             // starting_speed
                     vec3(0,0,1),    // starting_dir
-                    0.0005,            // end_amplitude
+                    0.00015,            // end_amplitude
                     50,           // end_frequency
-                    10,            // end_speed
+                    2.5,            // end_speed
                     "poor"          // seed_str
                 );
                 break;
+
+            case 'agitated':
+                this.createWaves(
+                    40,              // num_waves
+                    .2,              // starting_amplitude
+                    0.2,            // starting_frequency
+                    2.5,             // starting_speed
+                    vec3(0,0,1),    // starting_dir
+                    0.00015,            // end_amplitude
+                    50,           // end_frequency
+                    2.5,            // end_speed
+                    "poor"          // seed_str
+                );
+                break;
+
+            case 'stormy':
+                this.createWaves(
+                    40,              // num_waves
+                    .8,              // starting_amplitude
+                    0.2,            // starting_frequency
+                    4.5,             // starting_speed
+                    vec3(0,0,1),    // starting_dir
+                    0.00015,            // end_amplitude
+                    50,           // end_frequency
+                    4.5,            // end_speed
+                    "poor"          // seed_str
+                );
+                break;
+
             default:
                 throw new Error('Invalid preset');
         }
