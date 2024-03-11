@@ -106,6 +106,12 @@ export const Ocean_Shader =
         uniform mat4 projection_camera_model_transform;
 
         void main() {
+            original_position = position;
+
+            if(position.x + position.z < - 30.0) {
+                return;
+            }
+
             vec3 p = get_gersrner_wave_position(position, time, offset_x, offset_z);
             gl_Position = projection_camera_model_transform * vec4( p, 1.0 );     // Move vertex to final space.
                                             // The final normal vector in screen space.
@@ -114,7 +120,6 @@ export const Ocean_Shader =
             N = normalize( mat3( model_transform ) * new_normal / squared_scale);
 
             vertex_worldspace = ( model_transform * vec4( p, 1.0 ) ).xyz;
-            original_position = position;
         } `;
     }
 
@@ -205,7 +210,11 @@ export const Ocean_Shader =
         }
 
 
-        void main() {  
+        void main() {
+
+            if(original_position.x + original_position.z < - 30.0) {
+                discard;
+            }
         
             vec3 norm = normalize(get_gersrner_wave_normal(original_position, time, offset_x, offset_z));
             // vec3 norm = normalize(N);
