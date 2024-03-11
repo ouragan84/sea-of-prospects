@@ -210,9 +210,9 @@ export const Ocean_Shader =
             vec3 norm = normalize(get_gersrner_wave_normal(original_position, time, offset_x, offset_z));
             // vec3 norm = normalize(N);
 
-            // gl_FragColor = vec4( shape_color.xyz * ambient, shape_color.w );
+            gl_FragColor = vec4( shape_color.xyz * ambient, shape_color.w );
 
-            gl_FragColor = vec4(vertex_worldspace.x/10.0, vertex_worldspace.z/10.0, vertex_worldspace.y/10.0, 1.0);
+            // gl_FragColor = vec4(vertex_worldspace.x/10.0, vertex_worldspace.z/10.0, vertex_worldspace.y/10.0, 1.0);
 
             // gl_FragColor = vec4(original_position.x/10.0, original_position.z/10.0, original_position.y/10.0, 1.0);
 
@@ -258,7 +258,7 @@ export const Ocean_Shader =
 
         context.uniform1f(gpu_addresses.angle_offset, uniforms.angle_offset);
 
-        console.log(uniforms.angle_offset.toFixed(2) * 180 / Math.PI);
+        // console.log(uniforms.angle_offset.toFixed(2) * 180 / Math.PI);
 
 
         if (material.skyTexture && material.skyTexture.ready) {
