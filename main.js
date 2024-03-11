@@ -16,7 +16,7 @@ export class Sea_Of_Prospects_Scene extends Component
   {
     console.log("init")
 
-    this.preset = "stormy";
+    this.preset = "calm";
 
     // constructor(): Scenes begin by populating initial values like the Shapes and Materials they'll need.
     this.hover = this.swarm = false;
@@ -90,9 +90,24 @@ export class Sea_Of_Prospects_Scene extends Component
           skybox_texture = new Texture("assets/sunny_sky.jpg");
     }
 
+    this.base_water_color = color(0.27,0.46,0.95,1 );
+
+    if(this.preset == 'agitated'){
+        const avg = (this.base_water_color[0] + this.base_water_color[1] + this.base_water_color[2]) / 3;
+        const f = 0.2;
+        this.base_water_color = this.base_water_color.plus((color(avg, avg, avg, 0).minus(this.base_water_color)).times(f));
+    }
+
+    if(this.preset == 'stormy'){
+        const avg = (this.base_water_color[0] + this.base_water_color[1] + this.base_water_color[2]) / 3;
+        const f = 0.2;
+        this.base_water_color = this.base_water_color.plus((color(avg, avg, avg, 0).minus(this.base_water_color)).times(f));
+    }
+
     this.skybox = new Skybox({default_color: fog_param.color, texture: skybox_texture, fog_param: fog_param});
 
     this.ocean = new Ocean({
+      ocean_color: this.base_water_color,
       initPos : vec3(0,0,0),
       density : 5,
       size : this.render_distance * 2,
@@ -186,6 +201,32 @@ export class Sea_Of_Prospects_Scene extends Component
         (pos, dir, length, width, color) => this.draw_debug_arrow(caller, pos, dir, length, width, color),
         (start, end, color) => this.draw_debug_line(caller, start, end, color)
       );
+
+      if(this.ship.exploded){
+        // this.ocean.applyWaterForceOnRigidBody(this.ship.rb_piece1, t, dt, 0, 0, this.wind, 
+        //   (pos, size, color) => this.draw_debug_sphere(caller, pos, size, color),
+        //   (pos, dir, length, width, color) => this.draw_debug_arrow(caller, pos, dir, length, width, color),
+        //   (start, end, color) => this.draw_debug_line(caller, start, end, color)
+        // );
+
+        // this.ship.rb_piece1.show(caller, this.uniforms)
+
+        // this.ocean.applyWaterForceOnRigidBody(this.ship.rb_piece2, t, dt, 0, 0, this.wind, 
+        //   (pos, size, color) => this.draw_debug_sphere(caller, pos, size, color),
+        //   (pos, dir, length, width, color) => this.draw_debug_arrow(caller, pos, dir, length, width, color),
+        //   (start, end, color) => this.draw_debug_line(caller, start, end, color)
+        // );
+
+        // this.ship.rb_piece2.show(caller, this.uniforms)
+
+        // this.ocean.applyWaterForceOnRigidBody(this.ship.rb_piece2, t, dt, 0, 0, this.wind, 
+        //   (pos, size, color) => this.draw_debug_sphere(caller, pos, size, color),
+        //   (pos, dir, length, width, color) => this.draw_debug_arrow(caller, pos, dir, length, width, color),
+        //   (start, end, color) => this.draw_debug_line(caller, start, end, color)
+        // );
+
+        // this.ship.rb_piece3.show(caller, this.uniforms)
+      }
 
       this.update_wind()
   

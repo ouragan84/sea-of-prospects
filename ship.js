@@ -121,7 +121,7 @@ class Ship {
       this.shapes.ship_piece1.draw( caller, uniforms, this.rb.getTransformationMatrix().times(this.offsetMat).times(Mat4.translation(ship_piece1_pos[0], ship_piece1_pos[1], ship_piece1_pos[2])).times(Mat4.rotation(ship_piece1_rot.angle, ship_piece1_rot.axis[0],ship_piece1_rot.axis[1],ship_piece1_rot.axis[2] )).times(Mat4.scale(1.1,1.1,1.1)), this.materials.wood );
       this.shapes.ship_piece3.draw( caller, uniforms, this.rb.getTransformationMatrix().times(this.offsetMat).times(Mat4.translation(ship_piece3_pos[0], ship_piece3_pos[1], ship_piece3_pos[2])).times(Mat4.rotation(ship_piece3_rot.angle, ship_piece3_rot.axis[0],ship_piece3_rot.axis[1],ship_piece3_rot.axis[2] )).times(Mat4.scale(.5,.5,.5)), this.materials.wood );      
     }
-    console.log(this.rb.position)
+    // console.log(this.rb.position)
 
     // draw rigid body
     // this.shapes.box.draw( caller, uniforms, this.rb.getTransformationMatrix(), this.materials.plastic );

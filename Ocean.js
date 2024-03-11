@@ -29,22 +29,8 @@ class Ocean {
 
         const ocean_shader = new Ocean_Shader(1, this.gersrnerWave, config.skybox, config.fog_param);
 
-        let base_water_color = color(0.27,0.46,0.95,1 );
-
-        if(config.preset == 'agitated'){
-            const avg = (base_water_color[0] + base_water_color[1] + base_water_color[2]) / 3;
-            const f = 0.2;
-            base_water_color = base_water_color.plus((color(avg, avg, avg, 0).minus(base_water_color)).times(f));
-        }
-
-        if(config.preset == 'stormy'){
-            const avg = (base_water_color[0] + base_water_color[1] + base_water_color[2]) / 3;
-            const f = 0.2;
-            base_water_color = base_water_color.plus((color(avg, avg, avg, 0).minus(base_water_color)).times(f));
-        }
-
         this.materials = {};
-        this.materials.ocean = { shader: ocean_shader, ambient: 0.4, diffusivity: 0.9, specularity: 0.4, smoothness: 10, color: base_water_color, skyTexture: config.skybox.texture};
+        this.materials.ocean = { shader: ocean_shader, ambient: 0.4, diffusivity: 0.9, specularity: 0.4, smoothness: 10, color: config.ocean_color, skyTexture: config.skybox.texture};
 
         this.points = []
         this.floorPoints = []
@@ -107,9 +93,13 @@ class Ocean {
         const corner3_ocean_normal = this.gersrnerWave.gersrnerWaveNormal(corner3_ocean, t);
         const corner4_ocean_normal = this.gersrnerWave.gersrnerWaveNormal(corner4_ocean, t);
 
-        const boat_forward = boat_transform.times(vec4(0, 0, -1, 0)).to3().normalized();
+        let boat_forward = boat_transform.times(vec4(0, 0, -1, 0)).to3().normalized();
+        // cancel out the y component
+        boat_forward[1] = 0;
+        boat_forward = boat_forward.normalized();
+
         const boat_normal = boat_transform.times(vec4(0, 1, 0, 0)).to3().normalized();
-        let ocean_normal = corner1_ocean_normal.plus(corner2_ocean_normal).plus(corner3_ocean_normal).plus(corner4_ocean_normal).normalized();
+        // let ocean_normal = corner1_ocean_normal.plus(corner2_ocean_normal).plus(corner3_ocean_normal).plus(corner4_ocean_normal).normalized();
 
         const clamp = (num, min, max) => Math.min(Math.max(num, min), max);
 
@@ -119,6 +109,8 @@ class Ocean {
         let corner4_percent_submerged = clamp(corner4_ocean.minus(corner4_boat).dot(vec3(0,1,0)) / (2 * rigidBody.scale[1]) + 1, 0, 1);
 
         let percent_submerged = (corner1_percent_submerged + corner2_percent_submerged + corner3_percent_submerged + corner4_percent_submerged) / 4;
+
+        // console.log(percent_submerged.toFixed(2), corner1_percent_submerged.toFixed(2), corner2_percent_submerged.toFixed(2), corner3_percent_submerged.toFixed(2), corner4_percent_submerged.toFixed(2));
 
 
         draw_debug_sphere(corner1_boat, 0.2, color(0,1,0,1));
@@ -136,32 +128,43 @@ class Ocean {
         draw_debug_arrow(corner3_ocean, corner3_ocean_normal, 1.5, 1.5, color(1,0,0,1));
         draw_debug_arrow(corner4_ocean, corner4_ocean_normal, 1.5, 1.5, color(1,0,0,1));
 
+        draw_debug_arrow(rigidBody.position.plus(vec3(0,3,0)), boat_forward, 1.5, 1.5, color(0,0,1,1));
+        draw_debug_arrow(rigidBody.position.plus(vec3(0,3,0)), boat_normal, 1.5, 1.5, color(0,1,0,1));
 
         const mult_f = 20000;
-        const mult_t = 1000;
+        let mult_t = 2000;
+
+        if (boat_forward.dot(vec3(0,0,-1)) < 0){
+            mult_t = -mult_t;
+        }
 
         const axis1 = boat_normal.cross(corner1_ocean_normal).normalized();
+        draw_debug_arrow(corner1_boat, axis1, 1.5, 1.5, color(0,1,0,1));
         const angle1 = Math.acos(boat_normal.dot(corner1_ocean_normal));
+        // console.log(angle1.toFixed(2) * 180 / Math.PI);
         if(Math.abs(angle1) > 0.01)
-            rigidBody.addTorque(axis1.times(angle1 * mult_t * corner1_percent_submerged));
+            rigidBody.addTorque(axis1.times( angle1 * mult_t * corner1_percent_submerged));
         rigidBody.addForce(vec3(0,1,0).times(mult_f * corner1_percent_submerged));
 
         const axis2 = boat_normal.cross(corner2_ocean_normal).normalized();
+        // draw_debug_arrow(corner2_boat, axis2, 1.5, 1.5, color(0,1,0,1));
         const angle2 = Math.acos(boat_normal.dot(corner2_ocean_normal));
         if(Math.abs(angle2) > 0.01)
-            rigidBody.addTorque(axis2.times(angle2 * mult_t * corner2_percent_submerged));
+            rigidBody.addTorque(axis2.times( angle2 * mult_t * corner2_percent_submerged));
         rigidBody.addForce(vec3(0,1,0).times(mult_f * corner2_percent_submerged));
 
         const axis3 = boat_normal.cross(corner3_ocean_normal).normalized();
+        // draw_debug_arrow(corner3_boat, axis3, 1.5, 1.5, color(0,1,0,1));
         const angle3 = Math.acos(boat_normal.dot(corner3_ocean_normal));
         if(Math.abs(angle3) > 0.01)
-            rigidBody.addTorque(axis3.times(angle3 * mult_t * corner3_percent_submerged));
+            rigidBody.addTorque(axis3.times( angle3 * mult_t * corner3_percent_submerged));
         rigidBody.addForce(vec3(0,1,0).times(mult_f * corner3_percent_submerged));
 
         const axis4 = boat_normal.cross(corner4_ocean_normal).normalized();
+        // draw_debug_arrow(corner4_boat, axis4, 1.5, 1.5, color(0,1,0,1));
         const angle4 = Math.acos(boat_normal.dot(corner4_ocean_normal));
         if(Math.abs(angle4) > 0.01)
-            rigidBody.addTorque(axis4.times(angle4 * mult_t * corner4_percent_submerged));
+            rigidBody.addTorque(axis4.times( angle4 * mult_t * corner4_percent_submerged));
         rigidBody.addForce(vec3(0,1,0).times(mult_f * corner4_percent_submerged));
 
         const restore = 10000;
