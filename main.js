@@ -5,7 +5,7 @@ import { quaternionFromAngleAxis, RigidBody } from './RigidBody.js';
 import { Ship } from './ship.js';
 import { Skybox } from './Skybox.js';
 import { Text } from './text.js';
-import { ShaderMaterial } from './ShaderMaterial.js';
+import { ShaderMaterial, Sample_Shader } from './ShaderMaterial.js';
 
 const { vec3, vec4, color, Mat4, Shader, Texture, Component } = tiny;
 
@@ -141,7 +141,9 @@ export class Sea_Of_Prospects_Scene extends Component
     
     this.islands = new Islands(fog_param, 100)
 
-    this.sample_shader_material = new ShaderMaterial();
+    this.sample_shader_material = new ShaderMaterial(1024, new Sample_Shader());
+  
+    this.tex_phong = new defs.Textured_Phong(1, fog_param);
   }
 
   clamp = (x, min, max) => Math.min(Math.max(x, min), max);
@@ -179,6 +181,12 @@ export class Sea_Of_Prospects_Scene extends Component
     Shader.assign_camera(cam_Mat, this.uniforms);
 
     this.uniforms.projection_transform = Mat4.perspective( Math.PI/4, caller.width/caller.height, 0.1, this.render_distance).times(Mat4.rotation(Math.sin(40*explosionTimer)*.04*Math.exp(-explosionTimer), .2,1,.2))
+
+
+    // ONLY AFTER THE CAMERA IS SET UP, draw the scene
+    this.shapes.box.draw( caller, this.uniforms, Mat4.translation(-1, 6, -1), { shader: this.tex_phong, ambient: .2, diffusivity: 1, specularity:  1, color: color( 1,1,1,1 ), texture: this.sample_shader_material.get_texture() } );
+
+
     // const light_position = Mat4.rotation( angle,   1,0,0 ).times( vec4( 0,-1,1,0 ) ); !!!
     // !!! Light changed here
     if(this.start)
@@ -200,6 +208,8 @@ export class Sea_Of_Prospects_Scene extends Component
       this.ocean.apply_rb_offset(this.ship.rb);
       const camera_direction_xz = vec3(this.ship.rb.position[0] - cam_pos[0], 0, this.ship.rb.position[2] - cam_pos[2]).normalized();
       this.ocean.show(this.shapes, caller, this.uniforms, camera_direction_xz);
+
+
   
       this.ocean.applyWaterForceOnRigidBody(this.ship.rb, t, dt, this.horizontal_input, this.vertical_input, this.wind, 
         (pos, size, color) => this.draw_debug_sphere(caller, pos, size, color),

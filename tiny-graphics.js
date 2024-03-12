@@ -278,7 +278,15 @@ const Shader = tiny.Shader =
 const Texture = tiny.Texture =
   class Texture {
       // See description at https://github.com/encyclopedia-of-code/tiny-graphics-js/wiki/tiny-graphics.js#texture
-      constructor (filename, min_filter = "LINEAR_MIPMAP_LINEAR") {
+      constructor (filename, min_filter = "LINEAR_MIPMAP_LINEAR", existingTexture = undefined, context = undefined) {
+            if (existingTexture) {
+                // Assume this is an existing texture provided directly
+                this.gpu_instances = new Map();
+                this.ready = true; // Mark as ready immediately
+                // Directly use the existing WebGL texture
+                this.initializeWithExistingTexture(existingTexture, context);
+                return;
+            }
           Object.assign (this, {filename, min_filter});
 
           if ( !this.gpu_instances) this.gpu_instances = new Map ();     // Track which GPU contexts this object has
@@ -327,6 +335,29 @@ const Texture = tiny.Texture =
           context.activeTexture (context[ "TEXTURE" + texture_unit ]);
           context.bindTexture (context.TEXTURE_2D, gpu_instance.texture_buffer_pointer);
       }
+      initializeWithExistingTexture(existingTextureBuffer, context) {
+        // Assume that context is a WebGL context where the texture buffer is valid.
+        // This method sets up the Texture instance to use an existing texture buffer
+        // directly, without needing to load an image from a URL.
+        
+        // Check if this Texture has already been initialized in the provided context:
+        if (this.gpu_instances.has(context)) {
+            console.warn("Texture is already initialized for this context.");
+            return;
+        }
+    
+        // Create a new entry in gpu_instances to track this texture's GPU representation.
+        const gpu_instance = {
+            texture_buffer_pointer: existingTextureBuffer
+        };
+    
+        // Store the gpu_instance associated with the provided context.
+        this.gpu_instances.set(context, gpu_instance);
+    
+        // Mark this texture as 'ready' since the texture buffer is already prepared.
+        this.ready = true;
+    }
+    
   };
 
 
@@ -518,3 +549,55 @@ const Component = tiny.Component =
       render_explanation () {}
       render_controls () {}     // render_controls(): Called by Controls_Widget for generating interactive UI.
   };
+
+
+
+
+
+const Graphics_Card_Object = tiny.Graphics_Card_Object =
+class Graphics_Card_Object {                                       // ** Graphics_Card_Object** Extending this base class allows an object to
+    // copy itself onto a WebGL context on demand, whenever it is first used for
+    // a GPU draw command on a context it hasn't seen before.
+    constructor() {
+        this.gpu_instances = new Map()
+    }     // Track which GPU contexts this object has copied itself onto.
+    copy_onto_graphics_card(context, intial_gpu_representation) {                           // copy_onto_graphics_card():  Our object might need to register to multiple
+        // GPU contexts in the case of multiple drawing areas.  If this is a new GPU
+        // context for this object, copy the object to the GPU.  Otherwise, this
+        // object already has been copied over, so get a pointer to the existing
+        // instance.  The instance consists of whatever GPU pointers are associated
+        // with this object, as returned by the WebGL calls that copied it to the
+        // GPU.  GPU-bound objects should override this function, which builds an
+        // initial instance, so as to populate it with finished pointers.
+        const existing_instance = this.gpu_instances.get(context);
+
+        // Warn the user if they are avoidably making too many GPU objects.  Beginner
+        // WebGL programs typically only need to call copy_onto_graphics_card once
+        // per object; doing it more is expensive, so warn them with an "idiot
+        // alarm". Don't trigger the idiot alarm if the user is correctly re-using
+        // an existing GPU context and merely overwriting parts of itself.
+        if (!existing_instance) {
+            Graphics_Card_Object.idiot_alarm |= 0;     // Start a program-wide counter.
+            if (Graphics_Card_Object.idiot_alarm++ > 200)
+                throw `Error: You are sending a lot of object definitions to the GPU, probably by mistake!  
+                Many of them are likely duplicates, which you don't want since sending each one is very slow.  
+                To avoid this, from your display() function avoid ever declaring a Shape Shader or Texture (or 
+                subclass of these) with "new", thus causing the definition to be re-created and re-transmitted every
+                frame. Instead, call these in your scene's constructor and keep the result as a class member, 
+                or otherwise make sure it only happens once.  In the off chance that you have a somehow deformable 
+                shape that MUST change every frame, then at least use the special arguments of 
+                copy_onto_graphics_card to limit which buffers get overwritten every frame to only 
+                the necessary ones.`;
+        }
+        // Check if this object already exists on that GPU context.
+        return existing_instance ||             // If necessary, start a new object associated with the context.
+            this.gpu_instances.set(context, intial_gpu_representation).get(context);
+    }
+
+    activate(context, ...args) {                            // activate():  To use, super call it to retrieve a container of GPU
+        // pointers associated with this object.  If none existed one will be created.
+        // Then do any WebGL calls you need that require GPU pointers.
+        return this.gpu_instances.get(context) || this.copy_onto_graphics_card(context, ...args)
+    }
+}
+
