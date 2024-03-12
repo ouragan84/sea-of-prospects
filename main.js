@@ -18,7 +18,7 @@ export class Sea_Of_Prospects_Scene extends Component
 {       
   init()
   {
-    this.preset = "stormy";
+    this.preset = "calm";
 
     // constructor(): Scenes begin by populating initial values like the Shapes and Materials they'll need.
     this.hover = this.swarm = false;
@@ -267,8 +267,10 @@ export class Sea_Of_Prospects_Scene extends Component
       this.islands.OnCollideEnter(this.ship, this.shipExplosion)
       this.islands.show(caller, this.uniforms)
 
-      this.rainSystem.update(this.dt, this.ship.rb.position)
-      this.rainSystem.draw(caller, this.uniforms)
+      if (this.preset == 'stormy'){
+        this.rainSystem.update(this.dt, this.ship.rb.position)
+        this.rainSystem.draw(caller, this.uniforms)
+      }
       // 'floating' ball
       // this.shapes.ball.draw( caller, this.uniforms, Mat4.translation(5, this.ocean.gersrnerWave.solveForY(5, 5, t)+2, 5).times( Mat4.scale( 2, 2, 2) ), { shader: this.phong, ambient: .2, diffusivity: 1, specularity:  1, color: color( .9,.5,.9,1 ) } )
 
