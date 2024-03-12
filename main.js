@@ -1,6 +1,7 @@
 import {tiny, defs} from './examples/common.js';
 import { Island, Islands } from './island.js';
 import { Ocean } from './Ocean.js';
+import { RainSystem } from './RainSystem.js';
 import { quaternionFromAngleAxis, RigidBody } from './RigidBody.js';
 import { Ship } from './ship.js';
 import { Skybox } from './Skybox.js';
@@ -38,8 +39,8 @@ export class Sea_Of_Prospects_Scene extends Component
           fog_param = { color: color(1,1,1,1), start: this.render_distance-20, end: this.render_distance };
           break;
       case 'stormy':
-          this.light_color = color(1,0.91,0.62,1)
-          fog_param = { color: color(.8,.8,.8,1), start: this.render_distance-30, end: this.render_distance };
+          this.light_color = color(1,1,1,1)
+          fog_param = { color: color(.5,.5,.5,1), start: this.render_distance-30, end: this.render_distance };
           break;
       default:
           this.light_color = color(1,0.91,0.62,1)
@@ -103,7 +104,7 @@ export class Sea_Of_Prospects_Scene extends Component
 
     if(this.preset == 'stormy'){
         const avg = (this.base_water_color[0] + this.base_water_color[1] + this.base_water_color[2]) / 3;
-        const f = 0.2;
+        const f = .6;
         this.base_water_color = this.base_water_color.plus((color(avg, avg, avg, 0).minus(this.base_water_color)).times(f));
     }
 
@@ -143,6 +144,7 @@ export class Sea_Of_Prospects_Scene extends Component
     this.mousev = [0,0];  
     
     this.islands = new Islands(fog_param, 100)
+    this.rainSystem = new RainSystem(1000, fog_param)
 
     this.foam_shader = new Foam_Shader(this.ocean.gersrnerWave, foam_size_terrain, this.ship.rb.position, 0.02, 0.5);
     this.foam_material = new ShaderMaterialPingPong(4096, this.foam_shader);
@@ -262,7 +264,11 @@ export class Sea_Of_Prospects_Scene extends Component
       this.score_text_obj.update_string(`Score: ${this.score} - FPS: ${Math.round(1000/this.uniforms.animation_delta_time)}`)
       this.score_text_obj.draw(caller, this.uniforms, cam_Mat_inv.times(Mat4.translation(-.14, .075, -0.2)).times(Mat4.scale(.004, .004, .1)))
 
+      this.islands.OnCollideEnter(this.ship, this.shipExplosion)
       this.islands.show(caller, this.uniforms)
+
+      this.rainSystem.update(this.dt, this.ship.rb.position)
+      this.rainSystem.draw(caller, this.uniforms)
       // 'floating' ball
       // this.shapes.ball.draw( caller, this.uniforms, Mat4.translation(5, this.ocean.gersrnerWave.solveForY(5, 5, t)+2, 5).times( Mat4.scale( 2, 2, 2) ), { shader: this.phong, ambient: .2, diffusivity: 1, specularity:  1, color: color( .9,.5,.9,1 ) } )
 
@@ -300,6 +306,11 @@ export class Sea_Of_Prospects_Scene extends Component
       this.start_obj.draw(caller, this.uniforms, this.start_text_transform)
       this.score_text_obj.draw(caller, this.uniforms, this.score_text_transform)
     }
+  }
+
+  shipExplosion(ship){
+    ship.explode()
+    explosionTimer = 0
   }
 
   update_wind() {
@@ -373,8 +384,8 @@ export class Sea_Of_Prospects_Scene extends Component
     this.key_triggered_button ("Mute/Unmute", ["m"], () => this.mute=!this.mute);
     this.key_triggered_button ("Increase Score", ["i"], () => {
       this.score+=1
-      explosionTimer = 0
-      this.ship.explode()
+      // explosionTimer = 0
+      // this.ship.explode()
     });
     this.new_line();
     this.key_triggered_button ("Forward", ["w"], () => this.vertical_input = 1, undefined, () => this.vertical_input = 0);

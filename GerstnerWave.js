@@ -39,11 +39,11 @@ export class GerstnerWave{
                     40,              // num_waves
                     .8,              // starting_amplitude
                     0.2,            // starting_frequency
-                    4.5,             // starting_speed
+                    7.5,             // starting_speed
                     vec3(0,0,1),    // starting_dir
                     0.00015,            // end_amplitude
                     50,           // end_frequency
-                    4.5,            // end_speed
+                    10.5,            // end_speed
                     "poor"          // seed_str
                 );
                 break;

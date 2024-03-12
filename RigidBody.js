@@ -5,7 +5,7 @@ const { vec3, vec4, color, Mat4, Shape, Material, Shader, Texture, Component } =
 export
 const RigidBody = defs.RigidBody =
 class RigidBody {
-    constructor(mass=1, position = vec3(5, 1, 5), orientation = quaternionFromAngleAxis(0, vec3(0, 0, 1)), scale = vec3(1,1,1), momentOfInertia = 1, fog_param) {
+    constructor(mass=1, position = vec3(5, 1, 5), orientation = quaternionFromAngleAxis(0, vec3(0, 0, 1)), scale = vec3(1,1,1), momentOfInertia = 1, fog_param, def_mat) {
         this.position = position;
         this.orientation = orientation; 
 
@@ -22,7 +22,7 @@ class RigidBody {
         this.shapes = {
             'box'  : new defs.Cube()
         }
-        this.def_mat = { shader: new defs.Phong_Shader(1, fog_param), ambient: .3, diffusivity: 1, specularity: .5, color: color( .9,.1,.1,1 ) }
+        this.def_mat = { shader: new defs.Phong_Shader(1, fog_param), ambient: 1, diffusivity: 1, specularity: 1, color: color( .3,.3,.3,1 ) }
     }
 
     // apply a force at a point in world coordinates

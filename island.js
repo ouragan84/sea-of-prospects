@@ -8,7 +8,6 @@ class Islands {
     constructor(fog_param, islandDensity) {
         this.islandDensity = islandDensity;
         this.islands = [];
-        this.islandRots = []
         this.islandShapes = []
         this.positions = positions
 
@@ -23,16 +22,22 @@ class Islands {
 
 
         for (let i = 0; i < this.islandDensity; i++) {
-            this.islands.push(new Island(fog_param));
-            this.islandRots.push(Math.random() * Math.PI)
-            this.islandShapes.push(this.getRandomShape())
+            this.islands.push(new Island(this.getRandomShape(), this.positions[i], Math.random() * Math.PI ,fog_param));
+        }
+    }
+
+    OnCollideEnter(ship, shipExplosionCallBack) {
+        for (let i = 0; i < this.islands.length; i++) {
+            if (this.islands[i].isRigidbodyInsideIsland(ship.rb)) {
+                shipExplosionCallBack(ship)
+                break; 
+            }
         }
     }
 
     show(caller, uniforms) {
         for (let i = 0 ; i < this.islandDensity; i++){
-            let model_transform = Mat4.translation(this.positions[i]["x"], 0, this.positions[i]["y"]).times(Mat4.scale(15, 15, 15)).times(Mat4.rotation(this.islandRots[i], 0,1,0));
-            this.islands[i].show(caller, uniforms, this.islandShapes[i],  model_transform);
+            this.islands[i].show(caller, uniforms);
         }
     }
 
@@ -48,15 +53,44 @@ class Islands {
 export
 const Island = defs.Island =
 class Island {
-    constructor(fog_param){
+    constructor(shape, position, rotation, fog_param){
+        this.shape = shape
+        this.position = position
+        this.rotation = rotation
+        this.radius = 10
         const tex_phong = new defs.Textured_Phong(1, fog_param);
         const phong = new defs.Phong_Shader(1, fog_param);
         this.materials = {}
         this.materials.plastic = { shader: phong, ambient: .3, diffusivity: 1, specularity: .5, color: color( 0.647, 0.164, 0.164,1 )}
     }
 
-    show(caller, uniforms, shape, model_transform) {
-        shape.draw(caller, uniforms,model_transform, this.materials.plastic );
+    show(caller, uniforms) {
+        let model_transform = Mat4.translation(this.position["x"], 0, this.position["y"]).times(Mat4.scale(15, 15, 15)).times(Mat4.rotation(this.rotation, 0,1,0));
+        this.shape.draw(caller, uniforms,model_transform, this.materials.plastic );
+    }
+
+    isRigidbodyInsideIsland(rb) {
+        const corners = [
+            rb.getTransformationMatrix().times(vec4(-1, 1, 1, 1)).to3(),
+            rb.getTransformationMatrix().times(vec4(1, 1, 1, 1)).to3(),
+            rb.getTransformationMatrix().times(vec4(-1, 1, -1, 1)).to3(),
+            rb.getTransformationMatrix().times(vec4(1, 1, -1, 1)).to3()
+        ];
+    
+        for (const corner of corners) {
+            // Calculate the distance between the island center and the ship's corner
+            const distance = Math.sqrt(
+                Math.pow(corner[0] - this.position["x"], 2) +
+                Math.pow(corner[2] - this.position["y"], 2) // We use corner[2] (z-axis) because it corresponds to the 'y' in island's position
+            );
+    
+            // Check if the distance is less than or equal to the island's radius
+            if (distance <= this.radius) {
+                return true;
+            }
+        }
+    
+        return false;
     }
 }
 
