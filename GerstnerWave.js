@@ -23,13 +23,13 @@ export class GerstnerWave{
             case 'agitated':
                 this.createWaves(
                     40,              // num_waves
-                    .2,              // starting_amplitude
-                    0.2,            // starting_frequency
-                    2.5,             // starting_speed
+                    .5,              // starting_amplitude
+                    .2,            // starting_frequency
+                    5,             // starting_speed
                     vec3(0,0,1),    // starting_dir
                     0.00015,            // end_amplitude
                     50,           // end_frequency
-                    2.5,            // end_speed
+                    5,            // end_speed
                     "poor"          // seed_str
                 );
                 break;
@@ -137,7 +137,7 @@ export class GerstnerWave{
         return n;
     }
 
-    solveForY(x, z, t){
+    get_original_position_and_true_y(x, z, t){
         // solve for y at a given x, z, and t.
         // first apply the gersrner wave function to the x, z, and t.
         // based on the new x, z, can compute the error and converge to the x and z value that will give the y value we want.
@@ -146,7 +146,7 @@ export class GerstnerWave{
         let error = 0;
         let iterations = 0;
         const max_iterations = 10;
-        const max_error = 0.01;
+        const max_error = 0.001;
         let my_x = x;
         let my_z = z;
         let pos = this.gersrnerWave(vec3(my_x, 0, my_z), t);
@@ -158,20 +158,36 @@ export class GerstnerWave{
             const diff_x = pos[0] - x; // if pos is to the right of x, diff_x is positive
             const diff_z = pos[2] - z; // if pos is in front of z, diff_z is positive
 
-            my_x -= diff_x;
-            my_z -= diff_z;
-
             error = Math.sqrt(diff_x * diff_x + diff_z * diff_z);
 
             if (error < max_error)
                 break;
 
+            my_x -= diff_x;
+            my_z -= diff_z;
+
             pos = this.gersrnerWave(vec3(my_x, 0, my_z), t);
             iterations++;
         }
 
-        return y;
+        const p = this.gersrnerWave(vec3(my_x, 0, my_z), t);
 
+        // console.log(`
+        // Iterations: ${iterations}
+        // Error: ${error}
+        // Location: ${x.toFixed(3)}, ${z.toFixed(3)}
+        // Sample: ${my_x.toFixed(3)}, ${my_z.toFixed(3)}
+        // After Trans: ${p[0].toFixed(3)}, ${p[2].toFixed(3)}
+        // True y: ${p[1].toFixed(3)}
+        // Location should be equal to After Trans or it's wrong
+        // `);
+
+
+        return vec3(my_x, y, my_z)
+    }
+
+    solveForY(x, z, t){
+        this.get_original_position_and_true_y(x, z, t)[1];
     }
 
 }  

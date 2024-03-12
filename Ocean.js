@@ -86,15 +86,20 @@ class Ocean {
         const corner3_boat = boat_transform.times(vec4(-1, 1, -1, 1)).to3();
         const corner4_boat = boat_transform.times(vec4(1, 1, -1, 1)).to3();
 
-        const corner1_ocean = vec3(corner1_boat[0], this.gersrnerWave.solveForY(corner1_boat[0], corner1_boat[2], t), corner1_boat[2]);
-        const corner2_ocean = vec3(corner2_boat[0], this.gersrnerWave.solveForY(corner2_boat[0], corner2_boat[2], t), corner2_boat[2]);
-        const corner3_ocean = vec3(corner3_boat[0], this.gersrnerWave.solveForY(corner3_boat[0], corner3_boat[2], t), corner3_boat[2]);
-        const corner4_ocean = vec3(corner4_boat[0], this.gersrnerWave.solveForY(corner4_boat[0], corner4_boat[2], t), corner4_boat[2]);
+        const corner1_origin_and_y = this.gersrnerWave.get_original_position_and_true_y(corner1_boat[0], corner1_boat[2], t);
+        const corner2_origin_and_y = this.gersrnerWave.get_original_position_and_true_y(corner2_boat[0], corner2_boat[2], t);
+        const corner3_origin_and_y = this.gersrnerWave.get_original_position_and_true_y(corner3_boat[0], corner3_boat[2], t);
+        const corner4_origin_and_y = this.gersrnerWave.get_original_position_and_true_y(corner4_boat[0], corner4_boat[2], t);
 
-        const corner1_ocean_normal = this.gersrnerWave.gersrnerWaveNormal(corner1_ocean, t);
-        const corner2_ocean_normal = this.gersrnerWave.gersrnerWaveNormal(corner2_ocean, t);
-        const corner3_ocean_normal = this.gersrnerWave.gersrnerWaveNormal(corner3_ocean, t);
-        const corner4_ocean_normal = this.gersrnerWave.gersrnerWaveNormal(corner4_ocean, t);
+        const corner1_ocean = vec3(corner1_boat[0], corner1_origin_and_y[1], corner1_boat[2]);
+        const corner2_ocean = vec3(corner2_boat[0], corner2_origin_and_y[1], corner2_boat[2]);
+        const corner3_ocean = vec3(corner3_boat[0], corner3_origin_and_y[1], corner3_boat[2]);
+        const corner4_ocean = vec3(corner4_boat[0], corner4_origin_and_y[1], corner4_boat[2]);
+
+        const corner1_ocean_normal = this.gersrnerWave.gersrnerWaveNormal(corner1_origin_and_y, t);
+        const corner2_ocean_normal = this.gersrnerWave.gersrnerWaveNormal(corner2_origin_and_y, t);
+        const corner3_ocean_normal = this.gersrnerWave.gersrnerWaveNormal(corner3_origin_and_y, t);
+        const corner4_ocean_normal = this.gersrnerWave.gersrnerWaveNormal(corner4_origin_and_y, t);
 
         let boat_forward = boat_transform.times(vec4(0, 0, -1, 0)).to3().normalized();
         // cancel out the y component

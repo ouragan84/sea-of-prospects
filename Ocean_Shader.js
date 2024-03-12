@@ -50,8 +50,6 @@ export const Ocean_Shader =
         }
 
         vec3 get_gersrner_wave_normal(vec3 pos, float t, vec3 p_sample) {
-            
-
             vec3 rx = vec3(1.0,0.0,0.0);
             vec3 rz = vec3(0.0,0.0,1.0);
 
@@ -88,14 +86,6 @@ export const Ocean_Shader =
                 pos.y,
                 pos.x * sin(a) + pos.z * cos(a)
             );
-            
-            // vec3 rotated_offset = vec3(
-            //     offset_x * cos(-angle_offset) - offset_z * sin(-angle_offset),
-            //     0.0,
-            //     offset_x * sin(-angle_offset) + offset_z * cos(-angle_offset)
-            // );
-
-            // p_sample = p_sample - vec3(offset_x, 0.0, offset_z);
 
             p_sample = p_sample + vec3(offset_x, 0.0, offset_z);
 
@@ -126,8 +116,6 @@ export const Ocean_Shader =
 
             gl_Position = projection_camera_model_transform * vec4( new_vertex_position, 1.0 );      // Move vertex to final space.
 
-            // vec3 new_normal = get_gersrner_wave_normal(position, time, p_sample);
-            // N = normalize( mat3( model_transform ) * new_normal / squared_scale);
             N = vec3(0.0, 1.0, 0.0);
 
             vertex_worldspace = ( model_transform * vec4( new_vertex_position, 1.0 ) ).xyz;
@@ -208,7 +196,7 @@ export const Ocean_Shader =
                 
                   // Compute diffuse and specular components of Phong Reflection Model.
                 float diffuse  =      max( dot( N, L ), 0.0 );
-                float specular = pow( max( dot( N, H ), 0.0 ), smoothness ) * get_fernel_coeff(L, N);     // Use Blinn's "halfway vector" method.
+                float specular = pow( max( dot( N, H ), 0.0 ), smoothness ) * get_fernel_coeff(-L, N);     // Use Blinn's "halfway vector" method.
                 float attenuation = 1.0 / (1.0 + light_attenuation_factors[i] * distance_to_light * distance_to_light );
 
 
@@ -236,7 +224,7 @@ export const Ocean_Shader =
 
             gl_FragColor = vec4( shape_color.xyz * ambient, shape_color.w );
 
-            gl_FragColor.xyz += phong_model_lights( norm, vertex_worldspace );
+            gl_FragColor.xyz += phong_model_lights_water( norm, vertex_worldspace );
 
             vec3 direction = normalize(vertex_worldspace - camera_center);
             vec3 reflection = reflect(direction, norm);

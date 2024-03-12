@@ -15,8 +15,6 @@ export class Sea_Of_Prospects_Scene extends Component
 {       
   init()
   {
-    console.log("init")
-
     this.preset = "stormy";
 
     // constructor(): Scenes begin by populating initial values like the Shapes and Materials they'll need.
