@@ -97,7 +97,27 @@ class Foam_Shader extends Shader {
         #define PI 3.14159265359
 
         float get_jacobian_determinant(vec3 pos, float t){
-            vec3 p = vec3(0.0, 0.0, 0.0);
+            // vec3 p = vec3(0.0, 0.0, 0.0);
+
+            // for (int i = 0; i < num_waves; i++) {
+            //     float w = frequencies[i];
+            //     vec3 d = directions[i];
+            //     float l = 2.0 * PI / w;
+            //     float f = w * (d.x * pos.x + d.z * pos.z) - (speeds[i] * 2.0 / l  * t) + phases[i];
+            //     float a = amplitudes[i];
+            //     p = p + vec3(
+            //         d.x * a * cos(f), 
+            //         a * sin(f), 
+            //         d.z * a * cos(f)
+            //     );
+            // }
+
+            float dx_dx = 0.0;
+            float dx_dz = 0.0;
+            float dz_dx = 0.0;
+            float dz_dz = 0.0;
+
+            const float lambda = 1.0;
 
             for (int i = 0; i < num_waves; i++) {
                 float w = frequencies[i];
@@ -105,14 +125,16 @@ class Foam_Shader extends Shader {
                 float l = 2.0 * PI / w;
                 float f = w * (d.x * pos.x + d.z * pos.z) - (speeds[i] * 2.0 / l  * t) + phases[i];
                 float a = amplitudes[i];
-                p = p + vec3(
-                    d.x * a * cos(f), 
-                    a * sin(f), 
-                    d.z * a * cos(f)
-                );
+
+                dx_dx += - d.x * d.x * a * w * sin(f);
+                dx_dz += - d.x * d.z * a * w * sin(f);
+                dz_dx += - d.z * d.x * a * w * sin(f);
+                dz_dz += - d.z * d.z * a * w * sin(f);
             }
 
-            return length(p.xz);
+            float J = (1.0 + lambda * dx_dx) * (1.0 + lambda * dz_dz) - (lambda * dx_dz) * (lambda * dz_dx);
+
+            return J;
         }
         `;
     }

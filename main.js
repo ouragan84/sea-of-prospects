@@ -146,7 +146,7 @@ export class Sea_Of_Prospects_Scene extends Component
     this.islands = new Islands(fog_param, 100)
     this.rainSystem = new RainSystem(200, fog_param)
 
-    this.foam_shader = new Foam_Shader(this.ocean.gersrnerWave, foam_size_terrain, this.ship.rb.position, 0.02, 0.5);
+    this.foam_shader = new Foam_Shader(this.ocean.gersrnerWave, foam_size_terrain, this.ship.rb.position, 0.02, 0.4);
     this.foam_material = new ShaderMaterialPingPong(4096, this.foam_shader);
     this.foam_shader.shader_material = this.foam_material;
   
