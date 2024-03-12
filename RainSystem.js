@@ -13,7 +13,7 @@ class Raindrop{
 };
 
 export
-const RainSystem = defs.Ship =
+const RainSystem = defs.RainSystem =
 class RainSystem {
     constructor(count, fog_param) {
         this.raindrops = [];
@@ -31,7 +31,7 @@ class RainSystem {
 
     createRaindrop(shipPos) {
         // Randomize the initial position and speed of the raindrop
-        let positionMatrix = Mat4.translation(shipPos[0] + Math.random() * 60 - 30, Math.random() * 100 + 50,shipPos[2] +  Math.random() * 60 - 30);
+        let positionMatrix = Mat4.translation(shipPos[0] + Math.random() * 60 - 30, Math.random() * 5 + 20,shipPos[2] +  Math.random() * 60 - 30);
         let speed = Math.random() * 20 + 20;
         return { positionMatrix, speed };
     }
@@ -41,7 +41,7 @@ class RainSystem {
         for (let raindrop of this.raindrops) {
             raindrop.positionMatrix = raindrop.positionMatrix.times(Mat4.translation(0, -raindrop.speed * dt, 0));
             // Reset the raindrop to the top if it goes below a certain threshold
-            if (raindrop.positionMatrix[1][3] < -10) {
+            if (raindrop.positionMatrix[1][3] < -2) {
                 raindrop.positionMatrix = this.createRaindrop(shipPos).positionMatrix;
             }
         }
