@@ -16,6 +16,7 @@ export const Ocean_Shader =
         uniform float offset_x;
 
         varying vec3 original_position;
+        varying vec3 displacement;
 
         #define PI 3.14159265359
         uniform float offset_z;
@@ -29,18 +30,8 @@ export const Ocean_Shader =
         uniform vec3 directions[num_waves];
         uniform float phases[num_waves];
 
-        vec3 get_gersrner_wave_position(vec3 pos, float t, float offset_x, float offset_z){
-
-            vec3 p = pos;
-
-            // calculate p_sample, position but roated -angle_offset about (offset_x, offset_z)
-            vec3 p_sample = vec3(
-                pos.x * cos(-angle_offset) - pos.z * sin(-angle_offset),
-                pos.y,
-                pos.x * sin(-angle_offset) + pos.z * cos(-angle_offset)
-            );
-
-            p_sample = p_sample + vec3(offset_x, 0.0, offset_z);
+        vec3 get_gersrner_wave_displacement(vec3 pos, float t, vec3 p_sample) {
+            vec3 p = vec3(0.0, 0.0, 0.0);
 
             for (int i = 0; i < num_waves; i++) {
                 float w = frequencies[i];
@@ -54,19 +45,12 @@ export const Ocean_Shader =
                     d.z * a * cos(f)
                 );
             }
-
             
             return p;
         }
 
-        vec3 get_gersrner_wave_normal(vec3 pos, float t, float offset_x, float offset_z) {
-            vec3 p_sample = vec3(
-                pos.x * cos(-angle_offset) - pos.z * sin(-angle_offset),
-                pos.y,
-                pos.x * sin(-angle_offset) + pos.z * cos(-angle_offset)
-            );
-
-            p_sample = p_sample + vec3(offset_x, 0.0, offset_z);
+        vec3 get_gersrner_wave_normal(vec3 pos, float t, vec3 p_sample) {
+            
 
             vec3 rx = vec3(1.0,0.0,0.0);
             vec3 rz = vec3(0.0,0.0,1.0);
@@ -95,6 +79,29 @@ export const Ocean_Shader =
             return n;
         }
 
+        vec3 get_sample_position(vec3 pos, float t) {
+
+            float a = - angle_offset + PI / 4.0;
+
+            vec3 p_sample = vec3(
+                pos.x * cos(a) - pos.z * sin(a),
+                pos.y,
+                pos.x * sin(a) + pos.z * cos(a)
+            );
+            
+            // vec3 rotated_offset = vec3(
+            //     offset_x * cos(-angle_offset) - offset_z * sin(-angle_offset),
+            //     0.0,
+            //     offset_x * sin(-angle_offset) + offset_z * cos(-angle_offset)
+            // );
+
+            // p_sample = p_sample - vec3(offset_x, 0.0, offset_z);
+
+            p_sample = p_sample + vec3(offset_x, 0.0, offset_z);
+
+            return p_sample;
+        }
+
         `;
     }
  
@@ -112,14 +119,18 @@ export const Ocean_Shader =
                 return;
             }
 
-            vec3 p = get_gersrner_wave_position(position, time, offset_x, offset_z);
-            gl_Position = projection_camera_model_transform * vec4( p, 1.0 );     // Move vertex to final space.
-                                            // The final normal vector in screen space.
+            vec3 p_sample = get_sample_position(position, time);
 
-            vec3 new_normal = get_gersrner_wave_normal(position, time, offset_x, offset_z);
-            N = normalize( mat3( model_transform ) * new_normal / squared_scale);
+            displacement = get_gersrner_wave_displacement(position, time, p_sample);
+            vec3 new_vertex_position = position + displacement;
 
-            vertex_worldspace = ( model_transform * vec4( p, 1.0 ) ).xyz;
+            gl_Position = projection_camera_model_transform * vec4( new_vertex_position, 1.0 );      // Move vertex to final space.
+
+            // vec3 new_normal = get_gersrner_wave_normal(position, time, p_sample);
+            // N = normalize( mat3( model_transform ) * new_normal / squared_scale);
+            N = vec3(0.0, 1.0, 0.0);
+
+            vertex_worldspace = ( model_transform * vec4( new_vertex_position, 1.0 ) ).xyz;
         } `;
     }
 
@@ -216,14 +227,14 @@ export const Ocean_Shader =
                 discard;
             }
         
-            vec3 norm = normalize(get_gersrner_wave_normal(original_position, time, offset_x, offset_z));
+            // vec3 norm = normalize(get_gersrner_wave_normal(original_position, time, offset_x, offset_z));
             // vec3 norm = normalize(N);
 
+            vec3 p_sample = get_sample_position(original_position, time);
+
+            vec3 norm = normalize(get_gersrner_wave_normal(original_position, time, p_sample));
+
             gl_FragColor = vec4( shape_color.xyz * ambient, shape_color.w );
-
-            // gl_FragColor = vec4(vertex_worldspace.x/10.0, vertex_worldspace.z/10.0, vertex_worldspace.y/10.0, 1.0);
-
-            // gl_FragColor = vec4(original_position.x/10.0, original_position.z/10.0, original_position.y/10.0, 1.0);
 
             gl_FragColor.xyz += phong_model_lights( norm, vertex_worldspace );
 
