@@ -6,6 +6,8 @@ import { Ship } from './ship.js';
 import { Skybox } from './Skybox.js';
 import { Text } from './text.js';
 import { ShaderMaterial, Sample_Shader } from './ShaderMaterial.js';
+import { Foam_Shader } from './Foam.js';
+import { ShaderMaterialPingPong } from './ShaderMaterialPingPong.js';
 
 const { vec3, vec4, color, Mat4, Shader, Texture, Component } = tiny;
 
@@ -21,6 +23,8 @@ export class Sea_Of_Prospects_Scene extends Component
     this.hover = this.swarm = false;
 
     this.render_distance = 80;
+
+    const foam_size_terrain = 60; // sizezX of the foam texture in world space in either direction
 
     let fog_param;
 
@@ -112,6 +116,7 @@ export class Sea_Of_Prospects_Scene extends Component
       size : this.render_distance * 2,
       fog_param: fog_param,
       skybox: this.skybox,
+      foam_size_terrain: foam_size_terrain,
       preset: this.preset // 'calm', 'agitated', 'stormy'
     });
 
@@ -139,7 +144,9 @@ export class Sea_Of_Prospects_Scene extends Component
     
     this.islands = new Islands(fog_param, 100)
 
-    this.sample_shader_material = new ShaderMaterial(1024, new Sample_Shader());
+    this.foam_shader = new Foam_Shader(this.ocean.gersrnerWave, foam_size_terrain, this.ship.rb.position, 0.02, 0.5);
+    this.foam_material = new ShaderMaterialPingPong(4096, this.foam_shader);
+    this.foam_shader.shader_material = this.foam_material;
   
     this.tex_phong = new defs.Textured_Phong(1, fog_param);
   }
@@ -148,7 +155,7 @@ export class Sea_Of_Prospects_Scene extends Component
      
   render_animation( caller )
   {                    
-    this.sample_shader_material.update(caller, this.uniforms);
+    this.foam_material.update(caller, {... this.uniforms, offset: this.ocean.ocean_offset});
 
     const t = this.t = this.uniforms.animation_time/1000;
     const dt = this.dt = 0.02
@@ -182,7 +189,10 @@ export class Sea_Of_Prospects_Scene extends Component
 
 
     // ONLY AFTER THE CAMERA IS SET UP, draw the scene
-    this.shapes.box.draw( caller, this.uniforms, Mat4.translation(-1, 6, -1), { shader: this.tex_phong, ambient: .2, diffusivity: 1, specularity:  1, color: color( 1,1,1,1 ), texture: this.sample_shader_material.get_texture() } );
+
+    // put the transform in front of the camera, to the top left of the screen
+    const my_transform = Mat4.translation(0, 6, 0);
+    this.shapes.box.draw( caller, this.uniforms, my_transform, { shader: this.tex_phong, ambient: .2, diffusivity: 1, specularity:  1, color: color( 1,1,1,1 ), texture: this.foam_material.get_texture() } );
 
 
     // const light_position = Mat4.rotation( angle,   1,0,0 ).times( vec4( 0,-1,1,0 ) ); !!!
@@ -205,7 +215,7 @@ export class Sea_Of_Prospects_Scene extends Component
   
       this.ocean.apply_rb_offset(this.ship.rb);
       const camera_direction_xz = vec3(this.ship.rb.position[0] - cam_pos[0], 0, this.ship.rb.position[2] - cam_pos[2]).normalized();
-      this.ocean.show(this.shapes, caller, this.uniforms, camera_direction_xz);
+      this.ocean.show(this.shapes, caller, this.uniforms, camera_direction_xz, this.foam_material.get_texture());
 
 
   

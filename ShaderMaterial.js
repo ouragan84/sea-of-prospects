@@ -71,10 +71,8 @@ export class ShaderMaterial
     }
 
     texture_buffer_init(gl) {
-        // Depth Texture
         this.shaderTexture = gl.createTexture();
         this.buffered_shader_texture = new Buffered_Texture(this.shaderTexture);
-
 
         this.shaderTextureSize = this.SHADER_TEXTURE_TEX_SIZE;
         gl.bindTexture(gl.TEXTURE_2D, this.shaderTexture);

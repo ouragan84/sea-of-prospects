@@ -3,11 +3,12 @@ import {tiny, defs} from './examples/common.js';
 export const Ocean_Shader =
   class Ocean_Shader extends defs.Phong_Shader {
 
-    constructor(num_lights, wave_obj, skybox, fog) {
+    constructor(num_lights, wave_obj, skybox, fog, foam_size_terrain) {
         super(num_lights, fog);
         this.gersrnerWave = wave_obj;
         this.skybox = skybox;
         this.initialized_waves = false;
+        this.foam_size_terrain = foam_size_terrain;
     }
 
     shared_glsl_code () {           // ********* SHARED CODE, INCLUDED IN BOTH SHADERS *********
@@ -29,6 +30,8 @@ export const Ocean_Shader =
         uniform float speeds[num_waves];
         uniform vec3 directions[num_waves];
         uniform float phases[num_waves];
+
+        uniform float foam_size_terrain;
 
         vec3 get_gersrner_wave_displacement(vec3 pos, float t, vec3 p_sample) {
             vec3 p = vec3(0.0, 0.0, 0.0);
@@ -132,6 +135,8 @@ export const Ocean_Shader =
         float radius_blend_end = ${this.skybox.shader.radius_blend_end.toFixed(10)};
         float rotation_y = ${this.skybox.shader.rotation_y.toFixed(10)};
 
+        uniform sampler2D foam_texture;
+
         float pow2(float x) {
             return x * x;
         }
@@ -210,26 +215,24 @@ export const Ocean_Shader =
 
 
         void main() {
-
-            if(original_position.x + original_position.z < - 30.0) {
+            if(original_position.x + original_position.z < - 30.0)
                 discard;
-            }
-        
-            // vec3 norm = normalize(get_gersrner_wave_normal(original_position, time, offset_x, offset_z));
-            // vec3 norm = normalize(N);
 
             vec3 p_sample = get_sample_position(original_position, time);
-
             vec3 norm = normalize(get_gersrner_wave_normal(original_position, time, p_sample));
 
             gl_FragColor = vec4( shape_color.xyz * ambient, shape_color.w );
-
             gl_FragColor.xyz += phong_model_lights_water( norm, vertex_worldspace );
 
             vec3 direction = normalize(vertex_worldspace - camera_center);
             vec3 reflection = reflect(direction, norm);
-
             gl_FragColor = mix(gl_FragColor, get_skycolor(reflection), get_fernel_coeff(direction, norm));
+
+            vec2 foam_uv = vec2(0.5 * (p_sample.x - offset_x) / foam_size_terrain + 0.5, 0.5 * (p_sample.z - offset_z) / foam_size_terrain + 0.5);
+            if (foam_uv.x >= 0.0 && foam_uv.x <= 1.0 && foam_uv.y >= 0.0 && foam_uv.y <= 1.0){  
+                vec4 foam_color = texture2D(foam_texture, foam_uv);
+                gl_FragColor = mix(gl_FragColor, vec4(1,1,1,1), foam_color.x); // since foam is a shade of gray, we can use any of the color channels to mix
+            }
 
             float distance = length(camera_center - vertex_worldspace);
             float fog_amount = smoothstep(fog_start_dist, fog_end_dist, distance);
@@ -255,6 +258,7 @@ export const Ocean_Shader =
             context.uniform1fv(gpu_addresses.speeds, this.gersrnerWave.speeds);
             context.uniform1fv(gpu_addresses.phases, this.gersrnerWave.phases);
             context.uniform3fv(gpu_addresses.directions, this.flatten_vec_array(this.gersrnerWave.directions));
+            context.uniform1f(gpu_addresses.foam_size_terrain, this.foam_size_terrain);
             this.initialized_waves = true;
         }
 
@@ -274,6 +278,13 @@ export const Ocean_Shader =
             context.uniform1i (gpu_addresses.skyTexture, 0);
             // For this draw, use the texture image from the correct GPU buffer:
             material.skyTexture.activate(context, 0);
+        }
+
+        if (uniforms.foam_texture) {
+            // Select texture unit 1 for the fragment shader Sampler2D uniform called "texture":
+            context.uniform1i (gpu_addresses.foam_texture, 1);
+            // For this draw, use the texture image from the correct GPU buffer:
+            uniforms.foam_texture.activate(context, 1);
         }
     }
 };

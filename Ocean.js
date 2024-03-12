@@ -27,7 +27,7 @@ class Ocean {
 
         const points_across = this.size * this.density + 1;
 
-        const ocean_shader = new Ocean_Shader(1, this.gersrnerWave, config.skybox, config.fog_param);
+        const ocean_shader = new Ocean_Shader(1, this.gersrnerWave, config.skybox, config.fog_param, config.foam_size_terrain);
 
         this.materials = {};
         this.materials.ocean = { shader: ocean_shader, ambient: 0.4, diffusivity: 0.9, specularity: 0.4, smoothness: 10, color: config.ocean_color, skyTexture: config.skybox.texture};
@@ -272,7 +272,7 @@ class Ocean {
         return x + y * gridSize
     }
 
-    show(shapes, caller, uniforms, camera_direction) {
+    show(shapes, caller, uniforms, camera_direction, foam_buffered_texture) {
 
 
 
@@ -284,7 +284,7 @@ class Ocean {
 
         // console.log( `CamDir = <${camera_direction[0].toFixed(2)}, ${camera_direction[2].toFixed(2)}>, Angle = ${angle.toFixed(2) * 180 / Math.PI}` );
 
-        this.shapes.ocean.draw( caller, {...uniforms, offset: this.ocean_offset, angle_offset: angle}, transform, this.materials.ocean);
+        this.shapes.ocean.draw( caller, {...uniforms, offset: this.ocean_offset, angle_offset: angle, foam_texture: foam_buffered_texture}, transform, this.materials.ocean);
 
 
         // this.shapes.ocean.draw( caller, {...uniforms, offset: this.ocean_offset}, Mat4.identity(), this.materials.ocean);
