@@ -278,7 +278,7 @@ class Ocean {
 
         // rotate the ocean to rotate the ocean by the amount of degrees (only rotate about y axis) from <1,0,1> to the camera direction
         const angle =  Math.atan2(camera_direction[0], camera_direction[2]) % (2 * Math.PI);
-        const rotation = Mat4.rotation(angle - Math.PI / 4, 0, 1, 0);
+        const rotation = Mat4.rotation(angle - Math.PI / 2, 0, 1, 0);
 
         const transform = Mat4.translation(this.ocean_offset[0], 0, this.ocean_offset[2]).times(rotation);
 

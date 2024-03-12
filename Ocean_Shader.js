@@ -82,7 +82,7 @@ export const Ocean_Shader =
 
         vec3 get_sample_position(vec3 pos, float t) {
 
-            float a = - angle_offset + PI / 4.0;
+            float a = - angle_offset + PI / 2.0;
 
             vec3 p_sample = vec3(
                 pos.x * cos(a) - pos.z * sin(a),
@@ -108,7 +108,7 @@ export const Ocean_Shader =
         void main() {
             original_position = position;
 
-            if(position.x + position.z < - 30.0) {
+            if(position.x < - 20.0) {
                 return;
             }
 
@@ -215,7 +215,7 @@ export const Ocean_Shader =
 
 
         void main() {
-            if(original_position.x + original_position.z < - 30.0)
+            if(original_position.x < - 20.0)
                 discard;
 
             vec3 p_sample = get_sample_position(original_position, time);
