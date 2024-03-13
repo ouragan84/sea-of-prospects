@@ -135,6 +135,8 @@ export const Ocean_Shader =
         float radius_blend_end = ${this.skybox.shader.radius_blend_end.toFixed(10)};
         float rotation_y = ${this.skybox.shader.rotation_y.toFixed(10)};
 
+        uniform vec4 foam_color;
+
         uniform sampler2D foam_texture;
 
         float pow2(float x) {
@@ -230,8 +232,9 @@ export const Ocean_Shader =
 
             vec2 foam_uv = vec2(0.5 * (p_sample.x - offset_x) / foam_size_terrain + 0.5, 0.5 * (p_sample.z - offset_z) / foam_size_terrain + 0.5);
             if (foam_uv.x >= 0.0 && foam_uv.x <= 1.0 && foam_uv.y >= 0.0 && foam_uv.y <= 1.0){  
-                vec4 foam_color = texture2D(foam_texture, foam_uv);
-                gl_FragColor = mix(gl_FragColor, vec4(1,1,1,1), foam_color.x); // since foam is a shade of gray, we can use any of the color channels to mix
+                vec4 foam_tex_sample = texture2D(foam_texture, foam_uv);
+                float foam_intensity = foam_tex_sample.r * foam_color.a;
+                gl_FragColor = mix(gl_FragColor, vec4(foam_color.rgb, 1.0), foam_intensity);
             }
 
             float distance = length(camera_center - vertex_worldspace);
@@ -259,6 +262,10 @@ export const Ocean_Shader =
             context.uniform1fv(gpu_addresses.phases, this.gersrnerWave.phases);
             context.uniform3fv(gpu_addresses.directions, this.flatten_vec_array(this.gersrnerWave.directions));
             context.uniform1f(gpu_addresses.foam_size_terrain, this.foam_size_terrain);
+
+            console.log(material);
+
+            context.uniform4fv(gpu_addresses.foam_color, material.foamColor);
             this.initialized_waves = true;
         }
 

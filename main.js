@@ -18,7 +18,7 @@ export class Sea_Of_Prospects_Scene extends Component
 {       
   init()
   {
-    this.preset = "calm";
+    this.preset = "stormy";
 
     // constructor(): Scenes begin by populating initial values like the Shapes and Materials they'll need.
     this.hover = this.swarm = false;
@@ -118,6 +118,7 @@ export class Sea_Of_Prospects_Scene extends Component
       fog_param: fog_param,
       skybox: this.skybox,
       foam_size_terrain: foam_size_terrain,
+      foam_color: color(0.9,0.98,1,1),
       preset: this.preset // 'calm', 'agitated', 'stormy'
     });
 
@@ -146,7 +147,7 @@ export class Sea_Of_Prospects_Scene extends Component
     this.islands = new Islands(fog_param, 100)
     this.rainSystem = new RainSystem(200, fog_param)
 
-    this.foam_shader = new Foam_Shader(this.ocean.gersrnerWave, foam_size_terrain, this.ship.rb.position, 0.02, 0.4);
+    this.foam_shader = new Foam_Shader(this.ocean.gersrnerWave, foam_size_terrain, this.ship.rb.position, 60, 0.45, -0.2, 0.5);
     this.foam_material = new ShaderMaterialPingPong(4096, this.foam_shader);
     this.foam_shader.shader_material = this.foam_material;
   
@@ -157,7 +158,8 @@ export class Sea_Of_Prospects_Scene extends Component
      
   render_animation( caller )
   {                    
-    this.foam_material.update(caller, {... this.uniforms, offset: this.ocean.ocean_offset});
+    const sample_point_for_boat = this.ocean.gersrnerWave.get_original_position_and_true_y(this.ship.rb.position[0], this.ship.rb.position[2], this.t);
+    this.foam_material.update(caller, {... this.uniforms, offset: this.ocean.ocean_offset, sample_boat: sample_point_for_boat, boat_foam_intensity: this.ship.rb.velocity.norm() / 10});
 
     const t = this.t = this.uniforms.animation_time/1000;
     const dt = this.dt = 0.02

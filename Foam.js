@@ -5,15 +5,17 @@ const { vec3, vec4, color, Mat4, Shader, Texture, Component, Matrix } = tiny;
 
 export const Foam_Shader =
 class Foam_Shader extends Shader {
-    constructor (gersrnerWave, foam_size_terrain, starting_center, decay_rate, jacobian_threshold) {
+    constructor (gersrnerWave, foam_size_terrain, starting_center, frame_half_life, jacobian_threshold_start, jacobian_threshold_end, max_dist_from_boat) {
         super ();
         this.gersrnerWave = gersrnerWave;
         this.foam_size_terrain = foam_size_terrain;
         this.initialized_waves = false;
         this.last_offset = starting_center;
         this.is_first_frame = true;
-        this.decay_rate = decay_rate;
-        this.jacobian_threshold = jacobian_threshold;
+        this.decay_rate = 1 - Math.pow(0.5, 1 / frame_half_life);
+        this.jacobian_threshold_start = jacobian_threshold_start;
+        this.jacobian_threshold_end = jacobian_threshold_end;
+        this.max_dist_from_boat = max_dist_from_boat;
 
         this.shader_material = null; // don't forget to set it.
     }
@@ -42,6 +44,9 @@ class Foam_Shader extends Shader {
         context.uniform1f(gpu_addresses.last_offset_z, this.last_offset[2]);
         context.uniform1f(gpu_addresses.offset_x, uniforms.offset[0]);
         context.uniform1f(gpu_addresses.offset_z, uniforms.offset[2]);
+        context.uniform1f(gpu_addresses.boat_x, uniforms.sample_boat[0]);
+        context.uniform1f(gpu_addresses.boat_z, uniforms.sample_boat[2]);
+        context.uniform1f(gpu_addresses.boat_foam_intensity, Math.min(1, Math.max(0, uniforms.boat_foam_intensity)));
 
 
         if (this.is_first_frame) {
@@ -60,7 +65,9 @@ class Foam_Shader extends Shader {
             context.uniform1fv(gpu_addresses.phases, this.gersrnerWave.phases);
             context.uniform3fv(gpu_addresses.directions, this.flatten_vec_array(this.gersrnerWave.directions));
             context.uniform1f(gpu_addresses.decay_rate, this.decay_rate);
-            context.uniform1f(gpu_addresses.jacobian_threshold, this.jacobian_threshold);
+            context.uniform1f(gpu_addresses.jacobian_threshold_start, this.jacobian_threshold_start);
+            context.uniform1f(gpu_addresses.jacobian_threshold_end, this.jacobian_threshold_end);
+            context.uniform1f(gpu_addresses.max_dist_from_boat, this.max_dist_from_boat);
             this.initialized_waves = true;
         }
 
@@ -84,7 +91,14 @@ class Foam_Shader extends Shader {
         uniform float foam_size_terrain;
         uniform bool is_first_frame;
         uniform float decay_rate;
-        uniform float jacobian_threshold;
+        uniform float jacobian_threshold_start;
+        uniform float jacobian_threshold_end;
+
+        uniform float boat_x;
+        uniform float boat_z;
+        uniform float boat_foam_intensity;
+
+        uniform float max_dist_from_boat;
 
         const int num_waves = ${this.gersrnerWave.num_waves};
 
@@ -171,12 +185,22 @@ class Foam_Shader extends Shader {
 
             float jacobian = get_jacobian_determinant(vec3(x, 0.0, z), time);
 
-            if (jacobian < jacobian_threshold){
-                gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
+            if (jacobian < jacobian_threshold_start){
+                float intensity = (jacobian - jacobian_threshold_start) / (jacobian_threshold_end - jacobian_threshold_start);
+                gl_FragColor = mix(gl_FragColor, vec4(1.0, 1.0, 1.0, 1.0), intensity);
             }
 
+            // radial foam around the boat (intensity decreases as we move away from the boat)
+            float dx = x - boat_x;
+            float dz = z - boat_z;
+            float dist = sqrt(dx * dx + dz * dz);
+            float intensity = boat_foam_intensity - dist / max_dist_from_boat;
+            if (intensity > 0.0){
+                gl_FragColor = mix(gl_FragColor, vec4(1.0, 1.0, 1.0, 1.0), intensity);
+            }
+            
 
-            if (gl_FragColor.x < 0.05){
+            if (gl_FragColor.x < 0.1){
                 gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
             }
             
