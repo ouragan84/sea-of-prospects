@@ -88,7 +88,7 @@ export class Sea_Of_Prospects_Scene extends Component
           skybox_texture = new Texture("assets/sunny_sky.jpg");
           break;
       case 'stormy':
-          skybox_texture = new Texture("assets/stormy_sky2.jpg");
+          skybox_texture = new Texture("assets/stormy_sky.jpg");
           break;
       default:
           skybox_texture = new Texture("assets/sunny_sky.jpg");
