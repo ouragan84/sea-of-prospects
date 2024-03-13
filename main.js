@@ -169,6 +169,7 @@ export class Sea_Of_Prospects_Scene extends Component
   render_animation( caller )
   {                    
     const sample_point_for_boat = this.ocean.gersrnerWave.get_original_position_and_true_y(this.ship.rb.position[0], this.ship.rb.position[2], this.t);
+
     this.foam_material.update(caller, {... this.uniforms, offset: this.ocean.ocean_offset, sample_boat: sample_point_for_boat, boat_foam_intensity: this.ship.rb.velocity.norm() / 10});
 
     const t = this.t = this.uniforms.animation_time/1000;
@@ -398,6 +399,7 @@ export class Sea_Of_Prospects_Scene extends Component
     this.key_triggered_button ("Mute/Unmute", ["m"], () => this.mute=!this.mute);
     this.key_triggered_button ("Increase Score", ["i"], () => {
       this.score+=1
+      // console.log(this.ocean.gersrnerWave);
       // explosionTimer = 0
       // this.ship.explode()
     });

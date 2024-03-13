@@ -212,7 +212,7 @@ class Foam_Shader extends Shader {
             }
             
 
-            if (gl_FragColor.x < cutoff_intensity){
+            if (gl_FragColor.r < cutoff_intensity){
                 gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
             }
             

@@ -12,12 +12,29 @@ export const Ocean_Shader =
     }
 
     shared_glsl_code () {           // ********* SHARED CODE, INCLUDED IN BOTH SHADERS *********
-        return super.shared_glsl_code() + `
+        return `
+        precision mediump float;
+        
+        const int N_LIGHTS = ` + this.num_lights + `;
+        uniform float ambient, diffusivity, specularity, smoothness;
+        uniform vec4 light_positions_or_vectors[N_LIGHTS], light_colors[N_LIGHTS];
+        uniform float light_attenuation_factors[N_LIGHTS];
+        uniform vec4 shape_color;
+        uniform vec3 squared_scale, camera_center;
+
+        float fog_start_dist = ${this.fog_start.toFixed(2)};
+        float fog_end_dist = ${this.fog_end.toFixed(2)};
+        vec4 fog_color = ${this.fog_color};
+
+        varying vec3 N, vertex_worldspace;
+
         uniform float time;
         uniform float offset_x;
 
         varying vec3 original_position;
         varying vec3 displacement;
+
+        // varying float is_close_to_origin;
 
         #define PI 3.14159265359
         uniform float offset_z;
@@ -33,26 +50,42 @@ export const Ocean_Shader =
 
         uniform float foam_size_terrain;
 
-        vec3 get_gersrner_wave_displacement(vec3 pos, float t, vec3 p_sample) {
-            vec3 p = vec3(0.0, 0.0, 0.0);
+        vec3 random_normal(vec3 p) {
+            return normalize(vec3(
+                cos(p.x * 12.9898 + p.y * 78.233) * 43758.5453,
+                cos(p.x * -23.233 + p.y * 123.233) * 23421.631,
+                cos(p.x * 93.319 + p.y * 43.9833) * 54321.987
+            ));
+        }
 
+        vec3 get_gersrner_wave_displacement(vec3 p_sample, float t) {
+            vec3 dis = vec3(0.0, 0.0, 0.0);
+        
             for (int i = 0; i < num_waves; i++) {
-                float w = frequencies[i];
-                vec3 d = directions[i];
-                float l = 2.0 * PI / w;
-                float f = w * (d.x * p_sample.x + d.z * p_sample.z) - (speeds[i] * 2.0 / l  * t) + phases[i];
                 float a = amplitudes[i];
-                p = p + vec3(
-                    d.x * a * cos(f), 
-                    a * sin(f), 
+                vec3 d = directions[i];
+                float w = frequencies[i];
+                float l = 2.0 * PI / w;
+                float f = w * (d.x * p_sample.x + d.z * p_sample.z) - (speeds[i] * 2.0 / l * t) + phases[i];
+        
+                dis += vec3(
+                    d.x * a * cos(f),
+                    a * sin(f),
                     d.z * a * cos(f)
                 );
             }
-            
-            return p;
+
+            float a = angle_offset - PI / 2.0;
+            dis = vec3(
+                dis.x * cos(a) - dis.z * sin(a),
+                dis.y,
+                dis.x * sin(a) + dis.z * cos(a)
+            );
+        
+            return dis;
         }
 
-        vec3 get_gersrner_wave_normal(vec3 pos, float t, vec3 p_sample) {
+        vec3 get_gersrner_wave_normal(vec3 p_sample, float t) {
             vec3 rx = vec3(1.0,0.0,0.0);
             vec3 rz = vec3(0.0,0.0,1.0);
 
@@ -76,6 +109,13 @@ export const Ocean_Shader =
             }
 
             vec3 n = normalize(cross(rz, rx));
+
+            float a = angle_offset - PI / 2.0;
+            n = vec3(
+                n.x * cos(a) - n.z * sin(a),
+                n.y,
+                n.x * sin(a) + n.z * cos(a)
+            );
 
             return n;
         }
@@ -108,13 +148,21 @@ export const Ocean_Shader =
         void main() {
             original_position = position;
 
+            // is_close_to_origin = 0.0;
+            // if(position.x * position.x + position.z * position.z < 0.04) {
+            //     is_close_to_origin = 1.0;
+            // }
+
             if(position.x < - 20.0) {
                 return;
             }
 
             vec3 p_sample = get_sample_position(position, time);
 
-            displacement = get_gersrner_wave_displacement(position, time, p_sample);
+            // displacement = get_gersrner_wave_normal(vec3(0,0,0), time);
+            // vec3 new_vertex_position = displacement + random_normal(p_sample) * 0.3;
+
+            displacement = get_gersrner_wave_displacement(p_sample, time);
             vec3 new_vertex_position = position + displacement;
 
             gl_Position = projection_camera_model_transform * vec4( new_vertex_position, 1.0 );      // Move vertex to final space.
@@ -122,6 +170,7 @@ export const Ocean_Shader =
             N = vec3(0.0, 1.0, 0.0);
 
             vertex_worldspace = ( model_transform * vec4( new_vertex_position, 1.0 ) ).xyz;
+
         } `;
     }
 
@@ -221,7 +270,7 @@ export const Ocean_Shader =
                 discard;
 
             vec3 p_sample = get_sample_position(original_position, time);
-            vec3 norm = normalize(get_gersrner_wave_normal(original_position, time, p_sample));
+            vec3 norm = normalize(get_gersrner_wave_normal(p_sample, time));
 
             gl_FragColor = vec4( shape_color.xyz * ambient, shape_color.w );
             gl_FragColor.xyz += phong_model_lights_water( norm, vertex_worldspace );
@@ -237,10 +286,34 @@ export const Ocean_Shader =
                 gl_FragColor = mix(gl_FragColor, vec4(foam_color.rgb, 1.0), foam_intensity);
             }
 
+
+
+            // gl_FragColor = mix(gl_FragColor, vec4(p_sample*100.0, 1.0), 1.0);
+
+
+            // if (p_sample.x * p_sample.x + p_sample.z * p_sample.z < 0.08) {
+            //     gl_FragColor = vec4(0.0, 1.0, 0.0, 1.0);
+            // }
+            
+
+            // if sample_pos is <0.2 from (x=0,z=0), shade yellow
+            // if (is_close_to_origin > 0.5) {
+            //     gl_FragColor = vec4(1.0, 1.0, 0.0, 1.0);
+            // }
+
+            
+
+            // // if world_pos is <0.2 from (x=0,z=0), shade green
+            // if (vertex_worldspace.x * vertex_worldspace.x + vertex_worldspace.z * vertex_worldspace.z < 0.04) {
+            //     gl_FragColor = vec4(0.0, 1.0, 0.0, 1.0);
+            // }
+            
+
+
             float distance = length(camera_center - vertex_worldspace);
             float fog_amount = smoothstep(fog_start_dist, fog_end_dist, distance);
             gl_FragColor = mix(gl_FragColor, fog_color, fog_amount);
-        } `;
+        }`;
     }
 
     flatten_vec_array (arr) {
@@ -263,17 +336,19 @@ export const Ocean_Shader =
             context.uniform3fv(gpu_addresses.directions, this.flatten_vec_array(this.gersrnerWave.directions));
             context.uniform1f(gpu_addresses.foam_size_terrain, this.foam_size_terrain);
 
-            console.log(material);
+            // console.log(this);
 
             context.uniform4fv(gpu_addresses.foam_color, material.foamColor);
             this.initialized_waves = true;
         }
 
         super.update_GPU(context, gpu_addresses, uniforms, model_transform, material);
+        
 
         context.uniform1f(gpu_addresses.time, uniforms.animation_time / 1000);
         context.uniform1f(gpu_addresses.offset_x, uniforms.offset[0]);
         context.uniform1f(gpu_addresses.offset_z, uniforms.offset[2]);
+
 
         context.uniform1f(gpu_addresses.angle_offset, uniforms.angle_offset);
 

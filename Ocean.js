@@ -27,11 +27,6 @@ class Ocean {
 
         const points_across = this.size * this.density + 1;
 
-        const ocean_shader = new Ocean_Shader(1, this.gersrnerWave, config.skybox, config.fog_param, config.foam_size_terrain);
-
-        this.materials = {};
-        this.materials.ocean = { shader: ocean_shader, ambient: 0.4, diffusivity: 0.9, specularity: 0.4, smoothness: 10, color: config.ocean_color, skyTexture: config.skybox.texture, foamColor: config.foam_color};
-
         this.points = []
         this.floorPoints = []
         this.shapes = {};
@@ -62,6 +57,12 @@ class Ocean {
             a[i] = this.points[i].pos
         });
 
+        const ocean_shader = new Ocean_Shader(1, this.gersrnerWave, config.skybox, config.fog_param, config.foam_size_terrain);
+
+        this.materials = {};
+        this.materials.ocean = { shader: ocean_shader, ambient: 0.4, diffusivity: 0.9, specularity: 0.4, smoothness: 10, color: config.ocean_color, skyTexture: config.skybox.texture, foamColor: config.foam_color};
+
+
         this.showed_once = false;
     }
 
@@ -79,6 +80,20 @@ class Ocean {
 
     applyWaterForceOnRigidBody(rigidBody, t, dt, horizontal_input, vertical_input, wind, draw_debug_sphere, draw_debug_arrow, draw_debug_line){
 
+        // const test_pos = vec3(0,3,0);
+
+        // test_pos is the result of the gersrner wave function, so we have to find the sample point that would have given us this result
+        
+        // const sample_for_test_pos = this.gersrnerWave.get_original_position_and_true_y(test_pos[0], test_pos[2], t);
+        // draw_debug_sphere(sample_for_test_pos, 0.2, color(1,0,0,1));
+
+        // const gerstner_from_sample = this.gersrnerWave.get_displacement(sample_for_test_pos, t).plus(vec3(sample_for_test_pos[0], 0, sample_for_test_pos[2]));
+        // draw_debug_sphere(gerstner_from_sample, 0.2, color(0,1,0,1));
+
+        // const test_pos_xz_with_solved_y = vec3(test_pos[0], sample_for_test_pos[1], test_pos[2]);
+        // draw_debug_sphere(test_pos_xz_with_solved_y, 0.2, color(0,0,1,1));
+
+
         const boat_transform = rigidBody.getTransformationMatrix();
 
         // get the corners of the boat (top of the boat)
@@ -89,6 +104,7 @@ class Ocean {
         boat_corners.push(boat_transform.times(vec4(1, 1, -1, 1)).to3());
         boat_corners.push(boat_transform.times(vec4(-1, 1, 0, 1)).to3());
         boat_corners.push(boat_transform.times(vec4(1, 1, 0, 1)).to3());
+
 
         // origin_sample_points contains the x,z where the sample would have came from, and the solved y value of the ocean
         let origin_sample_points = []
@@ -105,7 +121,7 @@ class Ocean {
         // ocean_normals_corners contains the normal of the ocean at the same x,z as the boat
         let ocean_normal_corners = []
         origin_sample_points.forEach( point => {
-            ocean_normal_corners.push(this.gersrnerWave.gersrnerWaveNormal(vec3(point[0], point[1], point[2]), t));
+            ocean_normal_corners.push(this.gersrnerWave.get_normal(vec3(point[0], point[1], point[2]), t));
         });
 
         // get forward (horizonally only) and normal of the boat
@@ -152,7 +168,7 @@ class Ocean {
         // Apply forces and torques on each corner
         for (let i = 0; i < boat_corners.length; i++){
             const axis = boat_normal.cross(ocean_normal_corners[i]).normalized();
-            draw_debug_arrow(ocean_corners[i], axis, 1.5, 1.5, color(0,1,0,1));
+            // draw_debug_arrow(ocean_corners[i], axis, 1.5, 1.5, color(0,1,0,1));
             const angle = Math.acos(boat_normal.dot(ocean_normal_corners[i]));
             if(Math.abs(angle) > 0.01)
                 rigidBody.addTorque(axis.times( angle * mult_t * percent_submerged_corners[i]));
@@ -261,7 +277,7 @@ class Ocean {
 
 
 
-        // rotate the ocean to rotate the ocean by the amount of degrees (only rotate about y axis) from <1,0,1> to the camera direction
+        // rotate the ocean to rotate the ocean by the amount of degrees (only rotate about y axis) from <0,0,1> to the camera direction
         const angle =  Math.atan2(camera_direction[0], camera_direction[2]) % (2 * Math.PI);
         const rotation = Mat4.rotation(angle - Math.PI / 2, 0, 1, 0);
 

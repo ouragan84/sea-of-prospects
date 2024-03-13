@@ -52,14 +52,12 @@ export class GerstnerWave{
                 throw new Error('Invalid preset');
         }
 
-        console.log(this);
         console.log(`Amplidude range: ${this.amplitudes[0]} to ${this.amplitudes[this.amplitudes.length - 1]}`);
         console.log(`Frequency range: ${this.frequencies[0]} to ${this.frequencies[this.frequencies.length - 1]}`);
         console.log(`Speed range: ${this.speeds[0]} to ${this.speeds[this.speeds.length - 1]}`);
     }
 
     createWaves(num_waves, starting_steepness, starting_frequency, starting_speed, starting_dir, end_amplitude, end_frequency, end_speed, seed_str){
-
         const seed = cyrb128(seed_str.toString());
         const rand = sfc32(seed[0], seed[1], seed[2], seed[3]);
 
@@ -85,29 +83,49 @@ export class GerstnerWave{
         }
     }
 
-
-    gersrnerWave(pos, t){
-        let new_pos = vec3(pos[0], pos[1], pos[2]);
+    /*
+        vec3 get_gersrner_wave_displacement(vec3 p_sample, float t) {
+            vec3 dis = vec3(0.0, 0.0, 0.0);
         
+            for (int i = 0; i < num_waves; i++) {
+                float a = amplitudes[i];
+                vec3 d = directions[i];
+                float w = frequencies[i];
+                float l = 2.0 * PI / w;
+                float f = w * (d.x * p_sample.x + d.z * p_sample.z) - (speeds[i] * 2.0 / l * t) + phases[i];
+        
+                dis += vec3(
+                    d.x * a * cos(f),
+                    a * sin(f),
+                    d.z * a * cos(f)
+                );
+            }
+        
+            return dis;
+        }
+    */
+
+    get_displacement(p_sample, t){
+        let dis = vec3(0, 0, 0);
+
         for (let i = 0; i < this.num_waves; i++){
             const a = this.amplitudes[i];
             const d = this.directions[i];
             const w = this.frequencies[i];
-            const l = 2 * Math.PI / w;
-            const f = w * (pos[0] * d[0] + pos[2] * d[2]) - (this.speeds[i] * 2 / l * t)  + this.phases[i];
+            const l = 2.0 * Math.PI / w;
+            const f = w * (d[0] * p_sample[0] + d[2] * p_sample[2]) - (this.speeds[i] * 2.0 / l * t)  + this.phases[i];
 
-
-            new_pos = new_pos.plus(vec3(
-                d[0] * a * Math.cos(f), 
-                a * Math.sin(f), 
-                d[2] * a * Math.cos(f)
-            ));
+            dis = vec3(
+                dis[0] + d[0] * a * Math.cos(f),
+                dis[1] + a * Math.sin(f),
+                dis[2] + d[2] * a * Math.cos(f)
+            );
         }
 
-        return new_pos;
+        return dis;
     }
 
-    gersrnerWaveNormal(pos, t){
+    get_normal(p_sample, t){
         let rx = vec3(1,0,0);
         let rz = vec3(0,0,1);
 
@@ -116,7 +134,7 @@ export class GerstnerWave{
             const d = this.directions[i];
             const w = this.frequencies[i];
             const l = 2 * Math.PI / w;
-            const f = w * (pos[0] * d[0] + pos[2] * d[2]) - (this.speeds[i] * 2 / l * t)  + this.phases[i];
+            const f = w * (p_sample[0] * d[0] + p_sample[2] * d[2]) - (this.speeds[i] * 2 / l * t)  + this.phases[i];
 
             rx = rx.plus(vec3(
                 - d[0] * d[0] * a * w * Math.sin(f),
@@ -132,11 +150,10 @@ export class GerstnerWave{
         }
 
         const n = rz.cross(rx).normalized();
-        if (n[1] < 0)
-            return n.times(-1);
         return n;
     }
 
+    // x, z is the result of the gersrner wave function, so we have to find the sample point that would have given us this result
     get_original_position_and_true_y(x, z, t){
         // solve for y at a given x, z, and t.
         // first apply the gersrner wave function to the x, z, and t.
@@ -149,14 +166,14 @@ export class GerstnerWave{
         const max_error = 0.001;
         let my_x = x;
         let my_z = z;
-        let pos = this.gersrnerWave(vec3(my_x, 0, my_z), t);
+        let resulting_pos_from_my_xz = this.get_displacement(vec3(my_x, 0, my_z), t).plus(vec3(my_x, 0, my_z));
 
         while (iterations < max_iterations){
 
-            y = pos[1];
+            y = resulting_pos_from_my_xz[1];
             
-            const diff_x = pos[0] - x; // if pos is to the right of x, diff_x is positive
-            const diff_z = pos[2] - z; // if pos is in front of z, diff_z is positive
+            const diff_x = resulting_pos_from_my_xz[0] - x; // if pos is to the right of x, diff_x is positive
+            const diff_z = resulting_pos_from_my_xz[2] - z; // if pos is in front of z, diff_z is positive
 
             error = Math.sqrt(diff_x * diff_x + diff_z * diff_z);
 
@@ -166,22 +183,9 @@ export class GerstnerWave{
             my_x -= diff_x;
             my_z -= diff_z;
 
-            pos = this.gersrnerWave(vec3(my_x, 0, my_z), t);
+            resulting_pos_from_my_xz = this.get_displacement(vec3(my_x, 0, my_z), t).plus(vec3(my_x, 0, my_z));
             iterations++;
         }
-
-        const p = this.gersrnerWave(vec3(my_x, 0, my_z), t);
-
-        // console.log(`
-        // Iterations: ${iterations}
-        // Error: ${error}
-        // Location: ${x.toFixed(3)}, ${z.toFixed(3)}
-        // Sample: ${my_x.toFixed(3)}, ${my_z.toFixed(3)}
-        // After Trans: ${p[0].toFixed(3)}, ${p[2].toFixed(3)}
-        // True y: ${p[1].toFixed(3)}
-        // Location should be equal to After Trans or it's wrong
-        // `);
-
 
         return vec3(my_x, y, my_z)
     }
