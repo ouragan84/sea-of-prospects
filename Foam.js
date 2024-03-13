@@ -5,7 +5,7 @@ const { vec3, vec4, color, Mat4, Shader, Texture, Component, Matrix } = tiny;
 
 export const Foam_Shader =
 class Foam_Shader extends Shader {
-    constructor (gersrnerWave, foam_size_terrain, starting_center, frame_half_life, jacobian_threshold_start, jacobian_threshold_end, max_dist_from_boat) {
+    constructor (gersrnerWave, foam_size_terrain, starting_center, frame_half_life, jacobian_threshold_start, jacobian_threshold_end, max_dist_from_boat, cutoff_intensity, boat_dist_variation) {
         super ();
         this.gersrnerWave = gersrnerWave;
         this.foam_size_terrain = foam_size_terrain;
@@ -16,6 +16,8 @@ class Foam_Shader extends Shader {
         this.jacobian_threshold_start = jacobian_threshold_start;
         this.jacobian_threshold_end = jacobian_threshold_end;
         this.max_dist_from_boat = max_dist_from_boat;
+        this.cutoff_intensity = cutoff_intensity;
+        this.boat_dist_variation = boat_dist_variation;
 
         this.shader_material = null; // don't forget to set it.
     }
@@ -68,6 +70,8 @@ class Foam_Shader extends Shader {
             context.uniform1f(gpu_addresses.jacobian_threshold_start, this.jacobian_threshold_start);
             context.uniform1f(gpu_addresses.jacobian_threshold_end, this.jacobian_threshold_end);
             context.uniform1f(gpu_addresses.max_dist_from_boat, this.max_dist_from_boat);
+            context.uniform1f(gpu_addresses.cutoff_intensity, this.cutoff_intensity);
+            context.uniform1f(gpu_addresses.boat_dist_variation, this.boat_dist_variation);
             this.initialized_waves = true;
         }
 
@@ -93,10 +97,12 @@ class Foam_Shader extends Shader {
         uniform float decay_rate;
         uniform float jacobian_threshold_start;
         uniform float jacobian_threshold_end;
+        uniform float cutoff_intensity;
 
         uniform float boat_x;
         uniform float boat_z;
         uniform float boat_foam_intensity;
+        uniform float boat_dist_variation;
 
         uniform float max_dist_from_boat;
 
@@ -150,6 +156,12 @@ class Foam_Shader extends Shader {
 
             return J;
         }
+
+
+        float rand(vec3 co){
+            return fract(sin(dot(co, vec3(12.9898, 78.233, 45.543)) * 43758.5453));
+        }
+
         `;
     }
     vertex_glsl_code () {          // ********* VERTEX SHADER *********
@@ -193,14 +205,14 @@ class Foam_Shader extends Shader {
             // radial foam around the boat (intensity decreases as we move away from the boat)
             float dx = x - boat_x;
             float dz = z - boat_z;
-            float dist = sqrt(dx * dx + dz * dz);
+            float dist = sqrt(dx * dx + dz * dz) + rand(vec3(x, z, time)) * 2.0 * boat_dist_variation - boat_dist_variation;
             float intensity = boat_foam_intensity - dist / max_dist_from_boat;
             if (intensity > 0.0){
                 gl_FragColor = mix(gl_FragColor, vec4(1.0, 1.0, 1.0, 1.0), intensity);
             }
             
 
-            if (gl_FragColor.x < 0.1){
+            if (gl_FragColor.x < cutoff_intensity){
                 gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
             }
             
