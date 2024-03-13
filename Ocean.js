@@ -81,100 +81,85 @@ class Ocean {
 
         const boat_transform = rigidBody.getTransformationMatrix();
 
-        const corner1_boat = boat_transform.times(vec4(-1, 1, 1, 1)).to3();
-        const corner2_boat = boat_transform.times(vec4(1, 1, 1, 1)).to3();
-        const corner3_boat = boat_transform.times(vec4(-1, 1, -1, 1)).to3();
-        const corner4_boat = boat_transform.times(vec4(1, 1, -1, 1)).to3();
+        // get the corners of the boat (top of the boat)
+        let boat_corners = []
+        boat_corners.push(boat_transform.times(vec4(-1, 1, 1, 1)).to3());
+        boat_corners.push(boat_transform.times(vec4(1, 1, 1, 1)).to3());
+        boat_corners.push(boat_transform.times(vec4(-1, 1, -1, 1)).to3());
+        boat_corners.push(boat_transform.times(vec4(1, 1, -1, 1)).to3());
+        boat_corners.push(boat_transform.times(vec4(-1, 1, 0, 1)).to3());
+        boat_corners.push(boat_transform.times(vec4(1, 1, 0, 1)).to3());
 
-        const corner1_origin_and_y = this.gersrnerWave.get_original_position_and_true_y(corner1_boat[0], corner1_boat[2], t);
-        const corner2_origin_and_y = this.gersrnerWave.get_original_position_and_true_y(corner2_boat[0], corner2_boat[2], t);
-        const corner3_origin_and_y = this.gersrnerWave.get_original_position_and_true_y(corner3_boat[0], corner3_boat[2], t);
-        const corner4_origin_and_y = this.gersrnerWave.get_original_position_and_true_y(corner4_boat[0], corner4_boat[2], t);
+        // origin_sample_points contains the x,z where the sample would have came from, and the solved y value of the ocean
+        let origin_sample_points = []
+        boat_corners.forEach( corner => {
+            origin_sample_points.push(this.gersrnerWave.get_original_position_and_true_y(corner[0], corner[2], t));
+        });
 
-        const corner1_ocean = vec3(corner1_boat[0], corner1_origin_and_y[1], corner1_boat[2]);
-        const corner2_ocean = vec3(corner2_boat[0], corner2_origin_and_y[1], corner2_boat[2]);
-        const corner3_ocean = vec3(corner3_boat[0], corner3_origin_and_y[1], corner3_boat[2]);
-        const corner4_ocean = vec3(corner4_boat[0], corner4_origin_and_y[1], corner4_boat[2]);
+        // ocean_corners contains the x,y,z of the ocean at the same x,z as the boat
+        let ocean_corners = []
+        for (let i = 0; i < boat_corners.length; i++){
+            ocean_corners.push(vec3(boat_corners[i][0], origin_sample_points[i][1], boat_corners[i][2]));
+        }
 
-        const corner1_ocean_normal = this.gersrnerWave.gersrnerWaveNormal(corner1_origin_and_y, t);
-        const corner2_ocean_normal = this.gersrnerWave.gersrnerWaveNormal(corner2_origin_and_y, t);
-        const corner3_ocean_normal = this.gersrnerWave.gersrnerWaveNormal(corner3_origin_and_y, t);
-        const corner4_ocean_normal = this.gersrnerWave.gersrnerWaveNormal(corner4_origin_and_y, t);
+        // ocean_normals_corners contains the normal of the ocean at the same x,z as the boat
+        let ocean_normal_corners = []
+        origin_sample_points.forEach( point => {
+            ocean_normal_corners.push(this.gersrnerWave.gersrnerWaveNormal(vec3(point[0], point[1], point[2]), t));
+        });
 
+        // get forward (horizonally only) and normal of the boat
+        const boat_normal = boat_transform.times(vec4(0, 1, 0, 0)).to3().normalized();
         let boat_forward = boat_transform.times(vec4(0, 0, -1, 0)).to3().normalized();
-        // cancel out the y component
         boat_forward[1] = 0;
         boat_forward = boat_forward.normalized();
 
-        const boat_normal = boat_transform.times(vec4(0, 1, 0, 0)).to3().normalized();
-        // let ocean_normal = corner1_ocean_normal.plus(corner2_ocean_normal).plus(corner3_ocean_normal).plus(corner4_ocean_normal).normalized();
-
         const clamp = (num, min, max) => Math.min(Math.max(num, min), max);
 
-        let corner1_percent_submerged = clamp(corner1_ocean.minus(corner1_boat).dot(vec3(0,1,0)) / (2 * rigidBody.scale[1]) + 1, 0, 1);
-        let corner2_percent_submerged = clamp(corner2_ocean.minus(corner2_boat).dot(vec3(0,1,0)) / (2 * rigidBody.scale[1]) + 1, 0, 1);
-        let corner3_percent_submerged = clamp(corner3_ocean.minus(corner3_boat).dot(vec3(0,1,0)) / (2 * rigidBody.scale[1]) + 1, 0, 1);
-        let corner4_percent_submerged = clamp(corner4_ocean.minus(corner4_boat).dot(vec3(0,1,0)) / (2 * rigidBody.scale[1]) + 1, 0, 1);
-
-        let percent_submerged = (corner1_percent_submerged + corner2_percent_submerged + corner3_percent_submerged + corner4_percent_submerged) / 4;
-
-        // console.log(percent_submerged.toFixed(2), corner1_percent_submerged.toFixed(2), corner2_percent_submerged.toFixed(2), corner3_percent_submerged.toFixed(2), corner4_percent_submerged.toFixed(2));
+        let percent_submerged_corners = []
+        for (let i = 0; i < boat_corners.length; i++){
+            let my_percent_submerged = clamp(ocean_corners[i].minus(boat_corners[i]).dot(vec3(0,1,0)) / (2 * rigidBody.scale[1]) + 1, 0, 1);
+            percent_submerged_corners.push(my_percent_submerged);
+        }
 
 
-        draw_debug_sphere(corner1_boat, 0.2, color(0,1,0,1));
-        draw_debug_sphere(corner2_boat, 0.2, color(0,1,0,1));
-        draw_debug_sphere(corner3_boat, 0.2, color(0,1,0,1));
-        draw_debug_sphere(corner4_boat, 0.2, color(0,1,0,1));
+        // get average percent submerged
+        let percent_submerged = 0;
+        for (let i = 0; i < percent_submerged_corners.length; i++){
+            percent_submerged += percent_submerged_corners[i];
+        }
+        percent_submerged /= percent_submerged_corners.length;
 
-        draw_debug_line(corner1_boat, corner1_boat.plus(vec3(0,-4,0)), .02, color(1,0,0,1));
-        draw_debug_line(corner2_boat, corner2_boat.plus(vec3(0,-4,0)), .02, color(1,0,0,1));
-        draw_debug_line(corner3_boat, corner3_boat.plus(vec3(0,-4,0)), .02, color(1,0,0,1));
-        draw_debug_line(corner4_boat, corner4_boat.plus(vec3(0,-4,0)), .02, color(1,0,0,1));
-
-        draw_debug_arrow(corner1_ocean, corner1_ocean_normal, 1.5, 1.5, color(1,0,0,1));
-        draw_debug_arrow(corner2_ocean, corner2_ocean_normal, 1.5, 1.5, color(1,0,0,1));
-        draw_debug_arrow(corner3_ocean, corner3_ocean_normal, 1.5, 1.5, color(1,0,0,1));
-        draw_debug_arrow(corner4_ocean, corner4_ocean_normal, 1.5, 1.5, color(1,0,0,1));
-
+        // debug
         draw_debug_arrow(rigidBody.position.plus(vec3(0,3,0)), boat_forward, 1.5, 1.5, color(0,0,1,1));
         draw_debug_arrow(rigidBody.position.plus(vec3(0,3,0)), boat_normal, 1.5, 1.5, color(0,1,0,1));
 
+        for (let i = 0; i < boat_corners.length; i++){
+            draw_debug_sphere(boat_corners[i], 0.2, color(0,1,0,1));
+            draw_debug_line(boat_corners[i], boat_corners[i].plus(vec3(0,-4,0)), .02, color(1,0,0,1));
+            draw_debug_arrow(ocean_corners[i], ocean_normal_corners[i], 1.5, 1.5, color(1,0,0,1));
+        }
+
+        // Force and Torque factors
         const mult_f = 20000;
         let mult_t = 2000;
 
+        // Hack
         if (boat_forward.dot(vec3(0,0,-1)) < 0){
             mult_t = -mult_t;
         }
 
-        const axis1 = boat_normal.cross(corner1_ocean_normal).normalized();
-        draw_debug_arrow(corner1_boat, axis1, 1.5, 1.5, color(0,1,0,1));
-        const angle1 = Math.acos(boat_normal.dot(corner1_ocean_normal));
-        // console.log(angle1.toFixed(2) * 180 / Math.PI);
-        if(Math.abs(angle1) > 0.01)
-            rigidBody.addTorque(axis1.times( angle1 * mult_t * corner1_percent_submerged));
-        rigidBody.addForce(vec3(0,1,0).times(mult_f * corner1_percent_submerged));
+        // Apply forces and torques on each corner
+        for (let i = 0; i < boat_corners.length; i++){
+            const axis = boat_normal.cross(ocean_normal_corners[i]).normalized();
+            draw_debug_arrow(ocean_corners[i], axis, 1.5, 1.5, color(0,1,0,1));
+            const angle = Math.acos(boat_normal.dot(ocean_normal_corners[i]));
+            if(Math.abs(angle) > 0.01)
+                rigidBody.addTorque(axis.times( angle * mult_t * percent_submerged_corners[i]));
+            rigidBody.addForce(vec3(0,1,0).times(mult_f * percent_submerged_corners[i]));
+        }
 
-        const axis2 = boat_normal.cross(corner2_ocean_normal).normalized();
-        // draw_debug_arrow(corner2_boat, axis2, 1.5, 1.5, color(0,1,0,1));
-        const angle2 = Math.acos(boat_normal.dot(corner2_ocean_normal));
-        if(Math.abs(angle2) > 0.01)
-            rigidBody.addTorque(axis2.times( angle2 * mult_t * corner2_percent_submerged));
-        rigidBody.addForce(vec3(0,1,0).times(mult_f * corner2_percent_submerged));
-
-        const axis3 = boat_normal.cross(corner3_ocean_normal).normalized();
-        // draw_debug_arrow(corner3_boat, axis3, 1.5, 1.5, color(0,1,0,1));
-        const angle3 = Math.acos(boat_normal.dot(corner3_ocean_normal));
-        if(Math.abs(angle3) > 0.01)
-            rigidBody.addTorque(axis3.times( angle3 * mult_t * corner3_percent_submerged));
-        rigidBody.addForce(vec3(0,1,0).times(mult_f * corner3_percent_submerged));
-
-        const axis4 = boat_normal.cross(corner4_ocean_normal).normalized();
-        // draw_debug_arrow(corner4_boat, axis4, 1.5, 1.5, color(0,1,0,1));
-        const angle4 = Math.acos(boat_normal.dot(corner4_ocean_normal));
-        if(Math.abs(angle4) > 0.01)
-            rigidBody.addTorque(axis4.times( angle4 * mult_t * corner4_percent_submerged));
-        rigidBody.addForce(vec3(0,1,0).times(mult_f * corner4_percent_submerged));
-
+        // Restorative force
         const restore = 10000;
         const res_start_angle = Math.PI/6;
         if( Math.abs(boat_normal.normalized().dot(vec3(0,1,0))) < Math.cos(res_start_angle)){
