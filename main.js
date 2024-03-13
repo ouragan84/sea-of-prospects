@@ -39,7 +39,7 @@ export class Sea_Of_Prospects_Scene extends Component
           fog_param = { color: color(1,1,1,1), start: this.render_distance-20, end: this.render_distance };
           break;
       case 'stormy':
-          this.light_color = color(1,1,1,1)
+          this.light_color = color(1,0.91,0.62,1)
           fog_param = { color: color(.5,.5,.5,1), start: this.render_distance-30, end: this.render_distance };
           break;
       default:
@@ -151,11 +151,11 @@ export class Sea_Of_Prospects_Scene extends Component
       this.ocean.gersrnerWave, // gersrnerWave
       foam_size_terrain, // foam_size_terrain
       this.ship.rb.position, // starting_center
-      45, // frame_half_life
-      0.45, // jacobian_threshold_start
-      0, // jacobian_threshold_end
-      0.2, // max_dist_from_boat
-      0.1, // cutoff intensity
+      35, // frame_half_life
+      0.50, // jacobian_threshold_start
+      .15, // jacobian_threshold_end
+      0.3, // max_dist_from_boat
+      0.15, // cutoff intensity
       0.5 // boat_dist_variation
     );
     this.foam_material = new ShaderMaterialPingPong(4096, this.foam_shader);

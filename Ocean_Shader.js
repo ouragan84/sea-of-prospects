@@ -185,6 +185,7 @@ export const Ocean_Shader =
         float rotation_y = ${this.skybox.shader.rotation_y.toFixed(10)};
 
         uniform vec4 foam_color;
+        uniform float sky_reflect;
 
         uniform sampler2D foam_texture;
 
@@ -250,9 +251,11 @@ export const Ocean_Shader =
                 vec3 L = normalize( surface_to_light_vector );
                 vec3 H = normalize( L + E );
                 
+                float specular_factor = get_fernel_coeff(-E, N);
+
                   // Compute diffuse and specular components of Phong Reflection Model.
                 float diffuse  =      max( dot( N, L ), 0.0 );
-                float specular = pow( max( dot( N, H ), 0.0 ), smoothness ) * get_fernel_coeff(-L, N);     // Use Blinn's "halfway vector" method.
+                float specular = pow( max( dot( N, H ), 0.0 ), smoothness) * specular_factor;     // Use Blinn's "halfway vector" method.
                 float attenuation = 1.0 / (1.0 + light_attenuation_factors[i] * distance_to_light * distance_to_light );
 
 
@@ -277,7 +280,7 @@ export const Ocean_Shader =
 
             vec3 direction = normalize(vertex_worldspace - camera_center);
             vec3 reflection = reflect(direction, norm);
-            gl_FragColor = mix(gl_FragColor, get_skycolor(reflection), get_fernel_coeff(direction, norm));
+            gl_FragColor = mix(gl_FragColor, get_skycolor(reflection), get_fernel_coeff(direction, norm) * sky_reflect);
 
             vec2 foam_uv = vec2(0.5 * (p_sample.x - offset_x) / foam_size_terrain + 0.5, 0.5 * (p_sample.z - offset_z) / foam_size_terrain + 0.5);
             if (foam_uv.x >= 0.0 && foam_uv.x <= 1.0 && foam_uv.y >= 0.0 && foam_uv.y <= 1.0){  
@@ -285,30 +288,6 @@ export const Ocean_Shader =
                 float foam_intensity = foam_tex_sample.r * foam_color.a;
                 gl_FragColor = mix(gl_FragColor, vec4(foam_color.rgb, 1.0), foam_intensity);
             }
-
-
-
-            // gl_FragColor = mix(gl_FragColor, vec4(p_sample*100.0, 1.0), 1.0);
-
-
-            // if (p_sample.x * p_sample.x + p_sample.z * p_sample.z < 0.08) {
-            //     gl_FragColor = vec4(0.0, 1.0, 0.0, 1.0);
-            // }
-            
-
-            // if sample_pos is <0.2 from (x=0,z=0), shade yellow
-            // if (is_close_to_origin > 0.5) {
-            //     gl_FragColor = vec4(1.0, 1.0, 0.0, 1.0);
-            // }
-
-            
-
-            // // if world_pos is <0.2 from (x=0,z=0), shade green
-            // if (vertex_worldspace.x * vertex_worldspace.x + vertex_worldspace.z * vertex_worldspace.z < 0.04) {
-            //     gl_FragColor = vec4(0.0, 1.0, 0.0, 1.0);
-            // }
-            
-
 
             float distance = length(camera_center - vertex_worldspace);
             float fog_amount = smoothstep(fog_start_dist, fog_end_dist, distance);
@@ -351,6 +330,7 @@ export const Ocean_Shader =
 
 
         context.uniform1f(gpu_addresses.angle_offset, uniforms.angle_offset);
+        context.uniform1f(gpu_addresses.sky_reflect, material.sky_reflect);
 
         // console.log(uniforms.angle_offset.toFixed(2) * 180 / Math.PI);
 
