@@ -13,7 +13,7 @@ export class PreviousFrameMaterial
         this.write_texture = 0;
         this.ready = false;
 
-        this.texture_shader = new defs.Textured_Phong(1);
+        this.texture_shader = new Post_Process_Shader();
     }
 
     texture_buffer_init(gl) {
@@ -98,7 +98,8 @@ export class PreviousFrameMaterial
 
         const transform = Mat4.identity().times(Mat4.scale(1, 1/ar, 1));
         const texture = this.buffered_shader_textures[this.write_texture];
-        this.quad.draw(context, uniforms, transform, {shader: this.texture_shader, texture: texture, ambient: 1, diffusivity: 0, specularity: 0, color: color(1, 1, 1, 1)});
+        this.quad.draw(context, {...uniforms, screen_height: gl.canvas.height, screen_width: gl.canvas.width}
+        , transform, {shader: this.texture_shader, texture: texture});
 
         this.ready = true;
     }
@@ -113,3 +114,122 @@ export class PreviousFrameMaterial
         return this.buffered_depth_textures[this.read_texture];
     }
 }
+
+
+const Post_Process_Shader = class Post_Process_Shader extends Shader {
+    // The vertex shader only needs to pass through texture coordinates.
+    vertex_glsl_code() {
+        return `
+        precision mediump float;
+        attribute vec3 position;           // Position is expressed in object coordinates.
+        attribute vec2 texture_coord;      // Per-vertex texture coordinates.
+
+        uniform mat4 model_transform;
+        uniform mat4 projection_camera_model_transform;
+
+        varying vec2 f_tex_coord;          // Pass texture coordinates to the fragment shader.
+
+        void main() {
+            gl_Position = projection_camera_model_transform * vec4( position, 1.0 );
+            f_tex_coord = texture_coord;   // Pass through texture coordinates.
+        }`;
+    }
+
+    // The fragment shader samples the texture and applies it directly.
+    fragment_glsl_code() {
+        return `
+        precision mediump float;
+
+        varying vec2 f_tex_coord;          // Interpolated texture coordinates.
+        uniform sampler2D texture;         // The texture sampler.
+
+        uniform float screen_height;
+        uniform float screen_width;
+
+        const float FXAA_REDUCE_MIN = 1.0/128.0;
+        const float FXAA_REDUCE_MUL = 1.0/8.0;
+        const float FXAA_SPAN_MAX = 8.0;
+
+        vec2 get_screen_coords(vec2 tex_coords) {
+            return vec2(tex_coords.x * screen_width, tex_coords.y * screen_height);
+        }
+
+        vec2 get_tex_coords(vec2 screen_coords) {
+            return vec2(screen_coords.x / screen_width, screen_coords.y / screen_height);
+        }
+
+        float luminance(vec3 color) {
+            return dot(color, vec3(0.299, 0.587, 0.114));
+        }
+        
+        void main() {
+            vec4 color = texture2D(texture, f_tex_coord);
+        
+            float lumaNW = luminance(texture2D(texture, f_tex_coord + vec2(-1.0, -1.0) / vec2(screen_width, screen_height)).rgb);
+            float lumaNE = luminance(texture2D(texture, f_tex_coord + vec2(1.0, -1.0) / vec2(screen_width, screen_height)).rgb);
+            float lumaSW = luminance(texture2D(texture, f_tex_coord + vec2(-1.0, 1.0) / vec2(screen_width, screen_height)).rgb);
+            float lumaSE = luminance(texture2D(texture, f_tex_coord + vec2(1.0, 1.0) / vec2(screen_width, screen_height)).rgb);
+            float lumaM = luminance(color.rgb);
+        
+            float lumaMin = min(lumaM, min(min(lumaNW, lumaNE), min(lumaSW, lumaSE)));
+            float lumaMax = max(lumaM, max(max(lumaNW, lumaNE), max(lumaSW, lumaSE)));
+        
+            vec2 dir;
+            dir.x = -((lumaNW + lumaNE) - (lumaSW + lumaSE));
+            dir.y = ((lumaNW + lumaSW) - (lumaNE + lumaSE));
+        
+            float dirReduce = max((lumaNW + lumaNE + lumaSW + lumaSE) * (0.25 * FXAA_REDUCE_MUL), FXAA_REDUCE_MIN);
+        
+            float rcpDirMin = 1.0 / (min(abs(dir.x), abs(dir.y)) + dirReduce);
+            dir = min(vec2(FXAA_SPAN_MAX, FXAA_SPAN_MAX),
+                  max(vec2(-FXAA_SPAN_MAX, -FXAA_SPAN_MAX),
+                  dir * rcpDirMin)) / vec2(screen_width, screen_height);
+        
+            vec3 rgbA = 0.5 * (
+                texture2D(texture, f_tex_coord.xy + dir * (1.0 / 3.0 - 0.5)).rgb +
+                texture2D(texture, f_tex_coord.xy + dir * (2.0 / 3.0 - 0.5)).rgb);
+            vec3 rgbB = rgbA * 0.5 + 0.25 * (
+                texture2D(texture, f_tex_coord.xy + dir * -0.5).rgb +
+                texture2D(texture, f_tex_coord.xy + dir * 0.5).rgb);
+        
+            float lumaB = luminance(rgbB);
+            if ((lumaB < lumaMin) || (lumaB > lumaMax)) {
+                gl_FragColor = vec4(rgbA, color.a);
+            } else {
+                gl_FragColor = vec4(rgbB, color.a);
+            }
+        }
+        `;
+    }
+
+    update_GPU(context, gpu_addresses, uniforms, model_transform, material) {
+        // Activate and bind the texture if it exists and is ready.
+        if (material.texture && material.texture.ready) {
+            context.uniform1i(gpu_addresses.texture, 0); // Texture unit 0 is for the texture sampler in the fragment shader.
+            material.texture.activate(context, 0);
+        }
+    
+        // Compute and send the model_transform and projection_camera_model_transform matrices.
+        // These matrices are crucial for transforming the vertices from model space to clip space.
+        const model_transform_loc = gpu_addresses.model_transform; // Assuming the location is stored in gpu_addresses
+        const projection_camera_model_transform_loc = gpu_addresses.projection_camera_model_transform; // Assuming location storage
+    
+        // Assuming 'Matrix.flatten_2D_to_1D' exists and converts matrices for WebGL, similar to the provided shader's context.
+        // If your context does not have this helper function, you will need to replace it with appropriate WebGL calls.
+        if(model_transform_loc) { // If the location is valid
+            context.uniformMatrix4fv(model_transform_loc, false, Matrix.flatten_2D_to_1D(model_transform.transposed()));
+        }
+        
+        if(projection_camera_model_transform_loc) { // If the location is valid
+            const projection_transform = uniforms.projection_transform; // Assuming this is provided in 'uniforms'
+            const camera_inverse = uniforms.camera_inverse; // Assuming this is provided in 'uniforms'
+            
+            const PCM = projection_transform.times(camera_inverse).times(model_transform); // Compute the combined matrix.
+            context.uniformMatrix4fv(projection_camera_model_transform_loc, false, Matrix.flatten_2D_to_1D(PCM.transposed()));
+        }
+
+        // Set screen dimensions
+        context.uniform1f(gpu_addresses.screen_height, uniforms.screen_height);
+        context.uniform1f(gpu_addresses.screen_width, uniforms.screen_width);
+    }
+};
