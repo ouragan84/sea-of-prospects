@@ -49,23 +49,24 @@ export class Sea_Of_Prospects_Scene extends Component
       'ball' : new defs.Subdivision_Sphere( 4 ),
       'axis' : new defs.Axis_Arrows(),
       'arrow': new defs.Arrow(),
-      'box'  : new defs.Cube()
+      'box'  : new defs.Cube(),
+      'quad' : new defs.Square(),
     };
 
     this.phong = new defs.Phong_Shader(1, fog_param);
 
-    this.start = true
+    this.start = false
     this.start_text = "Start Game"
-    this.start_audio = new Audio('assets/start.mp3')
-    this.game_audio = new Audio('assets/game.mp3')
-    this.mute = true
+    this.start_audio = new Audio('assets/sounds/start_menu.mp3')
+    this.game_audio = new Audio('assets/sounds/game_loop.mp3')
+    this.mute = false
 
     // Keeps track of whether the game was started and was paused
     this.started = false
 
     // Text obj for start screen
     this.start_obj = new Text(fog_param, this.start_text)
-    this.start_text_transform = Mat4.identity().times(Mat4.rotation(Math.PI/4, 0,1,0)).times(Mat4.translation(-6,5,0))
+    this.start_screen_texture = new Texture("assets/textures/main_menu.jpg");
 
     this.score = 0
     this.reset = 0
@@ -80,16 +81,16 @@ export class Sea_Of_Prospects_Scene extends Component
 
     switch(this.preset){
       case 'calm':
-          skybox_texture = new Texture("assets/sunny_sky.jpg");
+          skybox_texture = new Texture("assets/textures/sunny_sky.jpg");
           break;
       case 'agitated':
-          skybox_texture = new Texture("assets/sunny_sky.jpg");
+          skybox_texture = new Texture("assets/textures/sunny_sky.jpg");
           break;
       case 'stormy':
-          skybox_texture = new Texture("assets/stormy_sky.jpg");
+          skybox_texture = new Texture("assets/textures/stormy_sky.jpg");
           break;
       default:
-          skybox_texture = new Texture("assets/sunny_sky.jpg");
+          skybox_texture = new Texture("assets/textures/sunny_sky.jpg");
     }
 
     this.base_water_color = color(0.27,0.46,0.95,1 );
@@ -175,47 +176,44 @@ export class Sea_Of_Prospects_Scene extends Component
 
 
     if(this.start)
-    {
-      if(this.mute)
-      {
-          this.start_audio.pause()
-          this.game_audio.pause()
-      }
-      else
-      {
-          this.start_audio.pause()
-          this.game_audio.play()
-      }
-
       this.game_update(caller, t, dt);
+    else
+      this.draw_start_menu(caller, t, dt);
+
+    this.play_audio();
+    
+  }
+
+  async play_audio(){
+    if(this.mute)
+    {
+      this.start_audio.pause()
+      this.game_audio.pause()
+      return;
+    }
+
+    if(this.start)
+    {
+      try{
+        await this.game_audio.play();
+      } catch (e) {}
+      this.start_audio.pause()
     }
     else
     {
-      if(this.mute)
-      {
-          this.start_audio.pause()
-          this.game_audio.pause()
-      }
-      else
-      {
-          this.game_audio.pause()
-          this.start_audio.play()
-      }
-      
-      this.draw_start_menu(caller, t, dt);
+      try{
+        await this.start_audio.play();
+      } catch (e) {}
+      this.game_audio.pause()
     }
   }
 
   game_update(caller, t, dt)
   {
-    // Order:
-    // Do physics
-    // Get camera position
-    // Update any Shader Materials
-    // Update uniforms
-    // Draw the scene
 
     // --- Physics ---
+
+    this.last_cam_pos = this.cam_pos || vec3(0,0,0);
 
     this.explosionTimer+=dt*1.5
 
@@ -263,7 +261,7 @@ export class Sea_Of_Prospects_Scene extends Component
     // --- Camera ---
 
     this.update_camera(caller);
-    this.ocean.set_offset(this.ship.rb.position);
+    this.ocean.set_offset(this.last_cam_pos);
 
 
     // --- Shader Materials ---
@@ -302,7 +300,7 @@ export class Sea_Of_Prospects_Scene extends Component
   {
     const front_of_boat = this.ship.rb.getTransformationMatrix().times(vec4(0,0,-0.5,1)).to3();
     const sample_point_for_boat = this.ocean.gersrnerWave.get_original_position_and_true_y(front_of_boat[0], front_of_boat[2], this.t);
-    this.foam_material.update(caller, {... this.uniforms, offset: this.ocean.ocean_offset, sample_boat: sample_point_for_boat, boat_foam_intensity: this.ship.rb.velocity.norm() / 8});
+    this.foam_material.update(caller, {... this.uniforms, offset: this.cam_pos, sample_boat: sample_point_for_boat, boat_foam_intensity: this.ship.rb.velocity.norm() / 8});
   }
 
   update_camera(caller)
@@ -362,26 +360,32 @@ export class Sea_Of_Prospects_Scene extends Component
 
   draw_start_menu(caller, t, dt)
   {
-    const start_screen_transform = Mat4.identity().times( Mat4.scale( 10,10, 1) );
-    const start_screen_material = { shader: new defs.Basic_Shader(), ambient: .2, diffusivity: 1, specularity:  1, color: color( .9,.5,.9,1 ) }
+    const gl = caller.context;
+    // gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    // gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
 
-    // TODO: Add orthographic camera projection, see ShaderMaterial class
+    const aspect_ratio = gl.canvas.width / gl.canvas.height;
 
-    this.shapes.ball.draw( caller, this.uniforms, start_screen_transform, start_screen_material );
+    const width = 1;
+    const height = width / aspect_ratio;  
 
-    if(this.started)
-    {
-        this.start_obj.update_string("Paused")
-    }
-    else
-    {
-        this.start_obj.update_string("Start Game")
-    }
+    const projection_transform = Mat4.orthographic(-1, 1, -height, height, -4, 4);
+    const cam_Mat = Mat4.look_at(vec3(0, 0, 1), vec3(0, 0, 0), vec3(0, 1, 0));
 
-    this.score_text_obj.update_string("Score: " + this.score)
+    Shader.assign_camera(cam_Mat, this.uniforms);
+    this.uniforms.projection_transform = projection_transform;
 
-    this.start_obj.draw(caller, this.uniforms, this.start_text_transform)
-    this.score_text_obj.draw(caller, this.uniforms, this.score_text_transform)
+    const start_screen_transform = Mat4.identity();
+
+    this.shapes.quad.draw( caller, this.uniforms, start_screen_transform, 
+      { shader: this.tex_phong, ambient: 1, diffusivity: 1, specularity: 1, color: color(.5,1,.5,1), texture: this.start_screen_texture} )
+
+    this.start_obj.update_string("Start Game (Spacebar)")
+
+    const start_text_transform = Mat4.identity().times(Mat4.translation(-0.4,-0.1,1)).times(Mat4.scale(.04, .04, .04));
+
+    this.start_obj.draw(caller, this.uniforms, start_text_transform)
+
   }
 
   mouseToWorldPos(mousePos) {

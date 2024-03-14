@@ -12,11 +12,11 @@ class Islands {
         this.positions = positions
 
         this.shapes = {
-            'island': new Shape_From_File( "assets/island.obj" ),
-            'island2': new Shape_From_File( "assets/island2.obj" ),
-            'island3': new Shape_From_File( "assets/island3.obj" ),
-            'island4': new Shape_From_File( "assets/island4.obj" ),
-            'island5': new Shape_From_File( "assets/island5.obj" ),
+            'island': new Shape_From_File( "assets/objects/island.obj" ),
+            'island2': new Shape_From_File( "assets/objects/island2.obj" ),
+            'island3': new Shape_From_File( "assets/objects/island3.obj" ),
+            'island4': new Shape_From_File( "assets/objects/island4.obj" ),
+            'island5': new Shape_From_File( "assets/objects/island5.obj" ),
         }
 
 

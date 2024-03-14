@@ -23,7 +23,7 @@ class Text {
 
                                 // To show text you need a Material like this one:
         this.text_image = { shader: texture, ambient: 1, diffusivity: 0, specularity: 0,
-                                        texture: new Texture( "assets/text.png" ) };
+                                        texture: new Texture( "assets/textures/text.png" ) };
 
         // this.transform = Mat4.identity().times(Mat4.rotation(Math.PI/4, 0,1,0)).times(Mat4.translation(-6,5,0))
     }

@@ -14,20 +14,20 @@ class Ship {
     this.shapes = {
       'box'  : new defs.Cube(),
       'ball' : new defs.Subdivision_Sphere( 4 ),
-      'ship': new Shape_From_File( "assets/ship.obj" ),
-      'ship_piece1': new Shape_From_File( "assets/ship_piece1.obj" ),
-      'ship_piece2': new Shape_From_File( "assets/ship_piece2.obj" ),
-      'ship_piece3': new Shape_From_File( "assets/ship_piece3.obj" ),
+      'ship': new Shape_From_File( "assets/objects/ship.obj" ),
+      'ship_piece1': new Shape_From_File( "assets/objects/ship_piece1.obj" ),
+      'ship_piece2': new Shape_From_File( "assets/objects/ship_piece2.obj" ),
+      'ship_piece3': new Shape_From_File( "assets/objects/ship_piece3.obj" ),
     }
 
-    const init_pos = vec3(0, 10, 0);
+    const init_pos = vec3(0, 5, 0);
 
     const tex_phong = new defs.Textured_Phong(1, fog_param);
     const phong = new defs.Phong_Shader(1, fog_param);
     this.materials = {};
-    this.materials.flag_tex = { shader: tex_phong, ambient: .3, texture: new Texture("assets/skull.png"),  diffusivity: 0.6, specularity: 0.5, color: color( 1, 1, 1 ,1 )}
-    this.materials.cloth_tex = { shader: tex_phong, ambient: .3, texture: new Texture("assets/cloth.jpg"),  diffusivity: 0.6, specularity: 0.5, color: color( 1, 1, 1 ,1 )}
-    this.materials.wood = { shader: tex_phong, ambient: .3, texture: new Texture("assets/wood.jpg"),  diffusivity: 0.7, specularity: 0.3, color: color( 1, 1, 1 ,1 )}
+    this.materials.flag_tex = { shader: tex_phong, ambient: .35, texture: new Texture("assets/textures/skull.png"),  diffusivity: 0.7, specularity: 0.4, color: color( 1, 1, 1 ,1 )}
+    this.materials.cloth_tex = { shader: tex_phong, ambient: .35, texture: new Texture("assets/textures/cloth.jpg"),  diffusivity: 0.7, specularity: 0.2, color: color( 1, 1, 1 ,1 )}
+    this.materials.wood = { shader: tex_phong, ambient: .3, texture: new Texture("assets/textures/wood.jpg"),  diffusivity: 0.7, specularity: 0.45, color: color( 1, 1, 1 ,1 )}
     this.materials.plastic = { shader: phong, ambient: .3, diffusivity: 1, specularity: .5, color: color( 1,.1,.1,1 )}
 
     const get_corners = (side_length) => [0, side_length-1, side_length**2-side_length, side_length**2-1];

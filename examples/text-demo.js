@@ -68,7 +68,7 @@ export class Text_Demo extends Component
 
                               // To show text you need a Material like this one:
       this.text_image = { shader: texture, ambient: 1, diffusivity: 0, specularity: 0,
-                                      texture: new Texture( "assets/text.png" ) };
+                                      texture: new Texture( "assets/textures/text.png" ) };
     }
   render_animation( caller, uniforms )
     { this.uniforms.lights = [ defs.Phong_Shader.light_source( vec4( 3,2,1,0 ),   color( 1,1,1,1 ),  1000000 ),
