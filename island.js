@@ -29,7 +29,7 @@ class Islands {
     OnCollideEnter(ship, shipExplosionCallBack) {
         for (let i = 0; i < this.islands.length; i++) {
             if (this.islands[i].isRigidbodyInsideIsland(ship.rb)) {
-                shipExplosionCallBack(ship)
+                shipExplosionCallBack()
                 break; 
             }
         }

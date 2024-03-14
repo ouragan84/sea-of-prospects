@@ -229,7 +229,7 @@ export class Sea_Of_Prospects_Scene extends Component
 
     this.ship.update(t, dt, this.wind)
 
-    this.islands.OnCollideEnter(this.ship, this.shipExplosion)
+    this.islands.OnCollideEnter(this.ship, () => this.shipExplosion(this.ship))
 
     if(this.ship.exploded){
       // this.ocean.applyWaterForceOnRigidBody(this.ship.rb_piece1, t, dt, 0, 0, this.wind, 
@@ -294,8 +294,8 @@ export class Sea_Of_Prospects_Scene extends Component
   }
 
   shipExplosion(ship){
-    ship.explode()
-    this.explosionTimer = 0
+    ship.explode();
+    this.explosionTimer = 0;
   }
 
   update_foam(caller)
@@ -437,9 +437,6 @@ export class Sea_Of_Prospects_Scene extends Component
     this.key_triggered_button ("Mute/Unmute", ["m"], () => this.mute=!this.mute);
     this.key_triggered_button ("Increase Score", ["i"], () => {
       this.score+=1
-      // console.log(this.ocean.gersrnerWave);
-      // explosionTimer = 0
-      // this.ship.explode()
     });
     this.new_line();
     this.key_triggered_button ("Forward", ["w"], () => this.vertical_input = 1, undefined, () => this.vertical_input = 0);
@@ -458,28 +455,16 @@ export class Sea_Of_Prospects_Scene extends Component
         canvas.requestPointerLock();
     };
 
-    let changeCallback =  function() {
-
+    const changeCallback = () => {
         if (document.pointerLockElement === canvas || document.mozPointerLockElement === canvas) {
-            // console.log('The pointer lock status is now locked');
             canvas.addEventListener("mousemove", (e) => {
               if(this.start)
               {
-                  // this.mouse.from_center = mouse_position(e);
                   this.mousev = [e.movementX, e.movementY];
-                  //console.log("mouse position: ", this.mouse.from_center)
               }
             }, false)
 
-            // canvas.addEventListener("mousedown", e => {
-            //     if(e.button == 2 || e.shiftKey || e.ctrlKey || e.altKey)
-            //         this.shoot_projectile("orange");
-            //     else
-            //         this.shoot_projectile("blue");
-            // })
-
         } else {
-            // console.log('The pointer lock status is now unlocked');
             canvas.addEventListener("mouseout", (e) => {
                 this.mousev = [0,0];
             }, false)
