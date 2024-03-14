@@ -105,10 +105,10 @@ export class GerstnerWave{
         }
     */
 
-    get_displacement(p_sample, t){
+    get_displacement(p_sample, t, number_of_waves = this.num_waves){
         let dis = vec3(0, 0, 0);
 
-        for (let i = 0; i < this.num_waves; i++){
+        for (let i = 0; i < Math.min(number_of_waves, this.num_waves); i++){
             const a = this.amplitudes[i];
             const d = this.directions[i];
             const w = this.frequencies[i];
@@ -125,11 +125,11 @@ export class GerstnerWave{
         return dis;
     }
 
-    get_normal(p_sample, t){
+    get_normal(p_sample, t, number_of_waves = this.num_waves){
         let rx = vec3(1,0,0);
         let rz = vec3(0,0,1);
 
-        for (let i = 0; i < this.num_waves; i++){
+        for (let i = 0; i < Math.min(number_of_waves, this.num_waves); i++){
             const a = this.amplitudes[i];
             const d = this.directions[i];
             const w = this.frequencies[i];

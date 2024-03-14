@@ -9,6 +9,8 @@ class RigidBody {
         this.position = position;
         this.orientation = orientation; 
 
+        console.log(`Orientation ${this.orientation}`)
+
         this.velocity = vec3(0, 0, 0); 
         this.angularVelocity = vec3(0, 0, 0);
 
@@ -41,34 +43,38 @@ class RigidBody {
     }
 
     update(dt) {
-      // console.log(`start position: ${this.position}`);
-
-      // linear motion
-      const acceleration = this.force.times(1 / this.mass);
-      this.velocity.add_by(acceleration.times(dt));
-      this.position.add_by(this.velocity.times(dt));
-
-      // Update angular velocity
-      const angularAcceleration = this.torque.times(1 / this.momentOfInertia);
-      this.angularVelocity.add_by(angularAcceleration.times(dt));
-
-      // Update orientation using quaternion
+      // Linear motion update
+      const acceleration = this.force.times(1 / this.mass); // a = F/m
+      this.velocity.add_by(acceleration.times(dt)); // v = v0 + a*dt
+      this.position.add_by(this.velocity.times(dt)); // x = x0 + v*dt
+  
+      // Angular motion update
+      const angularAcceleration = this.torque.times(1 / this.momentOfInertia); // alpha = torque / I
+      this.angularVelocity.add_by(angularAcceleration.times(dt)); // omega = omega0 + alpha*dt
+  
+      // Update orientation using quaternion and angular velocity
+      // Convert angular velocity to a quaternion with w=0
       let omega = vec4(0, this.angularVelocity[0], this.angularVelocity[1], this.angularVelocity[2]);
+  
+      // Calculate the derivative of the orientation quaternion
       let qDot = quaternionMultiply(this.orientation, omega).times(0.5);
+  
+      // Integrate to get the new orientation
       this.orientation = vec4(
           this.orientation[0] + qDot[0] * dt,
           this.orientation[1] + qDot[1] * dt,
           this.orientation[2] + qDot[2] * dt,
           this.orientation[3] + qDot[3] * dt
       );
+  
+      // Normalize the orientation quaternion to avoid drifting due to numerical integration
       this.orientation = normalizeQuaternion(this.orientation);
-
-      // Reset forces and torques
+  
+      // Reset forces and torques for the next update cycle
       this.force = vec3(0, 0, 0);
       this.torque = vec3(0, 0, 0);
-
-      // console.log(`end position: ${this.position}`);
   }
+  
 
   getTransformationMatrix() {
     // Convert quaternion to rotation matrix
@@ -151,24 +157,6 @@ function normalizeQuaternion(quaternion) {
   return vec4(quaternion[0] / norm, quaternion[1] / norm, quaternion[2] / norm, quaternion[3] / norm);
 }
 
-function normalizeColumns(mat) {
-  // Iterate over each column
-  for (let col = 0; col < mat[0].length; col++) {
-    // Compute the norm of the column
-    let norm = 0;
-    for (let row = 0; row < mat.length; row++) {
-      norm += mat[row][col] ** 2;
-    }
-    norm = Math.sqrt(norm);
-
-    // Normalize each element in the column
-    for (let row = 0; row < mat.length; row++) {
-      mat[row][col] /= norm;
-    }
-  }
-  return mat;
-}
-
 // Helper function to convert a quaternion to a rotation matrix
 function quaternionToRotationMatrix(q) {
   let [w, x, y, z] = [q[0], q[1], q[2], q[3]];
@@ -194,3 +182,32 @@ export function quaternionToAngleAxis(quaternion) {
 
   return { angle, axis };
 }
+
+
+
+
+
+
+/*
+
+
+function normalizeColumns(mat) {
+  // Iterate over each column
+  for (let col = 0; col < mat[0].length; col++) {
+    // Compute the norm of the column
+    let norm = 0;
+    for (let row = 0; row < mat.length; row++) {
+      norm += mat[row][col] ** 2;
+    }
+    norm = Math.sqrt(norm);
+
+    // Normalize each element in the column
+    for (let row = 0; row < mat.length; row++) {
+      mat[row][col] /= norm;
+    }
+  }
+  return mat;
+}
+
+
+*/
