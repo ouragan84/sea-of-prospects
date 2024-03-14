@@ -69,33 +69,11 @@ class Ocean {
         this.showed_once = false;
     }
 
-    apply_rb_offset(rigidBody){
-        if(!rigidBody.position || isNaN(rigidBody.position[0]) || isNaN(rigidBody.position[2]))
-            return;
-        // let new_x = rigidBody.position[0] - (rigidBody.position[0] % this.spacing);
-        // let new_z = rigidBody.position[2] - (rigidBody.position[2] % this.spacing);
-        // this.ocean_offset = vec3(new_x, 0, new_z);
-
-        this.ocean_offset = rigidBody.position;
-        this.ocean_offset[1] = 0;
-
+    set_offset(pos){
+        this.ocean_offset = vec3(pos[0], 0, pos[2]);
     }
 
     applyWaterForceOnRigidBody(rigidBody, t, dt, horizontal_input, vertical_input, wind, draw_debug_sphere, draw_debug_arrow, draw_debug_line){
-
-        // const test_pos = vec3(0,3,0);
-
-        // test_pos is the result of the gersrner wave function, so we have to find the sample point that would have given us this result
-        
-        // const sample_for_test_pos = this.gersrnerWave.get_original_position_and_true_y(test_pos[0], test_pos[2], t);
-        // draw_debug_sphere(sample_for_test_pos, 0.2, color(1,0,0,1));
-
-        // const gerstner_from_sample = this.gersrnerWave.get_displacement(sample_for_test_pos, t).plus(vec3(sample_for_test_pos[0], 0, sample_for_test_pos[2]));
-        // draw_debug_sphere(gerstner_from_sample, 0.2, color(0,1,0,1));
-
-        // const test_pos_xz_with_solved_y = vec3(test_pos[0], sample_for_test_pos[1], test_pos[2]);
-        // draw_debug_sphere(test_pos_xz_with_solved_y, 0.2, color(0,0,1,1));
-
 
         const boat_transform = rigidBody.getTransformationMatrix();
 
@@ -107,6 +85,8 @@ class Ocean {
         boat_corners.push(boat_transform.times(vec4(1, 1, -1, 1)).to3());
         boat_corners.push(boat_transform.times(vec4(-1, 1, 0, 1)).to3());
         boat_corners.push(boat_transform.times(vec4(1, 1, 0, 1)).to3());
+
+        // console.log(`rigidBody.position = ${rigidBody.position}`);
 
 
         // origin_sample_points contains the x,z where the sample would have came from, and the solved y value of the ocean
@@ -164,28 +144,50 @@ class Ocean {
         let mult_t = 2000;
 
         // Hack
-        if (boat_forward.dot(vec3(0,0,-1)) < 0){
-            mult_t = -mult_t;
-        }
+        // if (boat_forward.dot(vec3(0,0,-1)) < 0){
+        //     mult_t = -mult_t;
+        // }
+
+        // const angle_of_boat_forward = Math.acos(boat_forward.dot(vec3(0,0,-1)));
 
         // Apply forces and torques on each corner
         for (let i = 0; i < boat_corners.length; i++){
-            const axis = boat_normal.cross(ocean_normal_corners[i]).normalized();
-            // draw_debug_arrow(ocean_corners[i], axis, 1.5, 1.5, color(0,1,0,1));
-            const angle = Math.acos(boat_normal.dot(ocean_normal_corners[i]));
-            if(Math.abs(angle) > 0.01)
-                rigidBody.addTorque(axis.times( angle * mult_t * percent_submerged_corners[i]));
-            rigidBody.addForce(vec3(0,1,0).times(mult_f * percent_submerged_corners[i]));
+
+            const top_corner = boat_corners[i];
+            const ocean_corner = ocean_corners[i];
+            const ocean_normal = ocean_normal_corners[i];
+            const corner_percent_submerged = percent_submerged_corners[i];
+
+            const linear_boyancy_force = mult_f * corner_percent_submerged;
+            const linear_boyancy_force_vector = ocean_normal.times(linear_boyancy_force);
+            rigidBody.addForce(linear_boyancy_force_vector);
+
+            const angle = Math.abs(Math.acos(boat_forward.dot(ocean_normal)));
+            const torque_amount = mult_t * corner_percent_submerged * angle;
+            const torque_axis = boat_normal.cross(ocean_normal).normalized();
+            const torque_vector = torque_axis.times(torque_amount);
+            rigidBody.addTorque(torque_vector);
+
+
+            
+
+
+            // thought, if percent_submerged is 0, then we could rotate the boat so that this point falls into the water
+
+
+
+
+
         }
 
         // Restorative force
-        const restore = 10000;
-        const res_start_angle = Math.PI/6;
-        if( Math.abs(boat_normal.normalized().dot(vec3(0,1,0))) < Math.cos(res_start_angle)){
-            const axis_res = boat_normal.cross(vec3(0,1,0)).normalized();
-            const angle_res = Math.acos(boat_normal.dot(vec3(0,1,0)));
-            rigidBody.addTorque(axis_res.times(angle_res * restore));
-        }
+        // const restore = 10000;
+        // const res_start_angle = Math.PI/6;
+        // if( Math.abs(boat_normal.normalized().dot(vec3(0,1,0))) < Math.cos(res_start_angle)){
+        //     const axis_res = boat_normal.cross(vec3(0,1,0)).normalized();
+        //     const angle_res = Math.acos(boat_normal.dot(vec3(0,1,0)));
+        //     rigidBody.addTorque(axis_res.times(angle_res * restore));
+        // }
         
         // gravity
         const gravity = 9.8;

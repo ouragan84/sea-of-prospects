@@ -13,7 +13,7 @@ export class GerstnerWave{
                     0.2,            // starting_frequency
                     2.5,             // starting_speed
                     vec3(0,0,1),    // starting_dir
-                    0.00015,            // end_amplitude
+                    0.0001,            // end_amplitude
                     50,           // end_frequency
                     2.5,            // end_speed
                     "poor"          // seed_str

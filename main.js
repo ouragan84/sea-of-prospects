@@ -12,13 +12,11 @@ import { ShaderMaterialPingPong } from './ShaderMaterialPingPong.js';
 
 const { vec3, vec4, color, Mat4, Shader, Texture, Component } = tiny;
 
-let explosionTimer = 100
-
 export class Sea_Of_Prospects_Scene extends Component
 {       
   init()
   {
-    this.preset = "stormy";
+    this.preset = 'stormy'; // 'calm', 'agitated', 'stormy'
 
     // constructor(): Scenes begin by populating initial values like the Shapes and Materials they'll need.
     this.hover = this.swarm = false;
@@ -32,15 +30,15 @@ export class Sea_Of_Prospects_Scene extends Component
     switch(this.preset){
       case 'calm':
           this.light_color = color(1,0.91,0.62,1)
-          fog_param = { color: color(1,1,1,1), start: this.render_distance-20, end: this.render_distance };
+          fog_param = { color: color(1,1,1,1), start: this.render_distance-10, end: this.render_distance };
           break;
       case 'agitated':
           this.light_color = color(1,0.91,0.62,1)
-          fog_param = { color: color(1,1,1,1), start: this.render_distance-20, end: this.render_distance };
+          fog_param = { color: color(1,1,1,1), start: this.render_distance-10, end: this.render_distance };
           break;
       case 'stormy':
           this.light_color = color(1,0.91,0.62,1)
-          fog_param = { color: color(.5,.5,.5,1), start: this.render_distance-30, end: this.render_distance };
+          fog_param = { color: color(.5,.5,.5,1), start: this.render_distance-20, end: this.render_distance };
           break;
       default:
           this.light_color = color(1,0.91,0.62,1)
@@ -100,12 +98,15 @@ export class Sea_Of_Prospects_Scene extends Component
         const avg = (this.base_water_color[0] + this.base_water_color[1] + this.base_water_color[2]) / 3;
         const f = 0.2;
         this.base_water_color = this.base_water_color.plus((color(avg, avg, avg, 0).minus(this.base_water_color)).times(f));
+        this.base_water_color[3] = 1;
     }
 
     if(this.preset == 'stormy'){
         const avg = (this.base_water_color[0] + this.base_water_color[1] + this.base_water_color[2]) / 3;
         const f = .6;
         this.base_water_color = this.base_water_color.plus((color(avg, avg, avg, 0).minus(this.base_water_color)).times(f));
+        this.base_water_color[3] = 1;
+
     }
 
     this.skybox = new Skybox({default_color: fog_param.color, texture: skybox_texture, fog_param: fog_param});
@@ -141,7 +142,6 @@ export class Sea_Of_Prospects_Scene extends Component
     this.wind_forward_magnitude = 35;
     this.wind = vec3(0,0,-this.wind_default_magnitude);
 
-    // this.rb = new RigidBody(10, vec3(0,3,0), quaternionFromAngleAxis(0, vec3(0, 0, 1)), vec3(1,1,1), 1, fog_param);
     this.mousev = [0,0];  
     
     this.islands = new Islands(fog_param, 100)
@@ -154,7 +154,7 @@ export class Sea_Of_Prospects_Scene extends Component
       35, // frame_half_life
       0.50, // jacobian_threshold_start
       .15, // jacobian_threshold_end
-      0.3, // max_dist_from_boat
+      0.8, // max_dist_from_boat
       0.15, // cutoff intensity
       0.5 // boat_dist_variation
     );
@@ -162,19 +162,151 @@ export class Sea_Of_Prospects_Scene extends Component
     this.foam_shader.shader_material = this.foam_material;
   
     this.tex_phong = new defs.Textured_Phong(1, fog_param);
+
+    this.explosionTimer = 100;
   }
 
   clamp = (x, min, max) => Math.min(Math.max(x, min), max);
      
   render_animation( caller )
   {                    
-    const sample_point_for_boat = this.ocean.gersrnerWave.get_original_position_and_true_y(this.ship.rb.position[0], this.ship.rb.position[2], this.t);
-
-    this.foam_material.update(caller, {... this.uniforms, offset: this.ocean.ocean_offset, sample_boat: sample_point_for_boat, boat_foam_intensity: this.ship.rb.velocity.norm() / 10});
-
     const t = this.t = this.uniforms.animation_time/1000;
-    const dt = this.dt = 0.02
+    const dt = this.dt = 0.02;
 
+
+    if(this.start)
+    {
+      if(this.mute)
+      {
+          this.start_audio.pause()
+          this.game_audio.pause()
+      }
+      else
+      {
+          this.start_audio.pause()
+          this.game_audio.play()
+      }
+
+      this.game_update(caller, t, dt);
+    }
+    else
+    {
+      if(this.mute)
+      {
+          this.start_audio.pause()
+          this.game_audio.pause()
+      }
+      else
+      {
+          this.game_audio.pause()
+          this.start_audio.play()
+      }
+      
+      this.draw_start_menu(caller, t, dt);
+    }
+  }
+
+  game_update(caller, t, dt)
+  {
+    // Order:
+    // Do physics
+    // Get camera position
+    // Update any Shader Materials
+    // Update uniforms
+    // Draw the scene
+
+    // --- Physics ---
+
+    this.explosionTimer+=dt*1.5
+
+    this.update_wind()
+
+    this.ocean.applyWaterForceOnRigidBody(this.ship.rb, t, dt, this.horizontal_input, this.vertical_input, this.wind, 
+      (pos, size, color) => this.draw_debug_sphere(caller, pos, size, color),
+      (pos, dir, length, width, color) => this.draw_debug_arrow(caller, pos, dir, length, width, color),
+      (start, end, color) => this.draw_debug_line(caller, start, end, color)
+    );
+
+    this.ship.update(t, dt, this.wind)
+
+    this.islands.OnCollideEnter(this.ship, this.shipExplosion)
+
+    if(this.ship.exploded){
+      // this.ocean.applyWaterForceOnRigidBody(this.ship.rb_piece1, t, dt, 0, 0, this.wind, 
+      //   (pos, size, color) => this.draw_debug_sphere(caller, pos, size, color),
+      //   (pos, dir, length, width, color) => this.draw_debug_arrow(caller, pos, dir, length, width, color),
+      //   (start, end, color) => this.draw_debug_line(caller, start, end, color)
+      // );
+
+      // this.ship.rb_piece1.show(caller, this.uniforms)
+
+      // this.ocean.applyWaterForceOnRigidBody(this.ship.rb_piece2, t, dt, 0, 0, this.wind, 
+      //   (pos, size, color) => this.draw_debug_sphere(caller, pos, size, color),
+      //   (pos, dir, length, width, color) => this.draw_debug_arrow(caller, pos, dir, length, width, color),
+      //   (start, end, color) => this.draw_debug_line(caller, start, end, color)
+      // );
+
+      // this.ship.rb_piece2.show(caller, this.uniforms)
+
+      // this.ocean.applyWaterForceOnRigidBody(this.ship.rb_piece2, t, dt, 0, 0, this.wind, 
+      //   (pos, size, color) => this.draw_debug_sphere(caller, pos, size, color),
+      //   (pos, dir, length, width, color) => this.draw_debug_arrow(caller, pos, dir, length, width, color),
+      //   (start, end, color) => this.draw_debug_line(caller, start, end, color)
+      // );
+
+      // this.ship.rb_piece3.show(caller, this.uniforms)
+    }
+
+    if (this.preset == 'stormy')
+      this.rainSystem.update(this.dt, this.ship.rb.position);
+
+    // --- Camera ---
+
+    this.update_camera(caller);
+    this.ocean.set_offset(this.ship.rb.position);
+
+
+    // --- Shader Materials ---
+
+    this.update_foam(caller)
+
+    // --- Uniforms ---
+
+    this.apply_camera(caller);
+
+    // --- Draw the scene ---
+
+    this.ship.show(caller, this.uniforms)
+
+    this.skybox.show(caller, this.uniforms, this.cam_pos, this.render_distance);
+
+    this.score_text_obj.update_string(`Score: ${this.score} - FPS: ${Math.round(1000/this.uniforms.animation_delta_time)}`)
+    this.score_text_obj.draw(caller, this.uniforms, this.cam_Mat_inv.times(Mat4.translation(-.14, .075, -0.2)).times(Mat4.scale(.004, .004, .1)))
+
+    this.islands.show(caller, this.uniforms)
+
+    if (this.preset == 'stormy')
+      this.rainSystem.draw(caller, this.uniforms)
+
+    this.shapes.axis.draw( caller, this.uniforms, Mat4.identity(), { shader: this.phong, ambient: .2, diffusivity: 1, specularity:  1, color: color( 1,1,1,1 ) } )
+    this.ocean.show(this.shapes, caller, this.uniforms, this.camera_direction_xz, this.foam_material.get_texture());
+    
+  }
+
+  shipExplosion(ship){
+    ship.explode()
+    this.explosionTimer = 0
+  }
+
+  update_foam(caller)
+  {
+    const front_of_boat = this.ship.rb.getTransformationMatrix().times(vec4(0,0,-0.5,1)).to3();
+    const sample_point_for_boat = this.ocean.gersrnerWave.get_original_position_and_true_y(front_of_boat[0], front_of_boat[2], this.t);
+    this.foam_material.update(caller, {... this.uniforms, offset: this.ocean.ocean_offset, sample_boat: sample_point_for_boat, boat_foam_intensity: this.ship.rb.velocity.norm() / 8});
+  }
+
+  update_camera(caller)
+  {
     // Update theta and phi based on mouse input
     this.theta += this.mousev[0] * this.cameraConfig.sensitivity;
     this.phi = this.clamp(this.phi - this.mousev[1] * this.cameraConfig.sensitivity, 0.1, Math.PI/2 - 0.1);
@@ -193,139 +325,21 @@ export class Sea_Of_Prospects_Scene extends Component
     this.currentY = lerp(this.currentY, targetY, a);
     this.currentZ = lerp(this.currentZ, targetZ, a);
 
-    const cam_pos = vec3(this.currentX, this.currentY, this.currentZ).plus(this.ship.rb.position);
-    const cam_Mat = Mat4.look_at(cam_pos, this.ship.rb.position, vec3(0, 1, 0));
-    const cam_Mat_inv = Mat4.inverse(cam_Mat);
+    this.cam_pos = vec3(this.currentX, this.currentY, this.currentZ).plus(this.ship.rb.position);
+    this.cam_Mat = Mat4.look_at(this.cam_pos, this.ship.rb.position, vec3(0, 1, 0));
+    this.cam_Mat_inv = Mat4.inverse(this.cam_Mat);
 
-    // Assign the interpolated position to the camera
-    Shader.assign_camera(cam_Mat, this.uniforms);
-
-    this.uniforms.projection_transform = Mat4.perspective( Math.PI/4, caller.width/caller.height, 0.1, this.render_distance).times(Mat4.rotation(Math.sin(40*explosionTimer)*.04*Math.exp(-explosionTimer), .2,1,.2))
-
-
-    // ONLY AFTER THE CAMERA IS SET UP, draw the scene
-
-    // put the transform in front of the camera, to the top left of the screen
-    const my_transform = Mat4.translation(0, 6, 0);
-    this.shapes.box.draw( caller, this.uniforms, my_transform, { shader: this.tex_phong, ambient: .2, diffusivity: 1, specularity:  1, color: color( 1,1,1,1 ), texture: this.foam_material.get_texture() } );
-
-
-    // const light_position = Mat4.rotation( angle,   1,0,0 ).times( vec4( 0,-1,1,0 ) ); !!!
-    // !!! Light changed here
-    if(this.start)
-    {
-      if(this.mute)
-      {
-          this.start_audio.pause()
-          this.game_audio.pause()
-      }
-      else
-      {
-          this.start_audio.pause()
-          this.game_audio.play()
-      }
-      const light_position = vec3(20, 20, -10).plus(this.ship.rb.position).to4(1);
-    
-      this.uniforms.lights = [ defs.Phong_Shader.light_source( light_position, this.light_color, 1000000 )];
-  
-      this.ocean.apply_rb_offset(this.ship.rb);
-      const camera_direction_xz = vec3(this.ship.rb.position[0] - cam_pos[0], 0, this.ship.rb.position[2] - cam_pos[2]).normalized();
-      this.ocean.show(this.shapes, caller, this.uniforms, camera_direction_xz, this.foam_material.get_texture());
-
-
-  
-      this.ocean.applyWaterForceOnRigidBody(this.ship.rb, t, dt, this.horizontal_input, this.vertical_input, this.wind, 
-        (pos, size, color) => this.draw_debug_sphere(caller, pos, size, color),
-        (pos, dir, length, width, color) => this.draw_debug_arrow(caller, pos, dir, length, width, color),
-        (start, end, color) => this.draw_debug_line(caller, start, end, color)
-      );
-
-      if(this.ship.exploded){
-        // this.ocean.applyWaterForceOnRigidBody(this.ship.rb_piece1, t, dt, 0, 0, this.wind, 
-        //   (pos, size, color) => this.draw_debug_sphere(caller, pos, size, color),
-        //   (pos, dir, length, width, color) => this.draw_debug_arrow(caller, pos, dir, length, width, color),
-        //   (start, end, color) => this.draw_debug_line(caller, start, end, color)
-        // );
-
-        // this.ship.rb_piece1.show(caller, this.uniforms)
-
-        // this.ocean.applyWaterForceOnRigidBody(this.ship.rb_piece2, t, dt, 0, 0, this.wind, 
-        //   (pos, size, color) => this.draw_debug_sphere(caller, pos, size, color),
-        //   (pos, dir, length, width, color) => this.draw_debug_arrow(caller, pos, dir, length, width, color),
-        //   (start, end, color) => this.draw_debug_line(caller, start, end, color)
-        // );
-
-        // this.ship.rb_piece2.show(caller, this.uniforms)
-
-        // this.ocean.applyWaterForceOnRigidBody(this.ship.rb_piece2, t, dt, 0, 0, this.wind, 
-        //   (pos, size, color) => this.draw_debug_sphere(caller, pos, size, color),
-        //   (pos, dir, length, width, color) => this.draw_debug_arrow(caller, pos, dir, length, width, color),
-        //   (start, end, color) => this.draw_debug_line(caller, start, end, color)
-        // );
-
-        // this.ship.rb_piece3.show(caller, this.uniforms)
-      }
-
-      this.update_wind()
-  
-      this.ship.update(this.t, this.dt, this.wind)
-      this.ship.show(caller, this.uniforms)
-  
-
-      this.skybox.show(caller, this.uniforms, cam_pos, this.render_distance);
-
-      this.score_text_obj.update_string(`Score: ${this.score} - FPS: ${Math.round(1000/this.uniforms.animation_delta_time)}`)
-      this.score_text_obj.draw(caller, this.uniforms, cam_Mat_inv.times(Mat4.translation(-.14, .075, -0.2)).times(Mat4.scale(.004, .004, .1)))
-
-      this.islands.OnCollideEnter(this.ship, this.shipExplosion)
-      this.islands.show(caller, this.uniforms)
-
-      if (this.preset == 'stormy'){
-        this.rainSystem.update(this.dt, this.ship.rb.position)
-        this.rainSystem.draw(caller, this.uniforms)
-      }
-      // 'floating' ball
-      // this.shapes.ball.draw( caller, this.uniforms, Mat4.translation(5, this.ocean.gersrnerWave.solveForY(5, 5, t)+2, 5).times( Mat4.scale( 2, 2, 2) ), { shader: this.phong, ambient: .2, diffusivity: 1, specularity:  1, color: color( .9,.5,.9,1 ) } )
-
-      this.shapes.axis.draw( caller, this.uniforms, Mat4.identity(), { shader: this.phong, ambient: .2, diffusivity: 1, specularity:  1, color: color( 1,1,1,1 ) } )
-      
-      explosionTimer+=dt*1.5
-    }
-    else
-    {
-      if(this.mute)
-      {
-          this.start_audio.pause()
-          this.game_audio.pause()
-      }
-      else
-      {
-          this.game_audio.pause()
-          this.start_audio.play()
-      }
-      const start_screen_transform = Mat4.identity().times( Mat4.scale( 10,10, 1) );
-      const start_screen_material = { shader: new defs.Basic_Shader(), ambient: .2, diffusivity: 1, specularity:  1, color: color( .9,.5,.9,1 ) }
-      this.shapes.ball.draw( caller, this.uniforms, start_screen_transform, start_screen_material );
-
-      if(this.started)
-      {
-          this.start_obj.update_string("Paused")
-      }
-      else
-      {
-          this.start_obj.update_string("Start Game")
-      }
-
-      this.score_text_obj.update_string("Score: " + this.score)
-
-      this.start_obj.draw(caller, this.uniforms, this.start_text_transform)
-      this.score_text_obj.draw(caller, this.uniforms, this.score_text_transform)
-    }
+    this.camera_direction_xz = vec3(this.ship.rb.position[0] - this.cam_pos[0], 0, this.ship.rb.position[2] - this.cam_pos[2]).normalized();
   }
 
-  shipExplosion(ship){
-    ship.explode()
-    explosionTimer = 0
+  apply_camera(caller)
+  {
+    Shader.assign_camera(this.cam_Mat, this.uniforms);
+
+    this.uniforms.projection_transform = Mat4.perspective( Math.PI/4, caller.width/caller.height, 0.1, this.render_distance).times(Mat4.rotation(Math.sin(40*this.explosionTimer)*.04*Math.exp(-this.explosionTimer), .2,1,.2))
+
+    const light_position = vec3(20, 20, -10).plus(this.ship.rb.position).to4(1);
+    this.uniforms.lights = [ defs.Phong_Shader.light_source( light_position, this.light_color, 1000000 )];
   }
 
   update_wind() {
@@ -344,6 +358,30 @@ export class Sea_Of_Prospects_Scene extends Component
 
   getMouseVel(prevPos, currPos, dt) {
     return currPos.minus(prevPos).times(10000/dt);
+  }
+
+  draw_start_menu(caller, t, dt)
+  {
+    const start_screen_transform = Mat4.identity().times( Mat4.scale( 10,10, 1) );
+    const start_screen_material = { shader: new defs.Basic_Shader(), ambient: .2, diffusivity: 1, specularity:  1, color: color( .9,.5,.9,1 ) }
+
+    // TODO: Add orthographic camera projection, see ShaderMaterial class
+
+    this.shapes.ball.draw( caller, this.uniforms, start_screen_transform, start_screen_material );
+
+    if(this.started)
+    {
+        this.start_obj.update_string("Paused")
+    }
+    else
+    {
+        this.start_obj.update_string("Start Game")
+    }
+
+    this.score_text_obj.update_string("Score: " + this.score)
+
+    this.start_obj.draw(caller, this.uniforms, this.start_text_transform)
+    this.score_text_obj.draw(caller, this.uniforms, this.score_text_transform)
   }
 
   mouseToWorldPos(mousePos) {

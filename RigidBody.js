@@ -26,9 +26,9 @@ class RigidBody {
     }
 
     // apply a force at a point in world coordinates
-    addForceAtPoint(force, point) {
+    addForceAtPoint(force, point, torque_mult = 1) {
         this.force.add_by(force);
-        const torque = point.minus(this.position).cross(force);
+        const torque = point.minus(this.position).cross(force).times(torque_mult);
         this.torque.add_by(torque);
     }
 
@@ -41,6 +41,8 @@ class RigidBody {
     }
 
     update(dt) {
+      // console.log(`start position: ${this.position}`);
+
       // linear motion
       const acceleration = this.force.times(1 / this.mass);
       this.velocity.add_by(acceleration.times(dt));
@@ -64,6 +66,8 @@ class RigidBody {
       // Reset forces and torques
       this.force = vec3(0, 0, 0);
       this.torque = vec3(0, 0, 0);
+
+      // console.log(`end position: ${this.position}`);
   }
 
   getTransformationMatrix() {

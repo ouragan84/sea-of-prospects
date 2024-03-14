@@ -20,7 +20,7 @@ class Ship {
       'ship_piece3': new Shape_From_File( "assets/ship_piece3.obj" ),
     }
 
-    const init_pos = vec3(0, 5, 0);
+    const init_pos = vec3(0, 10, 0);
 
     const tex_phong = new defs.Textured_Phong(1, fog_param);
     const phong = new defs.Phong_Shader(1, fog_param);
@@ -70,6 +70,7 @@ class Ship {
     this.rb_piece2.velocity = vec3(-.3,6,.3)
     this.rb_piece3.velocity = vec3(.5,5,.5)
     this.exploded = false;
+
 
     this.offsetMat = Mat4.translation(this.boatoffset[0], this.boatoffset[1], this.boatoffset[2])
     .times(Mat4.scale(this.boatscale[0]/this.rb.scale[0], this.boatscale[1]/this.rb.scale[1], this.boatscale[2]/this.rb.scale[2]))
