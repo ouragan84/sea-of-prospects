@@ -400,9 +400,8 @@ export class Sea_Of_Prospects_Scene extends Component
 
   handle_reset()
   {
-    if(this.start)
+    if(this.started)
     {
-        this.start = false
         this.started = false
         this.score = 0
     }
@@ -438,7 +437,7 @@ export class Sea_Of_Prospects_Scene extends Component
     const changeCallback = () => {
         if (document.pointerLockElement === canvas || document.mozPointerLockElement === canvas) {
             canvas.addEventListener("mousemove", (e) => {
-              if(this.start)
+              if(this.started)
               {
                   this.mousev = [e.movementX, e.movementY];
               }
