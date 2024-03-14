@@ -55,8 +55,6 @@ export class Sea_Of_Prospects_Scene extends Component
 
     this.phong = new defs.Phong_Shader(1, fog_param);
 
-    this.start = false
-    this.start_text = "Start Game"
     this.start_audio = new Audio('assets/sounds/start_menu.mp3')
     this.game_audio = new Audio('assets/sounds/game_loop.mp3')
     this.mute = false
@@ -65,7 +63,7 @@ export class Sea_Of_Prospects_Scene extends Component
     this.started = false
 
     // Text obj for start screen
-    this.start_obj = new Text(fog_param, this.start_text)
+    this.start_obj = new Text(fog_param, "Start Game (Spacebar)");
     this.start_screen_texture = new Texture("assets/textures/main_menu.jpg");
 
     this.score = 0
@@ -175,7 +173,7 @@ export class Sea_Of_Prospects_Scene extends Component
     const dt = this.dt = 0.02;
 
 
-    if(this.start)
+    if(this.started)
       this.game_update(caller, t, dt);
     else
       this.draw_start_menu(caller, t, dt);
@@ -192,7 +190,7 @@ export class Sea_Of_Prospects_Scene extends Component
       return;
     }
 
-    if(this.start)
+    if(this.started)
     {
       try{
         await this.game_audio.play();
@@ -409,32 +407,10 @@ export class Sea_Of_Prospects_Scene extends Component
         this.score = 0
     }
   }
-
-  handle_audio()
-  {
-      this.mute = !this.mute
-
-      if(this.mute)
-      {
-          this.start_audio.pause()
-          this.game_audio.pause()
-      }
-      else
-      {
-          if(this.start)
-          {
-              this.game_audio.play()
-          }
-          else
-          {
-              this.start_audio.play()
-          }
-      }
-  }
   
   render_controls () {
     this.control_panel.innerHTML += "Click and drag the scene to <br> spin your viewpoint around it.<br>";
-    this.key_triggered_button ("Start/Pause Game", [" "], () => {this.start = !this.start; this.started = true});
+    this.key_triggered_button ("Start Game", [" "], () => {this.started = true});
     this.key_triggered_button ("Reset", ["r"], () => this.handle_reset());
     //this.key_triggered_button ("Pause Game", [" "], () => this.start = 0);
     this.new_line();
