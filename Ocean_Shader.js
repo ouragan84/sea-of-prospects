@@ -148,20 +148,11 @@ export const Ocean_Shader =
         void main() {
             original_position = position;
 
-            // is_close_to_origin = 0.0;
-            // if(position.x * position.x + position.z * position.z < 0.04) {
-            //     is_close_to_origin = 1.0;
-            // }
-
-            if(position.x < - 20.0) {
+            if(position.x < -15.0) {
                 return;
             }
 
             vec3 p_sample = get_sample_position(position, time);
-
-            // displacement = get_gersrner_wave_normal(vec3(0,0,0), time);
-            // vec3 new_vertex_position = displacement + random_normal(p_sample) * 0.3;
-
             displacement = get_gersrner_wave_displacement(p_sample, time);
             vec3 new_vertex_position = position + displacement;
 
@@ -267,9 +258,8 @@ export const Ocean_Shader =
             return result;
         }
 
-
         void main() {
-            if(original_position.x < - 20.0)
+            if(original_position.x < - 15.0)
                 discard;
 
             vec3 p_sample = get_sample_position(original_position, time);

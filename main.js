@@ -9,6 +9,7 @@ import { Text } from './text.js';
 import { ShaderMaterial, Sample_Shader } from './ShaderMaterial.js';
 import { Foam_Shader } from './Foam.js';
 import { ShaderMaterialPingPong } from './ShaderMaterialPingPong.js';
+import { PreviousFrameMaterial } from './PreviousFrameMaterial.js';
 
 const { vec3, vec4, color, Mat4, Shader, Texture, Component } = tiny;
 
@@ -16,7 +17,7 @@ export class Sea_Of_Prospects_Scene extends Component
 {       
   init()
   {
-    this.preset = 'stormy'; // 'calm', 'agitated', 'stormy'
+    this.preset = 'calm'; // 'calm', 'agitated', 'stormy'
 
     // constructor(): Scenes begin by populating initial values like the Shapes and Materials they'll need.
     this.hover = this.swarm = false;
@@ -57,10 +58,10 @@ export class Sea_Of_Prospects_Scene extends Component
 
     this.start_audio = new Audio('assets/sounds/start_menu.mp3')
     this.game_audio = new Audio('assets/sounds/game_loop.mp3')
-    this.mute = false
+    this.mute = true
 
     // Keeps track of whether the game was started and was paused
-    this.started = false
+    this.started = true
 
     // Text obj for start screen
     this.start_obj = new Text(fog_param, "Start Game (Spacebar)");
@@ -163,6 +164,9 @@ export class Sea_Of_Prospects_Scene extends Component
     this.tex_phong = new defs.Textured_Phong(1, fog_param);
 
     this.explosionTimer = 100;
+
+
+    this.prev_frame_material = new PreviousFrameMaterial();
   }
 
   clamp = (x, min, max) => Math.min(Math.max(x, min), max);
@@ -261,16 +265,18 @@ export class Sea_Of_Prospects_Scene extends Component
     this.update_camera(caller);
     this.ocean.set_offset(this.last_cam_pos);
 
-
     // --- Shader Materials ---
 
     this.update_foam(caller)
 
     // --- Uniforms ---
+    // This must be the first draw call
 
+    this.prev_frame_material.set_output_framebuffer(caller, this.uniforms);
     this.apply_camera(caller);
 
     // --- Draw the scene ---
+
 
     this.ship.show(caller, this.uniforms)
 
@@ -286,7 +292,12 @@ export class Sea_Of_Prospects_Scene extends Component
 
     this.shapes.axis.draw( caller, this.uniforms, Mat4.identity(), { shader: this.phong, ambient: .2, diffusivity: 1, specularity:  1, color: color( 1,1,1,1 ) } )
     this.ocean.show(this.shapes, caller, this.uniforms, this.camera_direction_xz, this.foam_material.get_texture());
+
+    // if(this.prev_frame_material.ready)
+    //   this.shapes.box.draw(caller, this.uniforms, Mat4.translation(-1, 5, -1).times(Mat4.scale(5,5,5)), {shader: this.tex_phong, ambient: 1, diffusivity: 0, specularity:  0, color: color(1,1,1,1), texture: this.prev_frame_material.get_texture()})
     
+    // This must be the last draw call
+    this.prev_frame_material.draw_scene(caller, this.uniforms);
   }
 
   shipExplosion(ship){
