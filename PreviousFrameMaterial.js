@@ -150,21 +150,11 @@ const Post_Process_Shader = class Post_Process_Shader extends Shader {
         const float FXAA_REDUCE_MUL = 1.0/8.0;
         const float FXAA_SPAN_MAX = 8.0;
 
-        vec2 get_screen_coords(vec2 tex_coords) {
-            return vec2(tex_coords.x * screen_width, tex_coords.y * screen_height);
-        }
-
-        vec2 get_tex_coords(vec2 screen_coords) {
-            return vec2(screen_coords.x / screen_width, screen_coords.y / screen_height);
-        }
-
         float luminance(vec3 color) {
             return dot(color, vec3(0.299, 0.587, 0.114));
         }
         
-        void main() {
-            vec4 color = texture2D(texture, f_tex_coord);
-        
+        vec4 fxaa(vec4 color, sampler2D texture, vec2 tex_coords) {
             float lumaNW = luminance(texture2D(texture, f_tex_coord + vec2(-1.0, -1.0) / vec2(screen_width, screen_height)).rgb);
             float lumaNE = luminance(texture2D(texture, f_tex_coord + vec2(1.0, -1.0) / vec2(screen_width, screen_height)).rgb);
             float lumaSW = luminance(texture2D(texture, f_tex_coord + vec2(-1.0, 1.0) / vec2(screen_width, screen_height)).rgb);
@@ -194,10 +184,64 @@ const Post_Process_Shader = class Post_Process_Shader extends Shader {
         
             float lumaB = luminance(rgbB);
             if ((lumaB < lumaMin) || (lumaB > lumaMax)) {
-                gl_FragColor = vec4(rgbA, color.a);
+                return vec4(rgbA, color.a);
             } else {
-                gl_FragColor = vec4(rgbB, color.a);
+                return vec4(rgbB, color.a);
             }
+        }
+
+        vec4 contrastSaturationBrightness(vec4 color, float brt, float sat, float con) {
+            vec3 c = color.rgb;
+            c = c * brt;
+            c = mix(vec3(luminance(color.rgb)), c, sat);
+            c = mix(vec3(0.5), c, con) + vec3(0.5 * (1.0 - con));
+            return vec4(c, color.a);
+        }
+
+        vec4 applyVignette(vec4 color, vec2 position, float amount) {
+            vec3 c = color.rgb;
+            float dist = distance(position, vec2(0.5, 0.5));
+            c *= smoothstep(0.8, amount, dist * (amount + 0.5));
+            return vec4(c, color.a);
+        }
+
+        vec4 simpleBloom(vec4 color) {
+            vec3 c = color.rgb;
+            float intensity = max(max(c.r, c.g), c.b);
+            if (intensity > 1.0) {
+                c += vec3(0.3) * (intensity - 1.0);
+            }
+            return vec4(c, color.a);
+        }
+
+        vec4 applyChromaticAberration(vec4 color, vec2 uv, float amount) {
+            vec2 caUV = uv + vec2(amount, 0.0);
+            float r = texture2D(texture, uv).r;
+            float g = texture2D(texture, caUV).g;
+            float b = texture2D(texture, caUV).b;
+            return vec4(r, g, b, color.a);
+        }
+
+        vec4 sharpen(vec4 color, vec2 uv, float strength) {
+            vec3 nbr_color = (
+                texture2D(texture, uv + vec2(0.0, 1.0/screen_height)).rgb +
+                texture2D(texture, uv + vec2(0.0, -1.0/screen_height)).rgb +
+                texture2D(texture, uv + vec2(1.0/screen_width, 0.0)).rgb +
+                texture2D(texture, uv + vec2(-1.0/screen_width, 0.0)).rgb
+            ) * 0.25;
+            return vec4(mix(color.rgb, nbr_color, -strength), 1.0);
+        }
+        
+        void main() {
+            vec4 color = texture2D(texture, f_tex_coord);
+        
+            gl_FragColor = fxaa(color, texture, f_tex_coord);
+
+            gl_FragColor = contrastSaturationBrightness(gl_FragColor, 1.0, 1.0, 1.0);
+            gl_FragColor = applyVignette(gl_FragColor, f_tex_coord, 0.3);
+            gl_FragColor = simpleBloom(gl_FragColor);
+            gl_FragColor = sharpen(gl_FragColor, f_tex_coord, 0.1);
+            
         }
         `;
     }
