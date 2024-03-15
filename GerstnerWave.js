@@ -154,7 +154,7 @@ export class GerstnerWave{
     }
 
     // x, z is the result of the gersrner wave function, so we have to find the sample point that would have given us this result
-    get_original_position_and_true_y(x, z, t){
+    get_original_position_and_true_y(x, z, t, max_iterations = 10, max_error = 0.01, number_of_waves = this.num_waves){
         // solve for y at a given x, z, and t.
         // first apply the gersrner wave function to the x, z, and t.
         // based on the new x, z, can compute the error and converge to the x and z value that will give the y value we want.
@@ -162,11 +162,9 @@ export class GerstnerWave{
         let y = 0;
         let error = 0;
         let iterations = 0;
-        const max_iterations = 10;
-        const max_error = 0.001;
         let my_x = x;
         let my_z = z;
-        let resulting_pos_from_my_xz = this.get_displacement(vec3(my_x, 0, my_z), t).plus(vec3(my_x, 0, my_z));
+        let resulting_pos_from_my_xz = this.get_displacement(vec3(my_x, 0, my_z), t, number_of_waves).plus(vec3(my_x, 0, my_z));
 
         while (iterations < max_iterations){
 
@@ -183,15 +181,15 @@ export class GerstnerWave{
             my_x -= diff_x;
             my_z -= diff_z;
 
-            resulting_pos_from_my_xz = this.get_displacement(vec3(my_x, 0, my_z), t).plus(vec3(my_x, 0, my_z));
+            resulting_pos_from_my_xz = this.get_displacement(vec3(my_x, 0, my_z), t, number_of_waves).plus(vec3(my_x, 0, my_z));
             iterations++;
         }
 
         return vec3(my_x, y, my_z)
     }
 
-    solveForY(x, z, t){
-        this.get_original_position_and_true_y(x, z, t)[1];
+    solveForY(x, z, t, max_iterations = 10, max_error = 0.01, number_of_waves = this.num_waves){
+        return this.get_original_position_and_true_y(x, z, t, max_iterations, max_error, number_of_waves)[1];
     }
 
 }  

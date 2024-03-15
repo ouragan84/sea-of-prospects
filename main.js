@@ -165,7 +165,7 @@ export class Sea_Of_Prospects_Scene extends Component
   
     this.tex_phong = new defs.Textured_Phong(1, fog_param);
 
-    this.chests = new ChestSpawner(() => this.score += 1, fog_param)
+    this.chests = new ChestSpawner(() => this.score += 1, fog_param, this.ocean);
 
     this.explosionTimer = 100;
 

@@ -6,10 +6,10 @@ const { vec3, vec4, color, Mat4, Shape, Material, Shader, Texture, Component, Ve
 export
 const ChestSpawner = defs.ChestSpawner =
 class ChestSpawner {
-    constructor(scoreIncreaseCallback, fog_param){
+    constructor(scoreIncreaseCallback, fog_param, ocean){
         this.chests = []
         for (let i = 0; i < chest_positions.length; i++){
-            this.chests.push(new Chest(vec3(chest_positions[i].x, 1, chest_positions[i].y), Math.random() * Math.PI, scoreIncreaseCallback, fog_param))
+            this.chests.push(new Chest(vec3(chest_positions[i].x, 0.5, chest_positions[i].y), Math.random() * Math.PI, scoreIncreaseCallback, fog_param, ocean))
         }
     }
 

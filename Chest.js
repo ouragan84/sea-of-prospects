@@ -56,15 +56,13 @@ class Prospect {
 export
 const Chest = defs.Chest =
 class Chest {
-    constructor(position = vec3(0,1,0), y_rotation = -Math.PI/2,scoreIncreaseCallback, fog_param) {
+    constructor(position = vec3(0,1,0), y_rotation = -Math.PI/2,scoreIncreaseCallback, fog_param, ocean) {
         this.position = position
         this.y_rotation = y_rotation
 
         this.chest_open_counter = 0
         this.startChestOpen = false
         
-        this.transform = Mat4.translation(position[0], position[1], position[2]).times(Mat4.rotation(y_rotation, 0,1,0))
-
         let tex_phong = new defs.Textured_Phong(1, fog_param);
         this.material = { shader: tex_phong, ambient: .3, texture: new Texture("assets/textures/treasure_chest_texture.jpg"),  diffusivity: 0.7, specularity: 0.45, color: color( 1, 1, 1 ,1 )}
 
@@ -73,7 +71,9 @@ class Chest {
             'chest_lower': new Shape_From_File( "assets/objects/chest_lower.obj" ),
         }
 
-        this.prospect = new Prospect(this.transform, scoreIncreaseCallback, fog_param)
+        this.prospect = new Prospect(Mat4.identity(), scoreIncreaseCallback, fog_param)
+
+        this.ocean = ocean
 
     }
 
@@ -88,7 +88,13 @@ class Chest {
 
     update(t, dt, ship_pos){
         let pivot = vec3(.85,.3,0); 
-        
+
+        const y = this.ocean.gersrnerWave.solveForY(this.position[0], this.position[2], t, 3, 0.1, 10);
+
+        this.transform = Mat4.translation(this.position[0], this.position[1] + y, this.position[2])
+                        .times(Mat4.rotation(this.y_rotation, 0,1,0));
+
+
         this.chest_upper_transform = this.transform.times(Mat4.translation(-.3,.55,0))
             .times(Mat4.translation(-pivot[0], -pivot[1], -pivot[2]))
             .times(Mat4.rotation(this.chest_open_function(this.chest_open_counter), 0, 0, 1))
@@ -101,6 +107,8 @@ class Chest {
 
         if (this.chest_open_counter > 2){
             // prospect spawns!!!
+            this.prospect.transform = this.transform.times(Mat4.translation(0,1.5,0))
+            this.prospect.chest_transform = this.transform;
             this.prospect.update(t, dt, ship_pos, this.y_rotation)
         }
     }
