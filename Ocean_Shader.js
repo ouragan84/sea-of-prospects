@@ -281,7 +281,7 @@ export const Ocean_Shader =
 
         vec3 ssr(vec3 viewPos, vec3 normal) {
             if (is_ssr_texture_ready != 1) {
-                return vec3(0.0); // No SSR if texture is not ready
+                return vec3(0, 0, 0); // No SSR if texture is not ready
             }
         
             vec3 reflectedRay = reflect(-normalize(viewPos), normalize(normal));
@@ -303,7 +303,7 @@ export const Ocean_Shader =
                 }
             }
         
-            return vec3(0.0); // No reflection found
+            return vec3(0, 0, 0); // No reflection found
         }
         
 
@@ -319,7 +319,7 @@ export const Ocean_Shader =
             // Calculate water color using existing lighting and sky reflections
             vec4 waterColor = vec4( shape_color.xyz * ambient, shape_color.w );
             waterColor.xyz += phong_model_lights_water(norm, vertex_worldspace);
-            waterColor = mix(waterColor, vec4(get_skycolor(reflect(direction, norm)), 1.0), get_fernel_coeff(direction, norm) * sky_reflect);
+            waterColor = mix(waterColor, vec4(get_skycolor(reflect(direction, norm))), get_fernel_coeff(direction, norm) * sky_reflect);
         
             // Apply SSR if texture is ready
             vec3 viewPos = vec3(camera_inverse * vec4(vertex_worldspace, 1.0));
@@ -339,7 +339,7 @@ export const Ocean_Shader =
             // Apply fog
             float distance = length(camera_center - vertex_worldspace);
             float fog_amount = smoothstep(fog_start_dist, fog_end_dist, distance);
-            gl_FragColor = mix(waterColor, vec4(fog_color, 1.0), fog_amount);
+            gl_FragColor = mix(waterColor, vec4(fog_color.rgb, 1.0), fog_amount);
         }`;
     }
 
@@ -386,7 +386,7 @@ export const Ocean_Shader =
         context.uniform1f(gpu_addresses.screen_height, uniforms.prev_frame_material.screen_height);
         context.uniform1i(gpu_addresses.is_ssr_texture_ready, uniforms.prev_frame_material.ready);
 
-        console.log(uniforms)
+        // console.log(uniforms)
 
         context.uniformMatrix4fv (gpu_addresses.projection_transform, 
             false, Matrix.flatten_2D_to_1D (uniforms.projection_transform.transposed()) );
