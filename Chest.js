@@ -12,9 +12,9 @@ class Prospect {
         this.spawnCounter = 0
 
         let tex_phong = new defs.Textured_Phong(1, fog_param);
-        this.material = { shader: tex_phong, ambient: .3, texture: new Texture("assets/textures/saba.jpg"),  diffusivity: 0.7, specularity: 0.45, color: color( 1, 1, 1 ,1 )}
+        this.material = { shader: tex_phong, ambient: .3, texture: new Texture("assets/textures/gem_texture.jpg"),  diffusivity: 0.7, specularity: 1, color: color( 1, 1, 1 ,1 )}
         this.shapes = {
-            'ball' : new defs.Subdivision_Sphere( 3 ),
+            'ball' : new Shape_From_File( "assets/objects/gem.obj" ),
         }
 
         this.lerpProgress = 0
@@ -110,7 +110,9 @@ class Chest {
         this.shapes.chest_lower.draw( caller, uniforms, this.transform, this.material );
 
         // prospect
-        this.prospect.show(caller, uniforms)
+        if(this.prospect.acquired == false){
+            this.prospect.show(caller, uniforms)
+        }
     }
 
 }

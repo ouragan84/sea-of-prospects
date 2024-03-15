@@ -133,10 +133,10 @@ class Ship {
   }
 
   computeSail1anchors(){
-    let p1_t = this.rb.getTransformationMatrix().times(this.offsetMat).times(Mat4.translation(.8,0.28,-0.25))
-    let p2_t = this.rb.getTransformationMatrix().times(this.offsetMat).times(Mat4.translation(-.8,0.28,-0.25))
-    let p3_t = this.rb.getTransformationMatrix().times(this.offsetMat).times(Mat4.translation(.8,1.92,-0.25))
-    let p4_t = this.rb.getTransformationMatrix().times(this.offsetMat).times(Mat4.translation(-.8,1.92,-0.25))
+    let p1_t = this.rb.getTransformationMatrix().times(this.offsetMat).times(Mat4.translation(.8,0.16,-0.25))
+    let p2_t = this.rb.getTransformationMatrix().times(this.offsetMat).times(Mat4.translation(-.8,0.16,-0.25))
+    let p3_t = this.rb.getTransformationMatrix().times(this.offsetMat).times(Mat4.translation(.8,1.78,-0.25))
+    let p4_t = this.rb.getTransformationMatrix().times(this.offsetMat).times(Mat4.translation(-.8,1.78,-0.25))
     let p1 = vec3(p1_t[0][3], p1_t[1][3], p1_t[2][3])
     let p2 = vec3(p2_t[0][3], p2_t[1][3], p2_t[2][3])
     let p3 = vec3(p3_t[0][3], p3_t[1][3], p3_t[2][3])
@@ -145,10 +145,10 @@ class Ship {
   }
 
   computeSail2anchors(){
-    let p1_t = this.rb.getTransformationMatrix().times(this.offsetMat).times(Mat4.translation(.42,.34,0.97))
-    let p2_t = this.rb.getTransformationMatrix().times(this.offsetMat).times(Mat4.translation(-.42,.34,0.97))
-    let p3_t = this.rb.getTransformationMatrix().times(this.offsetMat).times(Mat4.translation(.42,1.16,0.97))
-    let p4_t = this.rb.getTransformationMatrix().times(this.offsetMat).times(Mat4.translation(-.42,1.16,0.97))
+    let p1_t = this.rb.getTransformationMatrix().times(this.offsetMat).times(Mat4.translation(.42,.34-.15,0.97))
+    let p2_t = this.rb.getTransformationMatrix().times(this.offsetMat).times(Mat4.translation(-.42,.34-.15,0.97))
+    let p3_t = this.rb.getTransformationMatrix().times(this.offsetMat).times(Mat4.translation(.42,1.16-.15,0.97))
+    let p4_t = this.rb.getTransformationMatrix().times(this.offsetMat).times(Mat4.translation(-.42,1.16-.15,0.97))
     let p1 = vec3(p1_t[0][3], p1_t[1][3], p1_t[2][3])
     let p2 = vec3(p2_t[0][3], p2_t[1][3], p2_t[2][3])
     let p3 = vec3(p3_t[0][3], p3_t[1][3], p3_t[2][3])
