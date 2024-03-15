@@ -11,6 +11,7 @@ import { Foam_Shader } from './Foam.js';
 import { ShaderMaterialPingPong } from './ShaderMaterialPingPong.js';
 import { PreviousFrameMaterial } from './PreviousFrameMaterial.js';
 import { Chest } from './Chest.js';
+import { ChestSpawner } from './ChestSpawner.js';
 
 const { vec3, vec4, color, Mat4, Matrix, Shader, Texture, Component } = tiny;
 
@@ -164,7 +165,7 @@ export class Sea_Of_Prospects_Scene extends Component
   
     this.tex_phong = new defs.Textured_Phong(1, fog_param);
 
-    this.chest = new Chest(vec3(0,2,-3), -Math.PI/2, fog_param)
+    this.chests = new ChestSpawner(() => this.score += 1, fog_param)
 
     this.explosionTimer = 100;
 
@@ -262,15 +263,18 @@ export class Sea_Of_Prospects_Scene extends Component
     if (this.preset == 'stormy')
       this.rainSystem.draw(caller, this.uniforms)
 
-    this.chest.update(this.t, this.dt)
-    this.chest.show(caller, this.uniforms)
+    
+    this.chests.update(this.t, this.dt, this.ship.rb.position)
+    this.chests.show(caller, this.uniforms)
+    // this.chest.update(this.t, this.dt, this.ship.rb.position)
+    // this.chest.show(caller, this.uniforms)
 
     this.shapes.axis.draw( caller, this.uniforms, Mat4.identity(), { shader: this.phong, ambient: .2, diffusivity: 1, specularity:  1, color: color( 1,1,1,1 ) } )
     this.ocean.show(this.shapes, caller, this.uniforms, this.camera_direction_xz, this.foam_material.get_texture());
 
     if(this.prev_frame_material.ready){
-      this.shapes.box.draw(caller, this.uniforms, Mat4.translation(0, 4, -5).times(Mat4.scale(2,2,2)), {shader: this.tex_phong, ambient: 1, diffusivity: 0, specularity:  0, color: color(1,1,1,1), texture: this.prev_frame_material.get_texture()})
-      this.shapes.box.draw(caller, this.uniforms, Mat4.translation(0, 4, 5).times(Mat4.scale(2,2,2)), {shader: this.tex_phong, ambient: 1, diffusivity: 0, specularity:  0, color: color(1,1,1,1), texture: this.prev_frame_material.get_depth_texture()})
+      // this.shapes.box.draw(caller, this.uniforms, Mat4.translation(0, 4, -5).times(Mat4.scale(2,2,2)), {shader: this.tex_phong, ambient: 1, diffusivity: 0, specularity:  0, color: color(1,1,1,1), texture: this.prev_frame_material.get_texture()})
+      // this.shapes.box.draw(caller, this.uniforms, Mat4.translation(0, 4, 5).times(Mat4.scale(2,2,2)), {shader: this.tex_phong, ambient: 1, diffusivity: 0, specularity:  0, color: color(1,1,1,1), texture: this.prev_frame_material.get_depth_texture()})
     }
     
     // Draw this frame to the screen
@@ -412,7 +416,6 @@ export class Sea_Of_Prospects_Scene extends Component
     this.new_line();
     this.key_triggered_button ("Mute/Unmute", ["m"], () => this.mute=!this.mute);
     this.key_triggered_button ("Increase Score", ["i"], () => {
-      this.score+=1
       this.chest.openChest()
     });
     this.new_line();
