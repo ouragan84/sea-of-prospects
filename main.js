@@ -11,7 +11,7 @@ import { Foam_Shader } from './Foam.js';
 import { ShaderMaterialPingPong } from './ShaderMaterialPingPong.js';
 import { PreviousFrameMaterial } from './PreviousFrameMaterial.js';
 
-const { vec3, vec4, color, Mat4, Shader, Texture, Component } = tiny;
+const { vec3, vec4, color, Mat4, Matrix, Shader, Texture, Component } = tiny;
 
 export class Sea_Of_Prospects_Scene extends Component
 {       

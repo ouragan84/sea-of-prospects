@@ -37,9 +37,9 @@ export class PreviousFrameMaterial
 
             // Depth texture setup
             gl.bindTexture(gl.TEXTURE_2D, this.depthTextures[i]);
-            gl.texImage2D(gl.TEXTURE_2D, 0, gl.DEPTH_COMPONENT, this.screen_width, this.screen_height, 0, gl.DEPTH_COMPONENT, gl.UNSIGNED_SHORT, null);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+            gl.texImage2D(gl.TEXTURE_2D, 0, gl.DEPTH_COMPONENT, this.screen_width, this.screen_height, 0, gl.DEPTH_COMPONENT, gl.UNSIGNED_INT, null);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
             gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
             gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
         }
@@ -205,11 +205,11 @@ const Post_Process_Shader = class Post_Process_Shader extends Shader {
             return vec4(c, color.a);
         }
 
-        vec4 simpleBloom(vec4 color) {
+        vec4 simpleBloom(vec4 color, float bloomAmount, float intensityAmount) {
             vec3 c = color.rgb;
             float intensity = max(max(c.r, c.g), c.b);
-            if (intensity > 1.0) {
-                c += vec3(0.3) * (intensity - 1.0);
+            if (intensity > intensityAmount) {
+                c += bloomAmount * (intensity - intensityAmount);
             }
             return vec4(c, color.a);
         }
@@ -238,8 +238,8 @@ const Post_Process_Shader = class Post_Process_Shader extends Shader {
             gl_FragColor = fxaa(color, texture, f_tex_coord);
 
             gl_FragColor = contrastSaturationBrightness(gl_FragColor, 1.0, 1.0, 1.0);
-            gl_FragColor = applyVignette(gl_FragColor, f_tex_coord, 0.3);
-            gl_FragColor = simpleBloom(gl_FragColor);
+            gl_FragColor = applyVignette(gl_FragColor, f_tex_coord, 0.2);
+            gl_FragColor = simpleBloom(gl_FragColor, 0.1, 0.5);
             gl_FragColor = sharpen(gl_FragColor, f_tex_coord, 0.1);
             
         }
