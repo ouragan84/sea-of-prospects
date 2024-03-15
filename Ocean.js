@@ -129,55 +129,6 @@ class Ocean {
         }
         percent_submerged /= percent_submerged_corners.length;
 
-        // debug
-        // draw_debug_arrow(rigidBody.position.plus(vec3(0,3,0)), boat_forward, 1.5, 1.5, color(0,0,1,1));
-        // draw_debug_arrow(rigidBody.position.plus(vec3(0,3,0)), boat_normal, 1.5, 1.5, color(0,1,0,1));
-
-        // for (let i = 0; i < boat_corners.length; i++){
-        //     draw_debug_sphere(boat_corners[i], 0.2, color(0,1,0,1));
-        //     draw_debug_line(boat_corners[i], boat_corners[i].plus(vec3(0,-4,0)), .02, color(1,0,0,1));
-        //     draw_debug_arrow(ocean_corners[i], ocean_normal_corners[i], 1.5, 1.5, color(1,0,0,1));
-        // }
-
-        
-
-        // Hack
-        // if (boat_forward.dot(vec3(0,0,-1)) < 0){
-        //     mult_t = -mult_t;
-        // }
-
-        // const angle_of_boat_forward = Math.acos(boat_forward.dot(vec3(0,0,-1)));
-
-        // Apply forces and torques on each corner
-        // for (let i = 0; i < boat_corners.length; i++){
-
-        //     const top_corner = boat_corners[i];
-        //     const ocean_corner = ocean_corners[i];
-        //     const ocean_normal = ocean_normal_corners[i];
-        //     const corner_percent_submerged = percent_submerged_corners[i];
-
-        //     const linear_boyancy_force = mult_f * corner_percent_submerged;
-        //     const linear_boyancy_force_vector = ocean_normal.times(linear_boyancy_force);
-        //     rigidBody.addForce(linear_boyancy_force_vector);
-
-        //     const angle = Math.abs(Math.acos(boat_forward.dot(ocean_normal)));
-        //     const torque_amount = mult_t * corner_percent_submerged * angle;
-        //     const torque_axis = boat_normal.cross(ocean_normal).normalized();
-        //     const torque_vector = torque_axis.times(torque_amount);
-        //     rigidBody.addTorque(torque_vector);
-
-
-            
-
-
-        //     // thought, if percent_submerged is 0, then we could rotate the boat so that this point falls into the water
-
-
-
-
-
-        // }
-
         // Force and Torque factors
         const mult_f = 100000;
         let mult_t = 8000;
@@ -207,33 +158,6 @@ class Ocean {
         const torque_axis = boat_normal.cross(average_ocean_normal).normalized();
         const torque_vector = torque_axis.times(torque_amount);
         rigidBody.addTorque(torque_vector);
-
-        // console.log(`
-        // Percent submerged: ${percent_submerged}
-        // Angle: ${angle}
-        // Magnitude of torque: ${torque_vector.norm()}
-        // Magnitude of torque axis: ${torque_axis.norm()}
-        // Magnitude of average_normal: ${average_ocean_normal.norm()}
-        // Magnitude of boat_normal: ${boat_normal.norm()}
-        // `);
-
-
-
-        // draw_debug_arrow(average_ocean_corner, average_ocean_normal, 5, 3, color(1,0,0,1));
-        // draw_debug_arrow(average_ocean_corner, torque_axis, 5, 3, color(0,0,1,1));
-        // draw_debug_arrow(average_ocean_corner, boat_normal, 5, 3, color(0,1,0,1));
-
-
-        
-
-        // Restorative force
-        // const restore = 10000;
-        // const res_start_angle = Math.PI/6;
-        // if( Math.abs(boat_normal.normalized().dot(vec3(0,1,0))) < Math.cos(res_start_angle)){
-        //     const axis_res = boat_normal.cross(vec3(0,1,0)).normalized();
-        //     const angle_res = Math.acos(boat_normal.dot(vec3(0,1,0)));
-        //     rigidBody.addTorque(axis_res.times(angle_res * restore));
-        // }
         
         // gravity
         const gravity = 9.8;
@@ -244,8 +168,12 @@ class Ocean {
         rigidBody.addForce(boat_forward.times(coef_force_applied * vertical_input));
 
         // Horizontal Input
-        const coef_torque_applied = 2000;
-        rigidBody.addTorque(vec3(0,1,0).times( - coef_torque_applied * horizontal_input));
+        const coef_torque_applied_water = 2000;
+        const coef_torque_applied_air = 200;
+        if(percent_submerged > 0)
+            rigidBody.addTorque(vec3(0,1,0).times( - coef_torque_applied_water * horizontal_input));
+        else
+            rigidBody.addTorque(vec3(0,1,0).times( - coef_torque_applied_air * horizontal_input));
 
         // damping
         this.applyLinearDamping(rigidBody, percent_submerged);
@@ -289,8 +217,8 @@ class Ocean {
     applyAngularDamping(rigidBody, percent_submerged){
         const angular_drag_coef = 1200;
         const angular_friction_coef = 100;
-        const air_angular_drag_coef = 100;
-        const air_angular_friction_coef = 5;
+        const air_angular_drag_coef = 600;
+        const air_angular_friction_coef = 50;
 
         if(percent_submerged > 0){
             // Apply angular drag
@@ -326,19 +254,13 @@ class Ocean {
 
     show(shapes, caller, uniforms, camera_direction, foam_buffered_texture) {
 
-
-
         // rotate the ocean to rotate the ocean by the amount of degrees (only rotate about y axis) from <0,0,1> to the camera direction
         const angle =  Math.atan2(camera_direction[0], camera_direction[2]) % (2 * Math.PI);
         const rotation = Mat4.rotation(angle - Math.PI / 2, 0, 1, 0);
 
         const transform = Mat4.translation(this.ocean_offset[0], 0, this.ocean_offset[2]).times(rotation);
 
-        // console.log( `CamDir = <${camera_direction[0].toFixed(2)}, ${camera_direction[2].toFixed(2)}>, Angle = ${angle.toFixed(2) * 180 / Math.PI}` );
-
         this.shapes.ocean.draw( caller, {...uniforms, offset: this.ocean_offset, angle_offset: angle, foam_texture: foam_buffered_texture}, transform, this.materials.ocean);
 
-
-        // this.shapes.ocean.draw( caller, {...uniforms, offset: this.ocean_offset}, Mat4.identity(), this.materials.ocean);
     }
 }

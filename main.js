@@ -167,6 +167,8 @@ export class Sea_Of_Prospects_Scene extends Component
 
 
     this.prev_frame_material = new PreviousFrameMaterial();
+
+    this.prev_date_micro_sec = window.performance.now();
   }
 
   clamp = (x, min, max) => Math.min(Math.max(x, min), max);
@@ -285,8 +287,12 @@ export class Sea_Of_Prospects_Scene extends Component
     if (this.preset == 'stormy')
       this.rainSystem.draw(caller, this.uniforms)
 
-    this.shapes.axis.draw( caller, this.uniforms, Mat4.identity(), { shader: this.phong, ambient: .2, diffusivity: 1, specularity:  1, color: color( 1,1,1,1 ) } )
-    this.ocean.show(this.shapes, caller, this.uniforms, this.camera_direction_xz, this.foam_material.get_texture());
+    // this.shapes.axis.draw( caller, this.uniforms, Mat4.identity(), { shader: this.phong, ambient: .2, diffusivity: 1, specularity:  1, color: color( 1,1,1,1 ) } )
+    
+    this.ocean.show(this.shapes, caller, {...this.uniforms, 
+      prev_frame_material: this.prev_frame_material,
+      inv_proj_mat: this.projection_transform_inv,
+    }, this.camera_direction_xz, this.foam_material.get_texture());
 
     if(this.prev_frame_material.ready){
       this.shapes.box.draw(caller, this.uniforms, Mat4.translation(0, 4, -5).times(Mat4.scale(2,2,2)), {shader: this.tex_phong, ambient: 1, diffusivity: 0, specularity:  0, color: color(1,1,1,1), texture: this.prev_frame_material.get_texture()})
@@ -302,8 +308,10 @@ export class Sea_Of_Prospects_Scene extends Component
 
   draw_screen_ui(caller)
   {
-    this.score_text_obj.update_string(`Score: ${this.score} - FPS: ${Math.round(1000/this.uniforms.animation_delta_time)}`)
+    const new_date_micro_sec = window.performance.now();
+    this.score_text_obj.update_string(`Score: ${this.score} - FPS: ${Math.round(1000/(new_date_micro_sec - this.prev_date_micro_sec))}`)
     this.score_text_obj.draw(caller, this.uniforms, Mat4.translation(-0.95, .5, 0.1).times(Mat4.scale(.03, .03, .1)))
+    this.prev_date_micro_sec = new_date_micro_sec;
   }
 
   shipExplosion(ship){
@@ -313,9 +321,16 @@ export class Sea_Of_Prospects_Scene extends Component
 
   update_foam(caller)
   {
-    const front_of_boat = this.ship.rb.getTransformationMatrix().times(vec4(0,0,-0.5,1)).to3();
+    const front_of_boat = this.ship.rb.getTransformationMatrix().times(vec4(0,-1,-0.5,1)).to3();
     const sample_point_for_boat = this.ocean.gersrnerWave.get_original_position_and_true_y(front_of_boat[0], front_of_boat[2], this.t);
-    this.foam_material.update(caller, {... this.uniforms, offset: this.cam_pos, sample_boat: sample_point_for_boat, boat_foam_intensity: this.ship.rb.velocity.norm() / 8});
+    
+    let intensity_from_boat = this.ship.rb.velocity.norm() / 8;
+    if(front_of_boat[1] > sample_point_for_boat[1]){
+      intensity_from_boat = -10;
+    }
+
+    this.foam_material.update(caller, {... this.uniforms, offset: this.cam_pos, sample_boat: sample_point_for_boat, boat_foam_intensity: intensity_from_boat});
+
   }
 
   update_camera(caller)
@@ -342,6 +357,9 @@ export class Sea_Of_Prospects_Scene extends Component
     this.cam_Mat = Mat4.look_at(this.cam_pos, this.ship.rb.position, vec3(0, 1, 0));
     this.cam_Mat_inv = Mat4.inverse(this.cam_Mat);
 
+    this.projection_transform = Mat4.perspective( Math.PI/4, caller.width/caller.height, 0.1, this.render_distance).times(Mat4.rotation(Math.sin(40*this.explosionTimer)*.04*Math.exp(-this.explosionTimer), .2,1,.2));
+    this.projection_transform_inv = Mat4.inverse(this.projection_transform);
+
     this.camera_direction_xz = vec3(this.ship.rb.position[0] - this.cam_pos[0], 0, this.ship.rb.position[2] - this.cam_pos[2]).normalized();
   }
 
@@ -349,7 +367,7 @@ export class Sea_Of_Prospects_Scene extends Component
   {
     Shader.assign_camera(this.cam_Mat, this.uniforms);
 
-    this.uniforms.projection_transform = Mat4.perspective( Math.PI/4, caller.width/caller.height, 0.1, this.render_distance).times(Mat4.rotation(Math.sin(40*this.explosionTimer)*.04*Math.exp(-this.explosionTimer), .2,1,.2))
+    this.uniforms.projection_transform = this.projection_transform;
 
     const light_position = vec3(20, 20, -10).plus(this.ship.rb.position).to4(1);
     this.uniforms.lights = [ defs.Phong_Shader.light_source( light_position, this.light_color, 1000000 )];
