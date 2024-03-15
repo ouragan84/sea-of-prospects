@@ -238,7 +238,7 @@ const Post_Process_Shader = class Post_Process_Shader extends Shader {
             gl_FragColor = fxaa(color, texture, f_tex_coord);
 
             gl_FragColor = contrastSaturationBrightness(gl_FragColor, 1.0, 1.0, 1.0);
-            gl_FragColor = applyVignette(gl_FragColor, f_tex_coord, 0.2);
+            // gl_FragColor = applyVignette(gl_FragColor, f_tex_coord, 0.2);
             gl_FragColor = simpleBloom(gl_FragColor, 0.1, 0.5);
             gl_FragColor = sharpen(gl_FragColor, f_tex_coord, 0.1);
             

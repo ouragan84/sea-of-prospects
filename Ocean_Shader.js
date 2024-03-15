@@ -53,6 +53,7 @@ export const Ocean_Shader =
         uniform float foam_size_terrain;
 
         varying vec3 view_pos;
+        varying vec3 clip_pos;
 
         vec3 random_normal(vec3 p) {
             return normalize(vec3(
@@ -170,9 +171,6 @@ export const Ocean_Shader =
             N = vec3(0.0, 1.0, 0.0);
 
             vertex_worldspace = ( model_transform * vec4( new_vertex_position, 1.0 ) ).xyz;
-            
-            view_pos = vec3(camera_inverse * vec4(vertex_worldspace, 1.0));
-
         } `;
     }
 
@@ -190,16 +188,6 @@ export const Ocean_Shader =
         uniform float sky_reflect;
 
         uniform sampler2D foam_texture;
-
-        uniform sampler2D last_frame;
-        uniform sampler2D depth_texture;
-        uniform float screen_width;
-        uniform float screen_height;
-        uniform int is_ssr_texture_ready;
-        uniform mat4 projection_transform;
-        uniform mat4 camera_transform;
-        uniform mat4 camera_inverse;
-        uniform mat4 inv_proj_mat;
 
         float pow2(float x) {
             return x * x;
@@ -249,8 +237,7 @@ export const Ocean_Shader =
 
         float get_fernel_coeff(vec3 direction, vec3 norm) {
             return pow3(1.0 - dot(-direction, norm));
-        }
-
+        };
 
         vec3 phong_model_lights_water( vec3 N, vec3 vertex_worldspace ) {
             vec3 E = normalize( camera_center - vertex_worldspace );
@@ -279,33 +266,23 @@ export const Ocean_Shader =
             return result;
         }
 
-        vec3 ssr(vec3 viewPos, vec3 normal) {
-            if (is_ssr_texture_ready != 1) {
-                return vec3(0, 0, 0); // No SSR if texture is not ready
-            }
-        
-            vec3 reflectedRay = reflect(-normalize(viewPos), normalize(normal));
-            float depth = texture2D(depth_texture, gl_FragCoord.xy / vec2(screen_width, screen_height)).r;
-            vec3 rayPos = viewPos;
-            vec3 dir = normalize(reflectedRay);
-            float dDepth;
-        
-            for (int i = 0; i < 30; ++i) {
-                rayPos += dir * 0.1; // Step forward in the reflection ray
-                vec4 projectedCoord = projection_transform * vec4(rayPos, 1.0);
-                projectedCoord.xy /= projectedCoord.w;
-                projectedCoord.xy = projectedCoord.xy * 0.5 + 0.5;
-                float newDepth = texture2D(depth_texture, projectedCoord.xy).r;
-        
-                if (newDepth < depth) {
-                    vec3 color = texture2D(last_frame, projectedCoord.xy).rgb;
-                    return color; // Reflection found, return the color
-                }
-            }
-        
-            return vec3(0, 0, 0); // No reflection found
-        }
-        
+
+        // STUFF TO WORK WITH
+        uniform mat4 projection_transform;
+        uniform mat4 camera_transform;
+        uniform mat4 camera_inverse;
+        uniform mat4 inv_proj_mat;
+
+        uniform sampler2D last_frame;
+        uniform sampler2D depth_texture;
+
+        uniform float screen_width;
+        uniform float screen_height;
+        uniform int is_ssr_texture_ready;
+
+        // vec3 view_pos (set in vertex shader)
+        // vec3 clip_pos (set in vertex shader)
+
 
 
         void main() {
@@ -314,18 +291,21 @@ export const Ocean_Shader =
 
             vec3 p_sample = get_sample_position(original_position, time);
             vec3 norm = normalize(get_gersrner_wave_normal(p_sample, time));
+
+            vec3 view_norm = normalize(mat3(camera_transform) * norm);
+            vec3 clip_norm = normalize(mat3(inv_proj_mat) * view_norm);
+
             vec3 direction = normalize(vertex_worldspace - camera_center);
+            vec3 reflection = reflect(direction, norm);
         
             // Calculate water color using existing lighting and sky reflections
             vec4 waterColor = vec4( shape_color.xyz * ambient, shape_color.w );
             waterColor.xyz += phong_model_lights_water(norm, vertex_worldspace);
-            waterColor = mix(waterColor, vec4(get_skycolor(reflect(direction, norm))), get_fernel_coeff(direction, norm) * sky_reflect);
+            waterColor = mix(waterColor, get_skycolor(reflection), get_fernel_coeff(direction, norm) * sky_reflect);
         
             // Apply SSR if texture is ready
-            vec3 viewPos = vec3(camera_inverse * vec4(vertex_worldspace, 1.0));
             if (is_ssr_texture_ready == 1) {
-                vec3 ssrColor = ssr(viewPos, norm);
-                waterColor.xyz = mix(waterColor.xyz, ssrColor, 0.5); // Blend SSR with existing water color
+                
             }
 
             // Add foam
@@ -411,16 +391,16 @@ export const Ocean_Shader =
 
         if (material.skyTexture && material.skyTexture.ready) {
             // Select texture unit 0 for the fragment shader Sampler2D uniform called "texture":
-            context.uniform1i (gpu_addresses.skyTexture, 0);
+            context.uniform1i (gpu_addresses.skyTexture, 2);
             // For this draw, use the texture image from the correct GPU buffer:
-            material.skyTexture.activate(context, 0);
+            material.skyTexture.activate(context, 2);
         }
 
         if (uniforms.foam_texture) {
             // Select texture unit 1 for the fragment shader Sampler2D uniform called "texture":
-            context.uniform1i (gpu_addresses.foam_texture, 1);
+            context.uniform1i (gpu_addresses.foam_texture, 3);
             // For this draw, use the texture image from the correct GPU buffer:
-            uniforms.foam_texture.activate(context, 1);
+            uniforms.foam_texture.activate(context, 3);
         }
     }
 };

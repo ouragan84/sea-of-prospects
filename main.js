@@ -19,7 +19,7 @@ export class Sea_Of_Prospects_Scene extends Component
 {       
   init()
   {
-    this.preset = 'stormy'; // 'calm', 'agitated', 'stormy'
+    this.preset = 'calm'; // 'calm', 'agitated', 'stormy'
 
     // constructor(): Scenes begin by populating initial values like the Shapes and Materials they'll need.
     this.hover = this.swarm = false;
@@ -332,9 +332,15 @@ export class Sea_Of_Prospects_Scene extends Component
     this.currentX = lerp(this.currentX, targetX, a);
     this.currentY = lerp(this.currentY, targetY, a);
     this.currentZ = lerp(this.currentZ, targetZ, a);
-
+    
     this.cam_pos = vec3(this.currentX, this.currentY, this.currentZ).plus(this.ship.rb.position);
     this.cam_Mat = Mat4.look_at(this.cam_pos, this.ship.rb.position, vec3(0, 1, 0));
+
+    if( isNaN( this.ship.rb.position[0] ) || isNaN( this.ship.rb.position[1] ) || isNaN( this.ship.rb.position[2] ) ){
+      this.cam_pos = vec3(this.currentX, this.currentY, this.currentZ).plus(vec3(0,0,0));
+      this.cam_Mat = Mat4.look_at(this.cam_pos, vec3(0,0,0), vec3(0, 1, 0));
+    }
+
     this.cam_Mat_inv = Mat4.inverse(this.cam_Mat);
 
     this.projection_transform = Mat4.perspective( Math.PI/4, caller.width/caller.height, 0.1, this.render_distance).times(Mat4.rotation(Math.sin(40*this.explosionTimer)*.04*Math.exp(-this.explosionTimer), .2,1,.2));
