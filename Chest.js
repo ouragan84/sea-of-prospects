@@ -89,11 +89,23 @@ class Chest {
     update(t, dt, ship_pos){
         let pivot = vec3(.85,.3,0); 
 
-        const y = this.ocean.gersrnerWave.solveForY(this.position[0], this.position[2], t, 3, 0.1, 10);
+        // const y = this.ocean.gersrnerWave.solveForY(this.position[0], this.position[2], t, 3, 0.1, 10);
+        const dis = this.ocean.gersrnerWave.get_displacement(this.position, t, 5);
 
-        this.transform = Mat4.translation(this.position[0], this.position[1] + y, this.position[2])
-                        .times(Mat4.rotation(this.y_rotation, 0,1,0));
+        const water_normal = this.ocean.gersrnerWave.get_normal(this.position, t, 5);
 
+        // align chest with the normal of the water, only rotate around x and z to align with the normal
+
+        this.base_transform = Mat4.translation(this.position[0], this.position[1], this.position[2])
+                        .times(Mat4.translation(dis[0], dis[1], dis[2]))
+                        .times(Mat4.rotation(this.y_rotation, 0,1,0))
+
+        const angle_around_x = Math.atan2(water_normal[2], water_normal[1]);
+        const angle_around_z = Math.atan2(water_normal[0], water_normal[1]);
+
+        this.transform = this.base_transform
+                        .times(Mat4.rotation(angle_around_x, 1,0,0))
+                        .times(Mat4.rotation(angle_around_z, 0,0,1));
 
         this.chest_upper_transform = this.transform.times(Mat4.translation(-.3,.55,0))
             .times(Mat4.translation(-pivot[0], -pivot[1], -pivot[2]))
@@ -107,8 +119,8 @@ class Chest {
 
         if (this.chest_open_counter > 2){
             // prospect spawns!!!
-            this.prospect.transform = this.transform.times(Mat4.translation(0,1.5,0))
-            this.prospect.chest_transform = this.transform;
+            this.prospect.transform = this.base_transform.times(Mat4.translation(0,1.5,0))
+            this.prospect.chest_transform = this.base_transform;
             this.prospect.update(t, dt, ship_pos, this.y_rotation)
         }
     }
