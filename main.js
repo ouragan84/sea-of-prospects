@@ -276,14 +276,9 @@ export class Sea_Of_Prospects_Scene extends Component
     this.apply_camera(caller);
 
     // --- Draw the scene ---
-
-
     this.ship.show(caller, this.uniforms)
 
     this.skybox.show(caller, this.uniforms, this.cam_pos, this.render_distance);
-
-    this.score_text_obj.update_string(`Score: ${this.score} - FPS: ${Math.round(1000/this.uniforms.animation_delta_time)}`)
-    this.score_text_obj.draw(caller, this.uniforms, this.cam_Mat_inv.times(Mat4.translation(-.14, .075, -0.2)).times(Mat4.scale(.004, .004, .1)))
 
     this.islands.show(caller, this.uniforms)
 
@@ -293,11 +288,21 @@ export class Sea_Of_Prospects_Scene extends Component
     this.shapes.axis.draw( caller, this.uniforms, Mat4.identity(), { shader: this.phong, ambient: .2, diffusivity: 1, specularity:  1, color: color( 1,1,1,1 ) } )
     this.ocean.show(this.shapes, caller, this.uniforms, this.camera_direction_xz, this.foam_material.get_texture());
 
-    // if(this.prev_frame_material.ready)
-    //   this.shapes.box.draw(caller, this.uniforms, Mat4.translation(-1, 5, -1).times(Mat4.scale(5,5,5)), {shader: this.tex_phong, ambient: 1, diffusivity: 0, specularity:  0, color: color(1,1,1,1), texture: this.prev_frame_material.get_texture()})
+    if(this.prev_frame_material.ready){
+      this.shapes.box.draw(caller, this.uniforms, Mat4.translation(-1, 5, -1).times(Mat4.scale(3,3,3)), {shader: this.tex_phong, ambient: 1, diffusivity: 0, specularity:  0, color: color(1,1,1,1), texture: this.prev_frame_material.get_texture()})
+      // this.shapes.box.draw(caller, this.uniforms, Mat4.translation(1, 5, -1), {shader: this.tex_phong, ambient: 1, diffusivity: 0, specularity:  0, color: color(1,1,1,1), texture: this.prev_frame_material.get_depth_texture()})
+    }
     
     // This must be the last draw call
     this.prev_frame_material.draw_scene(caller, this.uniforms);
+
+    this.draw_screen_ui(caller);
+  }
+
+  draw_screen_ui(caller)
+  {
+    this.score_text_obj.update_string(`Score: ${this.score} - FPS: ${Math.round(1000/this.uniforms.animation_delta_time)}`)
+    this.score_text_obj.draw(caller, this.uniforms, Mat4.translation(-0.95, .5, 0.1).times(Mat4.scale(.03, .03, .1)))
   }
 
   shipExplosion(ship){
