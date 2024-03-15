@@ -20,6 +20,8 @@ export class Sea_Of_Prospects_Scene extends Component
   init()
   {
     this.preset = 'calm'; // 'calm', 'agitated', 'stormy'
+    this.weather_states = ['calm', 'agitated', 'stormy']
+    this.weather_index = 0 // default is calm
 
     // constructor(): Scenes begin by populating initial values like the Shapes and Materials they'll need.
     this.hover = this.swarm = false;
@@ -68,6 +70,7 @@ export class Sea_Of_Prospects_Scene extends Component
     // Text obj for start screen
     this.start_obj = new Text(fog_param, "Start Game (Spacebar)");
     this.start_screen_texture = new Texture("assets/textures/main_menu.jpg");
+    this.start_weather_obj = new Text(fog_param, `Weather: < ${this.preset} >`);
 
     this.score = 0
     this.reset = 0
@@ -288,6 +291,7 @@ export class Sea_Of_Prospects_Scene extends Component
   {
     this.score_text_obj.update_string(`Score: ${this.score} - FPS: ${Math.round(1000/this.uniforms.animation_delta_time)}`)
     this.score_text_obj.draw(caller, this.uniforms, Mat4.translation(-0.95, .5, 0.1).times(Mat4.scale(.03, .03, .1)))
+    console.log(this.preset)
   }
 
   shipExplosion(ship){
@@ -379,11 +383,11 @@ export class Sea_Of_Prospects_Scene extends Component
     this.shapes.quad.draw( caller, this.uniforms, start_screen_transform, 
       { shader: this.tex_phong, ambient: 1, diffusivity: 1, specularity: 1, color: color(.5,1,.5,1), texture: this.start_screen_texture} )
 
-    this.start_obj.update_string("Start Game (Spacebar)")
-
     const start_text_transform = Mat4.identity().times(Mat4.translation(-0.4,-0.1,1)).times(Mat4.scale(.04, .04, .04));
+    const start_weather_transform = Mat4.identity().times(Mat4.translation(-0.4,-0.2,1)).times(Mat4.scale(.035,.035,.035))
 
     this.start_obj.draw(caller, this.uniforms, start_text_transform)
+    this.start_weather_obj.draw(caller, this.uniforms, start_weather_transform)
 
   }
 
@@ -407,6 +411,16 @@ export class Sea_Of_Prospects_Scene extends Component
         this.score = 0
     }
   }
+
+  handle_weather()
+  {
+      if(!this.started)
+      {
+          this.preset = this.weather_states[++this.weather_index % 3]
+          this.start_weather_obj.update_string(`Weather: < ${this.preset} >`)
+      }
+      // disable weather change while game is going on
+  }
   
   render_controls () {
     this.control_panel.innerHTML += "Click and drag the scene to <br> spin your viewpoint around it.<br>";
@@ -424,6 +438,9 @@ export class Sea_Of_Prospects_Scene extends Component
     this.new_line ();
     this.key_triggered_button ("Bottom", ["s"], () => this.vertical_input = -1, undefined, () => this.vertical_input = 0);
     this.key_triggered_button ("Left", ["a"], () => this.horizontal_input = -1, undefined, () => this.horizontal_input = 0);
+
+    this.new_line();
+    this.key_triggered_button ("Change Weather", ['ArrowRight'], () => this.handle_weather());
 
     const canvas = document.getElementsByTagName("canvas")[0];
 
