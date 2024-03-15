@@ -18,7 +18,7 @@ class ChestSpawner {
             let chest_pos = this.chests[i].position;
             let distance = ship_pos.minus(chest_pos).norm(); // Calculate the distance between the ship and the chest
 
-            if (distance <= 5 && !this.chests[i].startChestOpen) {
+            if (distance <= 8 && !this.chests[i].startChestOpen) {
                 this.chests[i].openChest(); // Open the chest if the ship is within a distance of 5 or less
             }
 

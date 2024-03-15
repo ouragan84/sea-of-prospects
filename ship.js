@@ -27,7 +27,7 @@ class Ship {
     this.materials = {};
     this.materials.flag_tex = { shader: tex_phong, ambient: .35, texture: new Texture("assets/textures/skull.png"),  diffusivity: 0.7, specularity: 0.4, color: color( 1, 1, 1 ,1 )}
     this.materials.cloth_tex = { shader: tex_phong, ambient: .35, texture: new Texture("assets/textures/cloth.jpg"),  diffusivity: 0.7, specularity: 0.2, color: color( 1, 1, 1 ,1 )}
-    this.materials.wood = { shader: tex_phong, ambient: .3, texture: new Texture("assets/textures/wood.jpg"),  diffusivity: 0.7, specularity: 0.45, color: color( 1, 1, 1 ,1 )}
+    this.materials.wood = { shader: tex_phong, ambient: .3, texture: new Texture("assets/textures/wood2.jpg"),  diffusivity: 0.7, specularity: 0.45, color: color( 1, 1, 1 ,1 )}
     this.materials.plastic = { shader: phong, ambient: .3, diffusivity: 1, specularity: .5, color: color( 1,.1,.1,1 )}
 
     const get_corners = (side_length) => [0, side_length-1, side_length**2-side_length, side_length**2-1];
