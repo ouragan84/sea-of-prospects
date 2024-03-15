@@ -1,0 +1,12 @@
+# Blender MTL File: 'treasure_chest_blender.blend'
+# Material Count: 1
+
+newmtl treasure_chest_texture
+Ns 673.145649
+Ka 0.922727 0.922727 0.922727
+Kd 0.185924 0.095031 0.031801
+Ks 0.200000 0.200000 0.200000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 3

@@ -67,6 +67,8 @@ class Ocean {
         };
 
         this.showed_once = false;
+
+        console.log(this.gersrnerWave.get_original_position_and_true_y(0, 0, 0))
     }
 
     set_offset(pos){

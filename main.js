@@ -10,6 +10,8 @@ import { ShaderMaterial, Sample_Shader } from './ShaderMaterial.js';
 import { Foam_Shader } from './Foam.js';
 import { ShaderMaterialPingPong } from './ShaderMaterialPingPong.js';
 import { PreviousFrameMaterial } from './PreviousFrameMaterial.js';
+import { Chest } from './Chest.js';
+import { ChestSpawner } from './ChestSpawner.js';
 
 const { vec3, vec4, color, Mat4, Matrix, Shader, Texture, Component } = tiny;
 
@@ -17,7 +19,7 @@ export class Sea_Of_Prospects_Scene extends Component
 {       
   init()
   {
-    this.preset = 'calm'; // 'calm', 'agitated', 'stormy'
+    this.preset = 'stormy'; // 'calm', 'agitated', 'stormy'
 
     // constructor(): Scenes begin by populating initial values like the Shapes and Materials they'll need.
     this.hover = this.swarm = false;
@@ -163,6 +165,8 @@ export class Sea_Of_Prospects_Scene extends Component
   
     this.tex_phong = new defs.Textured_Phong(1, fog_param);
 
+    this.chests = new ChestSpawner(() => this.score += 1, fog_param, this.ocean);
+
     this.explosionTimer = 100;
 
 
@@ -233,31 +237,7 @@ export class Sea_Of_Prospects_Scene extends Component
 
     this.islands.OnCollideEnter(this.ship, () => this.shipExplosion(this.ship))
 
-    if(this.ship.exploded){
-      // this.ocean.applyWaterForceOnRigidBody(this.ship.rb_piece1, t, dt, 0, 0, this.wind, 
-      //   (pos, size, color) => this.draw_debug_sphere(caller, pos, size, color),
-      //   (pos, dir, length, width, color) => this.draw_debug_arrow(caller, pos, dir, length, width, color),
-      //   (start, end, color) => this.draw_debug_line(caller, start, end, color)
-      // );
-
-      // this.ship.rb_piece1.show(caller, this.uniforms)
-
-      // this.ocean.applyWaterForceOnRigidBody(this.ship.rb_piece2, t, dt, 0, 0, this.wind, 
-      //   (pos, size, color) => this.draw_debug_sphere(caller, pos, size, color),
-      //   (pos, dir, length, width, color) => this.draw_debug_arrow(caller, pos, dir, length, width, color),
-      //   (start, end, color) => this.draw_debug_line(caller, start, end, color)
-      // );
-
-      // this.ship.rb_piece2.show(caller, this.uniforms)
-
-      // this.ocean.applyWaterForceOnRigidBody(this.ship.rb_piece2, t, dt, 0, 0, this.wind, 
-      //   (pos, size, color) => this.draw_debug_sphere(caller, pos, size, color),
-      //   (pos, dir, length, width, color) => this.draw_debug_arrow(caller, pos, dir, length, width, color),
-      //   (start, end, color) => this.draw_debug_line(caller, start, end, color)
-      // );
-
-      // this.ship.rb_piece3.show(caller, this.uniforms)
-    }
+    this.chests.update(this.t, this.dt, this.ship.rb.position)
 
     if (this.preset == 'stormy')
       this.rainSystem.update(this.dt, this.ship.rb.position);
@@ -287,16 +267,16 @@ export class Sea_Of_Prospects_Scene extends Component
     if (this.preset == 'stormy')
       this.rainSystem.draw(caller, this.uniforms)
 
-    // this.shapes.axis.draw( caller, this.uniforms, Mat4.identity(), { shader: this.phong, ambient: .2, diffusivity: 1, specularity:  1, color: color( 1,1,1,1 ) } )
-    
+    this.chests.show(caller, this.uniforms)
+
     this.ocean.show(this.shapes, caller, {...this.uniforms, 
       prev_frame_material: this.prev_frame_material,
       inv_proj_mat: this.projection_transform_inv,
     }, this.camera_direction_xz, this.foam_material.get_texture());
 
     if(this.prev_frame_material.ready){
-      this.shapes.box.draw(caller, this.uniforms, Mat4.translation(0, 4, -5).times(Mat4.scale(2,2,2)), {shader: this.tex_phong, ambient: 1, diffusivity: 0, specularity:  0, color: color(1,1,1,1), texture: this.prev_frame_material.get_texture()})
-      this.shapes.box.draw(caller, this.uniforms, Mat4.translation(0, 4, 5).times(Mat4.scale(2,2,2)), {shader: this.tex_phong, ambient: 1, diffusivity: 0, specularity:  0, color: color(1,1,1,1), texture: this.prev_frame_material.get_depth_texture()})
+      // this.shapes.box.draw(caller, this.uniforms, Mat4.translation(0, 4, -5).times(Mat4.scale(2,2,2)), {shader: this.tex_phong, ambient: 1, diffusivity: 0, specularity:  0, color: color(1,1,1,1), texture: this.prev_frame_material.get_texture()})
+      // this.shapes.box.draw(caller, this.uniforms, Mat4.translation(0, 4, 5).times(Mat4.scale(2,2,2)), {shader: this.tex_phong, ambient: 1, diffusivity: 0, specularity:  0, color: color(1,1,1,1), texture: this.prev_frame_material.get_depth_texture()})
     }
     
     // Draw this frame to the screen
@@ -450,7 +430,7 @@ export class Sea_Of_Prospects_Scene extends Component
     this.new_line();
     this.key_triggered_button ("Mute/Unmute", ["m"], () => this.mute=!this.mute);
     this.key_triggered_button ("Increase Score", ["i"], () => {
-      this.score+=1
+      this.chest.openChest()
     });
     this.new_line();
     this.key_triggered_button ("Forward", ["w"], () => this.vertical_input = 1, undefined, () => this.vertical_input = 0);
