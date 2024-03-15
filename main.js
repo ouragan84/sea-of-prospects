@@ -289,13 +289,14 @@ export class Sea_Of_Prospects_Scene extends Component
     this.ocean.show(this.shapes, caller, this.uniforms, this.camera_direction_xz, this.foam_material.get_texture());
 
     if(this.prev_frame_material.ready){
-      this.shapes.box.draw(caller, this.uniforms, Mat4.translation(-1, 5, -1).times(Mat4.scale(3,3,3)), {shader: this.tex_phong, ambient: 1, diffusivity: 0, specularity:  0, color: color(1,1,1,1), texture: this.prev_frame_material.get_texture()})
-      // this.shapes.box.draw(caller, this.uniforms, Mat4.translation(1, 5, -1), {shader: this.tex_phong, ambient: 1, diffusivity: 0, specularity:  0, color: color(1,1,1,1), texture: this.prev_frame_material.get_depth_texture()})
+      this.shapes.box.draw(caller, this.uniforms, Mat4.translation(0, 4, -5).times(Mat4.scale(2,2,2)), {shader: this.tex_phong, ambient: 1, diffusivity: 0, specularity:  0, color: color(1,1,1,1), texture: this.prev_frame_material.get_texture()})
+      this.shapes.box.draw(caller, this.uniforms, Mat4.translation(0, 4, 5).times(Mat4.scale(2,2,2)), {shader: this.tex_phong, ambient: 1, diffusivity: 0, specularity:  0, color: color(1,1,1,1), texture: this.prev_frame_material.get_depth_texture()})
     }
     
-    // This must be the last draw call
+    // Draw this frame to the screen
     this.prev_frame_material.draw_scene(caller, this.uniforms);
 
+    // --- UI ---
     this.draw_screen_ui(caller);
   }
 
