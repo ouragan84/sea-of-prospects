@@ -74,6 +74,7 @@ export class Sea_Of_Prospects_Scene extends Component
     // Text obj for start screen
     this.gameover_obj = new Text(fog_param, "Game Over - Refresh to Restart");
     this.start_screen_texture = new Texture("assets/textures/main_menu.jpg");
+    this.start_obj = new Text(fog_param, 'START')
     this.start_weather_obj = new Text(fog_param, `Weather: ${this.preset}`);
     // this.change_obj = new Text(fog_param, "Change");
 
@@ -414,13 +415,13 @@ export class Sea_Of_Prospects_Scene extends Component
     this.shapes.quad.draw( caller, this.uniforms, start_screen_transform, 
       { shader: this.tex_phong, ambient: 1, diffusivity: 1, specularity: 1, color: color(.5,1,.5,1), texture: this.start_screen_texture} )
 
-    // const start_text_transform = Mat4.identity().times(Mat4.translation(-0.4,-0.1,1)).times(Mat4.scale(.04, .04, .04));
+    const start_text_transform = Mat4.identity().times(Mat4.translation(-0.125,-0.01,1)).times(Mat4.scale(.04, .04, .04));
     const start_weather_transform = Mat4.identity().times(Mat4.translation(-0.38,-0.36,1)).times(Mat4.scale(0.032, 0.032, 0.022))
     // const change_text_transform = Mat4.identity().times(Mat4.translation(0.36,-0.2,1)).times(Mat4.scale(0.025, 0.025, 0.025))
 
     // console.log('button matrix: ', start_text_transform)
 
-    // this.start_obj.draw(caller, this.uniforms, start_text_transform)
+    this.start_obj.draw(caller, this.uniforms, start_text_transform)
     this.start_weather_obj.draw(caller, this.uniforms, start_weather_transform)
     // this.change_obj.draw(caller, this.uniforms, change_text_transform)
 
@@ -619,14 +620,13 @@ export class Sea_Of_Prospects_Scene extends Component
 
       // Check if the click was inside the square and react accordingly
       // translateX, translateY, scaleX, scaleY 0.27, 0.1, 0.345, 0.04
-      if (isClickInsideSquare(clickX, clickY, this.button_obj, 0.27, 0, 0.345, 0.04)) {
+      if (isClickInsideSquare(clickX, clickY, this.button_obj, 0.09, 0.035, 0.18, 0.135)) {
         console.log('START');
-        // this.started = true;
-
-        // canvas.requestPointerLock();
+        this.started = true;
+        canvas.requestPointerLock();
       }
 
-      if (isClickInsideSquare(clickX, clickY, this.weather_button_obj, 0.26, 0.19, 0.078, 0.04)) {
+      if (isClickInsideSquare(clickX, clickY, this.weather_button_obj, 0.12, 0.344, 0.24, 0.093)) {
         // console.log('hello weather');
         this.preset = this.weather_states[++this.weather_index % 3]
         this.start_weather_obj.update_string(`Weather: ${this.preset}`)
