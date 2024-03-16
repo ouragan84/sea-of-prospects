@@ -317,6 +317,7 @@ export class Sea_Of_Prospects_Scene extends Component
     if(this.gameover == false){
       this.explosionTimer = 0;
       this.gameover = true;
+      this.wind = vec3(0,.1,0);
     }
   }
 
