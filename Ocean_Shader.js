@@ -266,8 +266,6 @@ export const Ocean_Shader =
             return result;
         }
 
-
-        // STUFF TO WORK WITH
         uniform mat4 projection_transform;
         uniform mat4 camera_transform;
         uniform mat4 camera_inverse;
@@ -279,13 +277,60 @@ export const Ocean_Shader =
         uniform float screen_width;
         uniform float screen_height;
         uniform int is_ssr_texture_ready;
-        
-        // Function prototypes
-        vec3 PositionFromDepth(float depth);
-        vec3 BinarySearch(vec3 dir, vec3 hitCoord, float dDepth);
-        vec4 RayMarch(vec3 dir, vec3 hitCoord, float dDepth);
-        vec3 fresnelSchlick(float cosTheta, vec3 F0);
-        vec3 hash(vec3 a);
+
+        // varying vec3 view_pos (set in vertex shader)
+        // varying vec3 vertex_worldspace (set in vertex shader)
+        // Everything else that's available in the fragment shader code as seen below 
+
+
+        float rayStep = 0.2;
+        const int iterationCount = 100;
+        float distanceBias = 0.05;
+
+
+        // Function to generate position from depth
+        vec3 generatePositionFromDepth(vec2 texturePos, float depth) {
+            vec4 ndc = vec4((texturePos - 0.5) * 2.0, depth, 1.0);
+            vec4 worldSpace = inv_proj_mat * ndc;
+            worldSpace /= worldSpace.w;
+            return worldSpace.xyz;
+        }
+
+        // Function to generate projected position
+        vec2 generateProjectedPosition(vec3 pos) {
+            vec4 projected = projection_transform * vec4(pos, 1.0);
+            projected.xy = (projected.xy / projected.w) * 0.5 + 0.5;
+            return projected.xy;
+        }
+
+        // SSR ray marching algorithm
+        vec3 SSR(vec3 position, vec3 normal, vec3 camera_center) {
+            vec3 reflectionDirection = normalize(reflect(position, normal));
+            vec3 step = rayStep * reflectionDirection;
+            vec3 marchingPosition = position + step;
+            float delta;
+            vec2 screenPosition;
+            float depthFromScreen;
+
+            float depthFromCamera = length(position - camera_center);
+
+            for (int i = 0; i < iterationCount; i++) {
+                screenPosition = generateProjectedPosition(marchingPosition);
+                depthFromScreen = texture2D(depth_texture, screenPosition).r; // Assuming depth is in the red channel
+                vec3 posFromDepth = generatePositionFromDepth(screenPosition, depthFromScreen);
+                delta = abs(marchingPosition.z - posFromDepth.z);
+
+                float distancePointToCamera = length(posFromDepth - camera_center);
+
+                if ( delta < distanceBias || distancePointToCamera > depthFromCamera) {
+                    return texture2D(last_frame, screenPosition).xyz;
+                }
+
+                marchingPosition += step;
+            }
+
+            return vec3(0.0); // No reflection
+        }
 
         void main() {
             if(original_position.x < -15.0)
@@ -302,28 +347,23 @@ export const Ocean_Shader =
         
             vec4 reflectColor = get_skycolor(reflection);
         
+                
+
             if (is_ssr_texture_ready == 1) {
+                // In view space, up is the camera's y axis, and right is the camera's x axis
+                // depth is the distance from the camera and is growing negative as it goes further away
+
                 vec3 view_norm = normalize(camera_inverse * vec4(norm, 0.0)).xyz;
                 vec3 view_pos_ = (camera_inverse * vec4(vertex_worldspace, 1.0)).xyz;
+                
+                // vec3 ssrColor = SSR(view_pos_, view_norm);
+                vec3 ssrColor = SSR(view_pos_, view_norm, camera_center);
 
-                // SSR implementation
-                vec3 hitCoord = view_pos;
-                float dDepth;
-                vec3 view_reflection = reflect(view_pos_, view_norm);
-
-                // gl_FragColor = vec4(view_reflection, 1.0); 
-                // return;
-
-                vec4 ssrResult = RayMarch(view_reflection, hitCoord, dDepth);
-                if (ssrResult.w > 0.0) {
-                    vec2 ssrUV = ssrResult.xy;
-                    reflectColor = texture2D(last_frame, ssrUV);
-
-                    // gl_FragColor = vec4(ssrResult.xyz, 1.0);
-                    // return;
+                if (ssrColor != vec3(0.0)) {
+                    reflectColor = vec4(ssrColor, 1.0);
                 }
             }
-        
+
             waterColor = mix(waterColor, reflectColor, get_fernel_coeff(direction, norm) * sky_reflect);
         
             vec2 foam_uv = vec2(0.5 * (p_sample.x - offset_x) / foam_size_terrain + 0.5, 0.5 * (p_sample.z - offset_z) / foam_size_terrain + 0.5);
@@ -337,110 +377,6 @@ export const Ocean_Shader =
             float fog_amount = smoothstep(fog_start_dist, fog_end_dist, distance);
             gl_FragColor = mix(waterColor, vec4(fog_color.rgb, 1.0), fog_amount);
         }
-
-        const float step = 0.1;
-        const float minRayStep = 0.1;
-        const int maxSteps = 30;
-        const int numBinarySearchSteps = 5;
-        
-
-        vec3 PositionFromDepth(float depth) {
-            float z = depth * 2.0 - 1.0;
-
-            vec4 clipSpacePosition = vec4(gl_FragCoord.xy / vec2(screen_width, screen_height) * 2.0 - 1.0, z, 1.0);
-            vec4 viewSpacePosition = inv_proj_mat * clipSpacePosition;
-        
-            // Perspective division
-            viewSpacePosition /= viewSpacePosition.w;
-        
-            return viewSpacePosition.xyz;
-        }
-
-        vec3 BinarySearch( vec3 dir, vec3 hitCoord, float dDepth)
-        {
-            float depth;
-        
-            vec4 projectedCoord;
-         
-            for(int i = 0; i < numBinarySearchSteps; i++)
-            {
-        
-                projectedCoord = projection_transform * vec4(hitCoord, 1.0);
-                projectedCoord.xy /= projectedCoord.w;
-                projectedCoord.xy = projectedCoord.xy * 0.5 + 0.5;
-         
-                depth = texture2D(depth_texture, projectedCoord.xy).r;
-        
-         
-                dDepth = hitCoord.z - depth;
-        
-                dir *= 0.5;
-                if(dDepth > 0.0)
-                    hitCoord += dir;
-                else
-                    hitCoord -= dir;    
-            }
-        
-                projectedCoord = projection_transform * vec4(hitCoord, 1.0);
-                projectedCoord.xy /= projectedCoord.w;
-                projectedCoord.xy = projectedCoord.xy * 0.5 + 0.5;
-         
-            return vec3(projectedCoord.xy, depth);
-        }
-        
-        vec4 RayMarch(vec3 dir, vec3 hitCoord, float dDepth)
-        {
-            dir *= step;
-         
-            float depth;
-            int steps;
-            vec4 projectedCoord;
-         
-            for(int i = 0; i < maxSteps; i++)
-            {
-                hitCoord += dir;
-         
-                projectedCoord = projection_transform * vec4(hitCoord, 1.0);
-                projectedCoord.xy /= projectedCoord.w;
-                projectedCoord.xy = projectedCoord.xy * 0.5 + 0.5;
-         
-                depth = texture2D(depth_texture, projectedCoord.xy).r;
-                if(depth > 1000.0)
-                    continue;
-         
-                dDepth = hitCoord.z - depth;
-        
-                if((dir.z - dDepth) < 1.2)
-                {
-                    if(dDepth <= 0.0)
-                    {   
-                        vec4 Result;
-                        Result = vec4(BinarySearch(dir, hitCoord, dDepth), 1.0);
-        
-                        return Result;
-                    }
-                }
-                
-                steps++;
-            }
-         
-            
-            return vec4(projectedCoord.xy, depth, 0.0);
-        }
-        
-        vec3 fresnelSchlick(float cosTheta, vec3 F0)
-        {
-            return F0 + (1.0 - F0) * pow(1.0 - cosTheta, 5.0);
-        }
-        
-        
-        vec3 hash(vec3 a)
-        {
-            a = fract(a * vec3(.8, .8, .8));
-            a += dot(a, a.yxz + 19.19);
-            return fract((a.xxy + a.yxx)*a.zyx);
-        }
-
         
         
         
