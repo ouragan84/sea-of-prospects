@@ -429,7 +429,7 @@ export class Sea_Of_Prospects_Scene extends Component
     this.materials.plastic = { shader: this.phong, ambient: .2, diffusivity: 1, specularity: .5, color: color( .9,.5,.9,1 ) }
 
     const start_button_transform = Mat4.identity().times(Mat4.translation(0.2,-0.1,1)).times(Mat4.scale(0.68, 0.04, 0.04));
-    const weather_button_transform = Mat4.identity().times(Mat4.translation(0.44,-0.2,1)).times(Mat4.scale(0.16,.035,.035))
+    const weather_button_transform = Mat4.identity().times(Mat4.translation(0.44,-0.2,1)).times(Mat4.scale(0.16,.035,.035));
     
     // comment out below two to comment out the black bounding box
     this.button_obj.draw(caller, this.uniforms, start_button_transform, { ...this.materials.plastic, color:  button_color})
@@ -621,7 +621,9 @@ export class Sea_Of_Prospects_Scene extends Component
       // translateX, translateY, scaleX, scaleY
       if (isClickInsideSquare(clickX, clickY, this.button_obj, 0.27, 0.1, 0.345, 0.04)) {
         // console.log('hello');
-        this.started = true
+        this.started = true;
+
+        canvas.requestPointerLock();
       }
 
       if (isClickInsideSquare(clickX, clickY, this.weather_button_obj, 0.26, 0.19, 0.078, 0.04)) {
