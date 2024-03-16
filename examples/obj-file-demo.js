@@ -8,7 +8,9 @@ class Shape_From_File extends Shape
 {                                   // **Shape_From_File** is a versatile standalone Shape that imports
                                     // all its arrays' data from an .obj 3D model file.
   constructor( filename )
-    { super( "position", "normal", "texture_coord" );
+    { 
+      super( "position", "normal", "texture_coord" );
+      this.filename = filename
                                     // Begin downloading the mesh. Once that completes, return
                                     // control to our parse_into_mesh function.
       this.load_file( filename );
