@@ -172,6 +172,7 @@ export class Sea_Of_Prospects_Scene extends Component
 
     this.shark_system = new SharkSystem(this.ocean, fog_param, () => this.shipExplosion(this.ship));
 
+    this.gameover = false;
 
     this.prev_frame_material = new PreviousFrameMaterial();
   }
@@ -293,13 +294,30 @@ export class Sea_Of_Prospects_Scene extends Component
 
   draw_screen_ui(caller)
   {
+
+    if(this.gameover && this.explosionTimer > 5.0)
+    {
+      const trans = Mat4.translation(0,0,0.1).times(Mat4.scale(2,2,2))
+      this.shapes.quad.draw( caller, this.uniforms, trans, 
+        { shader: this.phong, ambient: 1, diffusivity: 0, specularity: 0, color: color(1,0,0,.1)} )
+
+      this.start_obj.update_string("Game Over - Refresh to Restart")
+      this.start_obj.draw(caller, this.uniforms, Mat4.translation(-0.6,0,1).times(Mat4.scale(.03, .03, .03)))
+    }
+
+
     this.score_text_obj.update_string(`Score: ${this.score} - FPS: ${Math.round(1000/this.uniforms.animation_delta_time)}`)
-    this.score_text_obj.draw(caller, this.uniforms, Mat4.translation(-0.95, .5, 0.1).times(Mat4.scale(.03, .03, .1)))
+    this.score_text_obj.draw(caller, this.uniforms, Mat4.translation(-0.95, .5, 0.2).times(Mat4.scale(.03, .03, .1)))
+  
+    
   }
 
   shipExplosion(ship){
     ship.explode();
-    this.explosionTimer = 0;
+    if(this.gameover == false){
+      this.explosionTimer = 0;
+      this.gameover = true;
+    }
   }
 
   update_foam(caller)
