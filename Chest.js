@@ -130,7 +130,7 @@ class Chest {
         this.shapes.chest_lower.draw( caller, uniforms, this.transform, this.material );
 
         // prospect
-        if(this.prospect.acquired == false){
+        if(this.prospect.acquired == false && this.chest_open_counter > 2){
             this.prospect.show(caller, uniforms)
         }
     }

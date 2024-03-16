@@ -1,5 +1,7 @@
 import {tiny, defs} from './examples/common.js';
 
+const {  Matrix } = tiny;
+
 export const Ocean_Shader =
   class Ocean_Shader extends defs.Phong_Shader {
 
@@ -49,6 +51,8 @@ export const Ocean_Shader =
         uniform float phases[num_waves];
 
         uniform float foam_size_terrain;
+
+        varying vec3 view_pos;
 
         vec3 random_normal(vec3 p) {
             return normalize(vec3(
@@ -145,6 +149,11 @@ export const Ocean_Shader =
         uniform mat4 model_transform;
         uniform mat4 projection_camera_model_transform;
 
+        uniform mat4 projection_transform;
+        uniform mat4 camera_transform;
+        uniform mat4 camera_inverse;
+        uniform mat4 inv_proj_mat;
+
         void main() {
             original_position = position;
 
@@ -162,6 +171,7 @@ export const Ocean_Shader =
 
             vertex_worldspace = ( model_transform * vec4( new_vertex_position, 1.0 ) ).xyz;
 
+            view_pos = (camera_inverse * vec4(vertex_worldspace, 1.0)).xyz;
         } `;
     }
 
@@ -225,11 +235,9 @@ export const Ocean_Shader =
             return tex_color;
         }
 
-
         float get_fernel_coeff(vec3 direction, vec3 norm) {
             return pow3(1.0 - dot(-direction, norm));
         }
-
 
         vec3 phong_model_lights_water( vec3 N, vec3 vertex_worldspace ) {
             vec3 E = normalize( camera_center - vertex_worldspace );
@@ -258,31 +266,182 @@ export const Ocean_Shader =
             return result;
         }
 
+        uniform mat4 projection_transform;
+        uniform mat4 camera_transform;
+        uniform mat4 camera_inverse;
+        uniform mat4 inv_proj_mat;
+
+        uniform sampler2D last_frame;
+        uniform sampler2D depth_texture;
+
+        uniform float screen_width;
+        uniform float screen_height;
+        uniform int is_ssr_texture_ready;
+
+        // varying vec3 view_pos (set in vertex shader)
+        // varying vec3 vertex_worldspace (set in vertex shader)
+        // Everything else that's available in the fragment shader code as seen below 
+
+
+        // Ray marching and SSR functions based on your previous algorithm
+        const int NUM_SMALL_STEPS = 100;
+        const int NUM_STEPS = 150;
+        const float SMALL_STEP = 0.1;
+        const float BIG_STEP = 0.4;
+        const int NUM_ITERATIONS = 10;
+        const float BINARY_SEARCH_STEP = 0.02;
+
+        // // Function to generate position from depth
+        // vec3 generateViewSpacePositionFromDepth(vec2 texturePos, float depth) {
+        //     vec4 ndc = vec4((texturePos - 0.5) * 2.0, depth, 1.0);
+        //     vec4 worldSpace = inv_proj_mat * ndc;
+        //     worldSpace /= worldSpace.w;
+        //     return (camera_inverse * worldSpace).xyz;
+        // }
+
+        // Function to generate projected position
+        vec2 generateProjectedPositionFromViewSpacePos(vec3 viewSpacePos) {
+
+            // camera_transform camera_inverse projection_transform inv_proj_mat
+
+            // vec4 worldSpacePos = camera_transform * vec4(viewSpacePos, 1.0);
+
+            vec4 projected = projection_transform * vec4(viewSpacePos, 1.0);
+            projected.xy = (projected.xy / projected.w) * 0.5 + 0.5;
+            return projected.xy;
+
+        }
+
+        const float near_clip = 0.1;
+        const float far_clip = 80.0;
+
+        // Iteratively walk from position_in_view_space in the direction of direction_in_view_space, 
+        // and when the ray intersects the depth buffer, return the intersection point
+        vec4 rayMarch(vec3 position_in_view_space, vec3 direction_in_view_space) {
+            if (direction_in_view_space.z > 0.0) {
+                return vec4(0.0); // Early exit if direction is away from the camera
+            }
+
+            float z = position_in_view_space.z; // Assuming current_position.z is negative
+            float A = (far_clip + near_clip) / (far_clip - near_clip);
+            float B = (2.0 * far_clip * near_clip) / (far_clip - near_clip);
+            float depth_of_start = (A + B / z) / 2.0 + 0.5;
+        
+            vec3 current_position = position_in_view_space;
+            vec2 projectedCoords;
+            float depth, last_depth = 1.0;
+            vec3 last_position = current_position;
+        
+            // March the ray
+            for (int i = 0; i < NUM_STEPS; ++i) {
+                current_position += direction_in_view_space * (i < NUM_SMALL_STEPS ? SMALL_STEP : BIG_STEP);
+                projectedCoords = generateProjectedPositionFromViewSpacePos(current_position);
+                depth = texture2D(depth_texture, projectedCoords).x;
+        
+                z = current_position.z; // Assuming current_position.z is negative
+                A = (far_clip + near_clip) / (far_clip - near_clip);
+                B = (2.0 * far_clip * near_clip) / (far_clip - near_clip);
+                float depth_of_ray = (A + B / z) / 2.0 + 0.5;
+        
+                if (depth_of_ray > depth) {
+                    // Binary search between last_position and current_position
+                    vec3 min_pos = last_position;
+                    vec3 max_pos = current_position;
+                    for (int j = 0; j < NUM_ITERATIONS; ++j) {
+                        vec3 mid_pos = (min_pos + max_pos) * 0.5;
+                        projectedCoords = generateProjectedPositionFromViewSpacePos(mid_pos);
+                        depth = texture2D(depth_texture, projectedCoords).x;
+        
+                        if ((A + B / mid_pos.z) / 2.0 + 0.5 > depth) {
+                            max_pos = mid_pos;
+                        } else {
+                            min_pos = mid_pos;
+                        }
+                    }
+
+                    if ( depth_of_start < depth ){
+                        return vec4(generateProjectedPositionFromViewSpacePos(min_pos), depth, 1.0);
+                    } else {
+                        return vec4(0.0);
+                    }
+                }
+        
+                last_depth = depth;
+                last_position = current_position;
+            }
+        
+            return vec4(projectedCoords, last_depth, 0.0);
+        }
+        
+
+        
+
         void main() {
-            if(original_position.x < - 15.0)
+            // Assume original_position, time, camera_center, shape_color, ambient,
+            // and other necessary variables are defined and available
+
+            if (original_position.x < -15.0)
                 discard;
 
             vec3 p_sample = get_sample_position(original_position, time);
             vec3 norm = normalize(get_gersrner_wave_normal(p_sample, time));
+        
+            vec3 viewDir = normalize(vertex_worldspace - camera_center);
+            vec3 reflection = reflect(viewDir, norm);
+        
+            vec4 waterColor = vec4(shape_color.xyz * ambient, shape_color.w);
+            waterColor.xyz += phong_model_lights_water(norm, vertex_worldspace);
+        
+            vec4 reflectColor = get_skycolor(reflection);
+        
+            if (is_ssr_texture_ready == 1) {
 
-            gl_FragColor = vec4( shape_color.xyz * ambient, shape_color.w );
-            gl_FragColor.xyz += phong_model_lights_water( norm, vertex_worldspace );
+                vec3 pos_in_view_space = (camera_inverse * vec4(vertex_worldspace, 1.0)).xyz;
+                vec3 normal_in_view_space = (camera_inverse * vec4(norm, 0.0)).xyz;
+                vec3 view_dir_in_view_space = normalize(pos_in_view_space);
+                vec3 reflect_dir_in_view_space = reflect(view_dir_in_view_space, normal_in_view_space);
 
-            vec3 direction = normalize(vertex_worldspace - camera_center);
-            vec3 reflection = reflect(direction, norm);
-            gl_FragColor = mix(gl_FragColor, get_skycolor(reflection), get_fernel_coeff(direction, norm) * sky_reflect);
+
+                vec4 ssr_result = rayMarch(pos_in_view_space, reflect_dir_in_view_space);
+                vec2 ssr_uv = ssr_result.xy;
+                float ssr_depth = ssr_result.z;
+                int ssr_valid = int(ssr_result.w);
+                vec4 ssr_color = texture2D(last_frame, ssr_uv);
+
+                // color distance from shape_color
+                const vec3 bad_blue = vec3(0.5, 0.5, 0.8);
+                const vec3 bad_white = vec3(1.0, 1.0, 1.0);
+
+                if (ssr_valid == 1 && length(ssr_color.rgb - bad_white) > 0.34 && length(ssr_color.rgb - bad_blue) > 0.34) {
+                    reflectColor = vec4(ssr_color.rgb, 1.0);
+
+                    // gl_FragColor = reflectColor;
+                    // return;
+                }else{
+                    // gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
+                    // return;
+                
+                }
+            }
+            
+            waterColor = mix(waterColor, reflectColor, get_fernel_coeff(viewDir, norm) * sky_reflect);
 
             vec2 foam_uv = vec2(0.5 * (p_sample.x - offset_x) / foam_size_terrain + 0.5, 0.5 * (p_sample.z - offset_z) / foam_size_terrain + 0.5);
-            if (foam_uv.x >= 0.0 && foam_uv.x <= 1.0 && foam_uv.y >= 0.0 && foam_uv.y <= 1.0){  
+            if (foam_uv.x >= 0.0 && foam_uv.x <= 1.0 && foam_uv.y >= 0.0 && foam_uv.y <= 1.0) {
                 vec4 foam_tex_sample = texture2D(foam_texture, foam_uv);
                 float foam_intensity = foam_tex_sample.r * foam_color.a;
-                gl_FragColor = mix(gl_FragColor, vec4(foam_color.rgb, 1.0), foam_intensity);
+                waterColor = mix(waterColor, vec4(foam_color.rgb, 1.0), foam_intensity);
             }
 
             float distance = length(camera_center - vertex_worldspace);
             float fog_amount = smoothstep(fog_start_dist, fog_end_dist, distance);
-            gl_FragColor = mix(gl_FragColor, fog_color, fog_amount);
-        }`;
+            gl_FragColor = mix(waterColor, vec4(fog_color.rgb, 1.0), fog_amount);
+        }
+        
+        
+        
+        
+        `;
     }
 
     flatten_vec_array (arr) {
@@ -324,19 +483,45 @@ export const Ocean_Shader =
 
         // console.log(uniforms.angle_offset.toFixed(2) * 180 / Math.PI);
 
+        context.uniform1f(gpu_addresses.screen_width, uniforms.prev_frame_material.screen_width);
+        context.uniform1f(gpu_addresses.screen_height, uniforms.prev_frame_material.screen_height);
+        context.uniform1i(gpu_addresses.is_ssr_texture_ready, uniforms.prev_frame_material.ready);
+
+        // console.log(uniforms)
+
+        context.uniformMatrix4fv (gpu_addresses.projection_transform, 
+            false, Matrix.flatten_2D_to_1D (uniforms.projection_transform.transposed()) );
+
+        context.uniformMatrix4fv (gpu_addresses.camera_transform,
+            false, Matrix.flatten_2D_to_1D (uniforms.camera_transform.transposed()) );
+
+        context.uniformMatrix4fv (gpu_addresses.camera_inverse,
+            false, Matrix.flatten_2D_to_1D (uniforms.camera_inverse.transposed()) );
+
+        context.uniformMatrix4fv (gpu_addresses.inv_proj_mat,
+            false, Matrix.flatten_2D_to_1D (uniforms.inv_proj_mat.transposed()) );
+
+
+        if (uniforms.prev_frame_material.ready) {
+            context.uniform1i (gpu_addresses.last_frame, 0);
+            uniforms.prev_frame_material.get_texture().activate(context, 0);
+
+            context.uniform1i (gpu_addresses.depth_texture, 1);
+            uniforms.prev_frame_material.get_depth_texture().activate(context, 1);
+        }
 
         if (material.skyTexture && material.skyTexture.ready) {
             // Select texture unit 0 for the fragment shader Sampler2D uniform called "texture":
-            context.uniform1i (gpu_addresses.skyTexture, 0);
+            context.uniform1i (gpu_addresses.skyTexture, 2);
             // For this draw, use the texture image from the correct GPU buffer:
-            material.skyTexture.activate(context, 0);
+            material.skyTexture.activate(context, 2);
         }
 
         if (uniforms.foam_texture) {
             // Select texture unit 1 for the fragment shader Sampler2D uniform called "texture":
-            context.uniform1i (gpu_addresses.foam_texture, 1);
+            context.uniform1i (gpu_addresses.foam_texture, 3);
             // For this draw, use the texture image from the correct GPU buffer:
-            uniforms.foam_texture.activate(context, 1);
+            uniforms.foam_texture.activate(context, 3);
         }
     }
 };
