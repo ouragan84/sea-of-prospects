@@ -19,7 +19,7 @@ export class Sea_Of_Prospects_Scene extends Component
 {       
   init()
   {
-    this.preset = 'stormy'; // 'calm', 'agitated', 'stormy'
+    this.preset = 'calm'; // 'calm', 'agitated', 'stormy'
 
     // constructor(): Scenes begin by populating initial values like the Shapes and Materials they'll need.
     this.hover = this.swarm = false;
@@ -88,7 +88,7 @@ export class Sea_Of_Prospects_Scene extends Component
           skybox_texture = new Texture("assets/textures/sunny_sky.jpg");
           break;
       case 'stormy':
-          skybox_texture = new Texture("assets/textures/stormy_sky.jpg");
+          skybox_texture = new Texture("assets/textures/stormy_sky3.jpg");
           break;
       default:
           skybox_texture = new Texture("assets/textures/sunny_sky.jpg");
