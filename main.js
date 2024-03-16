@@ -291,6 +291,9 @@ export class Sea_Of_Prospects_Scene extends Component
 
     this.shark_system.show(caller, this.uniforms)
 
+    this.shapes.ball.draw( caller, this.uniforms, this.projection_transform_inv.times(Mat4.translation(0, 0, -0.5)).times(Mat4.scale(0.2, 0.2, 0.2)), 
+    { shader: this.phong, ambient: .3, diffusivity: .8, specularity: .5, color: color(1,0,0,1) } )
+
     if(this.prev_frame_material.ready){
       // this.shapes.box.draw(caller, this.uniforms, Mat4.translation(0, 4, -5).times(Mat4.scale(2,2,2)), {shader: this.tex_phong, ambient: 1, diffusivity: 0, specularity:  0, color: color(1,1,1,1), texture: this.prev_frame_material.get_texture()})
       // this.shapes.box.draw(caller, this.uniforms, Mat4.translation(0, 4, 5).times(Mat4.scale(2,2,2)), {shader: this.tex_phong, ambient: 1, diffusivity: 0, specularity:  0, color: color(1,1,1,1), texture: this.prev_frame_material.get_depth_texture()})

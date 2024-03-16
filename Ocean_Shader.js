@@ -284,62 +284,73 @@ export const Ocean_Shader =
 
 
         // Ray marching and SSR functions based on your previous algorithm
-        const int NUM_STEPS = 20;
+        const int NUM_STEPS = 40;
         const float STEP = 0.1;
         const int NUM_ITERATIONS = 10;
         const float BINARY_SEARCH_STEP = 0.02;
 
-        vec3 binarySearch(vec3 position, vec3 direction, float delta) {
-            vec4 projectedCoords;
-            float depth;
+        // // Function to generate position from depth
+        // vec3 generateViewSpacePositionFromDepth(vec2 texturePos, float depth) {
+        //     vec4 ndc = vec4((texturePos - 0.5) * 2.0, depth, 1.0);
+        //     vec4 worldSpace = inv_proj_mat * ndc;
+        //     worldSpace /= worldSpace.w;
+        //     return (camera_inverse * worldSpace).xyz;
+        // }
 
-            for (int i = 0; i < NUM_ITERATIONS; ++i) {
-                direction *= BINARY_SEARCH_STEP;
+        // Function to generate projected position
+        vec2 generateProjectedPositionFromViewSpacePos(vec3 viewSpacePos) {
 
-                projectedCoords = projection_transform * vec4(position, 1.0);
-                projectedCoords.xy /= projectedCoords.w;
-                projectedCoords.xy = projectedCoords.xy * 0.5 + 0.5;
+            // camera_transform camera_inverse projection_transform inv_proj_mat
 
-                depth = texture2D(depth_texture, projectedCoords.xy).z;
+            // vec4 worldSpacePos = camera_transform * vec4(viewSpacePos, 1.0);
 
-                delta = position.z - depth;
+            vec4 projected = projection_transform * vec4(viewSpacePos, 1.0);
+            projected.xy = (projected.xy / projected.w) * 0.5 + 0.5;
+            return projected.xy;
 
-                if (delta > 0.0) {
-                    position += direction;
-                } else {
-                    position -= direction;
-                }
-            }
-
-            projectedCoords = projection_transform * vec4(position, 1.0);
-            projectedCoords.xy /= projectedCoords.w;
-            projectedCoords.xy = projectedCoords.xy * 0.5 + 0.5;
-            return vec3(projectedCoords.xy, depth);
         }
 
-        vec4 rayMarch(vec3 position, vec3 direction, out float delta) {
-            direction *= STEP;
+        const float near_clip = 0.1;
+        const float far_clip = 80.0;
 
-            vec4 projectedCoords;
+        // Iteratively walk from position_in_view_space in the direction of direction_in_view_space, 
+        // and when the ray intersects the depth buffer, return the intersection point
+        vec4 rayMarch(vec3 position_in_view_space, vec3 direction_in_view_space) {
+
+            if (direction_in_view_space.z > 0.0) {
+                return vec4(0.0);
+            }
+
+            vec3 walk_dir = direction_in_view_space * STEP; // this is how much we move in each step
+            vec3 current_position = position_in_view_space + walk_dir;
+
+            vec2 projectedCoords;
             float depth;
 
             for (int i = 0; i < NUM_STEPS; ++i) {
-                position += direction;
 
-                projectedCoords = projection_transform * vec4(position, 1.0);
-                projectedCoords.xy /= projectedCoords.w;
-                projectedCoords.xy = projectedCoords.xy * 0.5 + 0.5;
+                projectedCoords = generateProjectedPositionFromViewSpacePos(current_position);
+                depth = texture2D(depth_texture, projectedCoords).x;
 
-                depth = texture2D(depth_texture, projectedCoords.xy).z;
+                //q: what is the range of depth values?
+                //a: 0 to 1. O is close to the camera, 1 is far from the camera
 
-                delta = position.z - depth;
 
-                if (direction.z - delta < 1.2) {
-                    if (delta < 0.0) {
-                        return vec4(binarySearch(position, direction, delta), 1.0);
-                    }
+
+                // current_point is in camera space, so get its depth in the same format, 0 to 1
+                float depth_of_ray = - (current_position.z - near_clip) / (far_clip - near_clip);
+            
+
+
+                // vec3 other_point = generateViewSpacePositionFromDepth(projectedCoords, depth);
+
+                // if the depth is greater than the current depth, we have intersected the depth buffer
+                if (depth_of_ray > 0.0) {
+                    return vec4(projectedCoords, depth, 1.0);
                 }
+
             }
+
             return vec4(projectedCoords.xy, depth, 0.0);
         }
 
@@ -364,18 +375,34 @@ export const Ocean_Shader =
             vec4 reflectColor = get_skycolor(reflection);
         
             if (is_ssr_texture_ready == 1) {
-                vec3 viewDirNorm = normalize(camera_inverse * vec4(viewDir, 0.0)).xyz;
-                vec3 reflectionNorm = normalize(camera_inverse * vec4(reflection, 0.0)).xyz;
+
+                vec3 pos_in_view_space = (camera_inverse * vec4(vertex_worldspace, 1.0)).xyz;
+                vec3 normal_in_view_space = (camera_inverse * vec4(norm, 0.0)).xyz;
+                vec3 view_dir_in_view_space = normalize(pos_in_view_space);
+                vec3 reflect_dir_in_view_space = reflect(view_dir_in_view_space, normal_in_view_space);
+
+
+                vec4 ssr_result = rayMarch(pos_in_view_space, reflect_dir_in_view_space);
+                vec2 ssr_uv = ssr_result.xy;
+                float ssr_depth = ssr_result.z;
+                int ssr_valid = int(ssr_result.w);
+
+
+                if (ssr_valid == 1) {
+                    vec4 ssr_color = texture2D(last_frame, ssr_uv);
+                    gl_FragColor = ssr_color;
+                }else{
+
+                    if (ssr_depth > 0.0) {
+                        gl_FragColor = vec4(0.0, 0.0, 1.0, 1.0);
+                    } else {
+                        gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
+                    } 
+                        
                 
-                float delta;
-                vec4 ssrResult = rayMarch(view_pos, reflectionNorm, delta);
-        
-                if (delta < 0.0) {
-                    vec2 ssrCoords = ssrResult.xy;
-                    // Adjusting the Y coordinate if necessary to flip the reflection
-                    ssrCoords.y = 1.0 - ssrCoords.y;
-                    reflectColor = texture2D(last_frame, ssrCoords);
                 }
+
+                return;
             }
             
             waterColor = mix(waterColor, reflectColor, get_fernel_coeff(viewDir, norm) * sky_reflect);
