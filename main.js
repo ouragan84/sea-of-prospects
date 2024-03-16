@@ -23,6 +23,9 @@ export class Sea_Of_Prospects_Scene extends Component
     this.weather_states = ['calm', 'agitated', 'stormy']
     this.weather_index = 0 // default is calm
 
+    this.button_obj = new defs.Square()
+    this.weather_button_obj = new defs.Square()
+
     // constructor(): Scenes begin by populating initial values like the Shapes and Materials they'll need.
     this.hover = this.swarm = false;
 
@@ -65,12 +68,13 @@ export class Sea_Of_Prospects_Scene extends Component
     this.mute = true
 
     // Keeps track of whether the game was started and was paused
-    this.started = true
+    this.started = false
 
     // Text obj for start screen
     this.start_obj = new Text(fog_param, "Start Game (Spacebar)");
     this.start_screen_texture = new Texture("assets/textures/main_menu.jpg");
-    this.start_weather_obj = new Text(fog_param, `Weather: < ${this.preset} >`);
+    this.start_weather_obj = new Text(fog_param, `Weather: ${this.preset}`);
+    this.change_obj = new Text(fog_param, "Change");
 
     this.score = 0
     this.reset = 0
@@ -147,7 +151,7 @@ export class Sea_Of_Prospects_Scene extends Component
     this.wind_forward_magnitude = 35;
     this.wind = vec3(0,0,-this.wind_default_magnitude);
 
-    this.mousev = [0,0];  
+    this.mousev = [0,0];
     
     this.islands = new Islands(fog_param, 100)
     this.rainSystem = new RainSystem(200, fog_param)
@@ -172,9 +176,10 @@ export class Sea_Of_Prospects_Scene extends Component
 
     this.explosionTimer = 100;
 
-
     this.prev_frame_material = new PreviousFrameMaterial();
   }
+
+  
 
   clamp = (x, min, max) => Math.min(Math.max(x, min), max);
      
@@ -184,7 +189,7 @@ export class Sea_Of_Prospects_Scene extends Component
     const dt = this.dt = 0.02;
 
 
-    if(this.started)
+    if(this.started)   
       this.game_update(caller, t, dt);
     else
       this.draw_start_menu(caller, t, dt);
@@ -291,7 +296,7 @@ export class Sea_Of_Prospects_Scene extends Component
   {
     this.score_text_obj.update_string(`Score: ${this.score} - FPS: ${Math.round(1000/this.uniforms.animation_delta_time)}`)
     this.score_text_obj.draw(caller, this.uniforms, Mat4.translation(-0.95, .5, 0.1).times(Mat4.scale(.03, .03, .1)))
-    console.log(this.preset)
+    // console.log(this.preset)
   }
 
   shipExplosion(ship){
@@ -384,11 +389,26 @@ export class Sea_Of_Prospects_Scene extends Component
       { shader: this.tex_phong, ambient: 1, diffusivity: 1, specularity: 1, color: color(.5,1,.5,1), texture: this.start_screen_texture} )
 
     const start_text_transform = Mat4.identity().times(Mat4.translation(-0.4,-0.1,1)).times(Mat4.scale(.04, .04, .04));
-    const start_weather_transform = Mat4.identity().times(Mat4.translation(-0.4,-0.2,1)).times(Mat4.scale(.035,.035,.035))
+    const start_weather_transform = Mat4.identity().times(Mat4.translation(-0.4,-0.2,1)).times(Mat4.scale(0.025, 0.025, 0.025))
+    const change_text_transform = Mat4.identity().times(Mat4.translation(0.36,-0.2,1)).times(Mat4.scale(0.025, 0.025, 0.025))
+
+    // console.log('button matrix: ', start_text_transform)
 
     this.start_obj.draw(caller, this.uniforms, start_text_transform)
     this.start_weather_obj.draw(caller, this.uniforms, start_weather_transform)
+    this.change_obj.draw(caller, this.uniforms, change_text_transform)
 
+    const button_color = color( 0.2, 0.2, 0.2, 1 )
+    this.materials = {}
+    this.materials.plastic = { shader: this.phong, ambient: .2, diffusivity: 1, specularity: .5, color: color( .9,.5,.9,1 ) }
+
+    const start_button_transform = Mat4.identity().times(Mat4.translation(0.2,-0.1,1)).times(Mat4.scale(0.68, 0.04, 0.04));
+    const weather_button_transform = Mat4.identity().times(Mat4.translation(0.44,-0.2,1)).times(Mat4.scale(0.16,.035,.035))
+    
+    // comment out below two to comment out the black bounding box
+    this.button_obj.draw(caller, this.uniforms, start_button_transform, { ...this.materials.plastic, color:  button_color})
+    this.weather_button_obj.draw(caller, this.uniforms, weather_button_transform, { ...this.materials.plastic, color:  button_color})
+    
   }
 
   mouseToWorldPos(mousePos) {
@@ -416,8 +436,75 @@ export class Sea_Of_Prospects_Scene extends Component
   {
       if(!this.started)
       {
+          let fog_param;
           this.preset = this.weather_states[++this.weather_index % 3]
-          this.start_weather_obj.update_string(`Weather: < ${this.preset} >`)
+          this.start_weather_obj.update_string(`Weather: ${this.preset}`)
+          const foam_size_terrain = 60; // sizezX of the foam texture in world space in either direction
+          let skybox_texture;
+
+          switch(this.preset){
+            case 'calm':
+                this.light_color = color(1,0.91,0.62,1)
+                fog_param = { color: color(1,1,1,1), start: this.render_distance-10, end: this.render_distance };
+                break;
+            case 'agitated':
+                this.light_color = color(1,0.91,0.62,1)
+                fog_param = { color: color(1,1,1,1), start: this.render_distance-10, end: this.render_distance };
+                break;
+            case 'stormy':
+                this.light_color = color(1,0.91,0.62,1)
+                fog_param = { color: color(.5,.5,.5,1), start: this.render_distance-20, end: this.render_distance };
+                break;
+            default:
+                this.light_color = color(1,0.91,0.62,1)
+          }
+      
+          this.phong = new defs.Phong_Shader(1, fog_param);
+      
+          switch(this.preset){
+            case 'calm':
+                skybox_texture = new Texture("assets/textures/sunny_sky.jpg");
+                break;
+            case 'agitated':
+                skybox_texture = new Texture("assets/textures/sunny_sky.jpg");
+                break;
+            case 'stormy':
+                skybox_texture = new Texture("assets/textures/stormy_sky.jpg");
+                break;
+            default:
+                skybox_texture = new Texture("assets/textures/sunny_sky.jpg");
+          }
+      
+          this.base_water_color = color(0.27,0.46,0.95,1 );
+      
+          if(this.preset == 'agitated'){
+              const avg = (this.base_water_color[0] + this.base_water_color[1] + this.base_water_color[2]) / 3;
+              const f = 0.2;
+              this.base_water_color = this.base_water_color.plus((color(avg, avg, avg, 0).minus(this.base_water_color)).times(f));
+              this.base_water_color[3] = 1;
+          }
+      
+          if(this.preset == 'stormy'){
+              const avg = (this.base_water_color[0] + this.base_water_color[1] + this.base_water_color[2]) / 3;
+              const f = .6;
+              this.base_water_color = this.base_water_color.plus((color(avg, avg, avg, 0).minus(this.base_water_color)).times(f));
+              this.base_water_color[3] = 1;
+      
+          }
+      
+          this.skybox = new Skybox({default_color: fog_param.color, texture: skybox_texture, fog_param: fog_param});
+      
+          // this.ocean = new Ocean({
+          //   ocean_color: this.base_water_color,
+          //   initPos : vec3(0,0,0),
+          //   density : 5,
+          //   size : this.render_distance * 2,
+          //   fog_param: fog_param,
+          //   skybox: this.skybox,
+          //   foam_size_terrain: foam_size_terrain,
+          //   foam_color: color(0.9,0.98,1,1),
+          //   preset: this.preset // 'calm', 'agitated', 'stormy'
+          // });
       }
       // disable weather change while game is going on
   }
@@ -451,6 +538,73 @@ export class Sea_Of_Prospects_Scene extends Component
     canvas.onclick = function(e){
         canvas.requestPointerLock();
     };
+
+    function getButtonPos(translateX, translateY, scaleX, scaleY)
+    {
+      console.log(translateX, translateY, scaleX, scaleY)
+      const centerX = canvas.width / 2;
+      const centerY = canvas.height / 2;
+  
+          // Convert translation to canvas coordinates
+          const translatedX = centerX + (translateX * canvas.width);
+          const translatedY = centerY + (translateY * canvas.height);
+  
+          const halfSizeScaledX = (scaleX * canvas.width) / 2;
+          const halfSizeScaledY = (scaleY * canvas.height) / 2;
+  
+          const squareBounds = {
+              x: translatedX - halfSizeScaledX,
+              y: translatedY - halfSizeScaledY,
+              width: scaleX * canvas.width,
+              height: scaleY * canvas.height
+      };
+
+      return squareBounds
+    }
+
+    // Function to check if a click is within the bounds of the square
+    function isClickInsideSquare(clickX, clickY, obj, translateX, translateY, scaleX, scaleY) {
+
+      const squareBounds = getButtonPos(translateX, translateY, scaleX, scaleY)
+
+      return (
+        // clickX >= squareBounds.x &&
+        // clickX <= squareBounds.x + squareBounds.width &&
+        // clickY >= squareBounds.y &&
+        // clickY <= squareBounds.y + squareBounds.height
+        clickX >= squareBounds.x - squareBounds.width &&
+        clickX <= squareBounds.x + squareBounds.width &&
+        clickY >= squareBounds.y - 0.5*squareBounds.height &&
+        clickY <= squareBounds.y + squareBounds.height
+      );
+    }
+    
+    // Add click event listener to the canvas
+    canvas.onclick = (event) => {
+      // Calculate click position relative to the canvas
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = canvas.width / rect.width;   // Relationship bitmap vs. element for X
+      const scaleY = canvas.height / rect.height; // Relationship bitmap vs. element for Y
+
+      const clickX = (event.clientX - rect.left) * scaleX; // Scale mouse coordinates after they have
+      const clickY = (event.clientY - rect.top) * scaleY;  // been adjusted to be relative to element
+
+      // console.log('click pos: ', clickX, clickY)
+
+      // Check if the click was inside the square and react accordingly
+      // translateX, translateY, scaleX, scaleY
+      if (isClickInsideSquare(clickX, clickY, this.button_obj, 0.27, 0.1, 0.345, 0.04)) {
+        // console.log('hello');
+        this.started = true
+      }
+
+      if (isClickInsideSquare(clickX, clickY, this.weather_button_obj, 0.26, 0.19, 0.078, 0.04)) {
+        // console.log('hello weather');
+        this.preset = this.weather_states[++this.weather_index % 3]
+        this.start_weather_obj.update_string(`Weather: ${this.preset}`)
+        console.log(this.preset)
+      }
+    }
 
     const changeCallback = () => {
         if (document.pointerLockElement === canvas || document.mozPointerLockElement === canvas) {
