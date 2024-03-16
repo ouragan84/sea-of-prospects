@@ -62,7 +62,7 @@ class Ocean {
         this.materials = {};
         this.materials.ocean = {
             shader: ocean_shader, ambient: 0.4, diffusivity: 0.6, specularity: 0.5, 
-            smoothness: 10, sky_reflect: 0.7, color: config.ocean_color, 
+            smoothness: 10, sky_reflect: 0.5, color: config.ocean_color, 
             skyTexture: config.skybox.texture, foamColor: config.foam_color
         };
 
