@@ -283,96 +283,110 @@ export const Ocean_Shader =
         // Everything else that's available in the fragment shader code as seen below 
 
 
-        float rayStep = 0.2;
-        const int iterationCount = 100;
-        float distanceBias = 0.05;
+        // Ray marching and SSR functions based on your previous algorithm
+        const int NUM_STEPS = 20;
+        const float STEP = 0.1;
+        const int NUM_ITERATIONS = 10;
+        const float BINARY_SEARCH_STEP = 0.02;
 
+        vec3 binarySearch(vec3 position, vec3 direction, float delta) {
+            vec4 projectedCoords;
+            float depth;
 
-        // Function to generate position from depth
-        vec3 generatePositionFromDepth(vec2 texturePos, float depth) {
-            vec4 ndc = vec4((texturePos - 0.5) * 2.0, depth, 1.0);
-            vec4 worldSpace = inv_proj_mat * ndc;
-            worldSpace /= worldSpace.w;
-            return worldSpace.xyz;
-        }
+            for (int i = 0; i < NUM_ITERATIONS; ++i) {
+                direction *= BINARY_SEARCH_STEP;
 
-        // Function to generate projected position
-        vec2 generateProjectedPosition(vec3 pos) {
-            vec4 projected = projection_transform * vec4(pos, 1.0);
-            projected.xy = (projected.xy / projected.w) * 0.5 + 0.5;
-            return projected.xy;
-        }
+                projectedCoords = projection_transform * vec4(position, 1.0);
+                projectedCoords.xy /= projectedCoords.w;
+                projectedCoords.xy = projectedCoords.xy * 0.5 + 0.5;
 
-        // SSR ray marching algorithm
-        vec3 SSR(vec3 position, vec3 normal, vec3 camera_center) {
-            vec3 reflectionDirection = normalize(reflect(position, normal));
-            vec3 step = rayStep * reflectionDirection;
-            vec3 marchingPosition = position + step;
-            float delta;
-            vec2 screenPosition;
-            float depthFromScreen;
+                depth = texture2D(depth_texture, projectedCoords.xy).z;
 
-            float depthFromCamera = length(position - camera_center);
+                delta = position.z - depth;
 
-            for (int i = 0; i < iterationCount; i++) {
-                screenPosition = generateProjectedPosition(marchingPosition);
-                depthFromScreen = texture2D(depth_texture, screenPosition).r; // Assuming depth is in the red channel
-                vec3 posFromDepth = generatePositionFromDepth(screenPosition, depthFromScreen);
-                delta = abs(marchingPosition.z - posFromDepth.z);
-
-                float distancePointToCamera = length(posFromDepth - camera_center);
-
-                if ( delta < distanceBias || distancePointToCamera > depthFromCamera) {
-                    return texture2D(last_frame, screenPosition).xyz;
+                if (delta > 0.0) {
+                    position += direction;
+                } else {
+                    position -= direction;
                 }
-
-                marchingPosition += step;
             }
 
-            return vec3(0.0); // No reflection
+            projectedCoords = projection_transform * vec4(position, 1.0);
+            projectedCoords.xy /= projectedCoords.w;
+            projectedCoords.xy = projectedCoords.xy * 0.5 + 0.5;
+            return vec3(projectedCoords.xy, depth);
         }
 
-        void main() {
-            if(original_position.x < -15.0)
-                discard;
+        vec4 rayMarch(vec3 position, vec3 direction, out float delta) {
+            direction *= STEP;
+
+            vec4 projectedCoords;
+            float depth;
+
+            for (int i = 0; i < NUM_STEPS; ++i) {
+                position += direction;
+
+                projectedCoords = projection_transform * vec4(position, 1.0);
+                projectedCoords.xy /= projectedCoords.w;
+                projectedCoords.xy = projectedCoords.xy * 0.5 + 0.5;
+
+                depth = texture2D(depth_texture, projectedCoords.xy).z;
+
+                delta = position.z - depth;
+
+                if (direction.z - delta < 1.2) {
+                    if (delta < 0.0) {
+                        return vec4(binarySearch(position, direction, delta), 1.0);
+                    }
+                }
+            }
+            return vec4(projectedCoords.xy, depth, 0.0);
+        }
+
         
+
+        void main() {
+            // Assume original_position, time, camera_center, shape_color, ambient,
+            // and other necessary variables are defined and available
+
+            if (original_position.x < -15.0)
+                discard;
+
             vec3 p_sample = get_sample_position(original_position, time);
             vec3 norm = normalize(get_gersrner_wave_normal(p_sample, time));
         
-            vec3 direction = normalize(vertex_worldspace - camera_center);
-            vec3 reflection = reflect(direction, norm);
+            vec3 viewDir = normalize(vertex_worldspace - camera_center);
+            vec3 reflection = reflect(viewDir, norm);
         
             vec4 waterColor = vec4(shape_color.xyz * ambient, shape_color.w);
             waterColor.xyz += phong_model_lights_water(norm, vertex_worldspace);
         
             vec4 reflectColor = get_skycolor(reflection);
         
-                
-
             if (is_ssr_texture_ready == 1) {
-                // In view space, up is the camera's y axis, and right is the camera's x axis
-                // depth is the distance from the camera and is growing negative as it goes further away
-
-                vec3 view_norm = normalize(camera_inverse * vec4(norm, 0.0)).xyz;
-                vec3 view_pos_ = (camera_inverse * vec4(vertex_worldspace, 1.0)).xyz;
+                vec3 viewDirNorm = normalize(camera_inverse * vec4(viewDir, 0.0)).xyz;
+                vec3 reflectionNorm = normalize(camera_inverse * vec4(reflection, 0.0)).xyz;
                 
-                // vec3 ssrColor = SSR(view_pos_, view_norm);
-                vec3 ssrColor = SSR(view_pos_, view_norm, camera_center);
-
-                if (ssrColor != vec3(0.0)) {
-                    reflectColor = vec4(ssrColor, 1.0);
+                float delta;
+                vec4 ssrResult = rayMarch(view_pos, reflectionNorm, delta);
+        
+                if (delta < 0.0) {
+                    vec2 ssrCoords = ssrResult.xy;
+                    // Adjusting the Y coordinate if necessary to flip the reflection
+                    ssrCoords.y = 1.0 - ssrCoords.y;
+                    reflectColor = texture2D(last_frame, ssrCoords);
                 }
             }
+            
+            waterColor = mix(waterColor, reflectColor, get_fernel_coeff(viewDir, norm) * sky_reflect);
 
-            waterColor = mix(waterColor, reflectColor, get_fernel_coeff(direction, norm) * sky_reflect);
-        
             vec2 foam_uv = vec2(0.5 * (p_sample.x - offset_x) / foam_size_terrain + 0.5, 0.5 * (p_sample.z - offset_z) / foam_size_terrain + 0.5);
             if (foam_uv.x >= 0.0 && foam_uv.x <= 1.0 && foam_uv.y >= 0.0 && foam_uv.y <= 1.0) {
                 vec4 foam_tex_sample = texture2D(foam_texture, foam_uv);
                 float foam_intensity = foam_tex_sample.r * foam_color.a;
                 waterColor = mix(waterColor, vec4(foam_color.rgb, 1.0), foam_intensity);
             }
-        
+
             float distance = length(camera_center - vertex_worldspace);
             float fog_amount = smoothstep(fog_start_dist, fog_end_dist, distance);
             gl_FragColor = mix(waterColor, vec4(fog_color.rgb, 1.0), fog_amount);
