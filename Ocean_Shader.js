@@ -284,8 +284,10 @@ export const Ocean_Shader =
 
 
         // Ray marching and SSR functions based on your previous algorithm
-        const int NUM_STEPS = 40;
-        const float STEP = 0.1;
+        const int NUM_SMALL_STEPS = 100;
+        const int NUM_STEPS = 150;
+        const float SMALL_STEP = 0.1;
+        const float BIG_STEP = 1.0;
         const int NUM_ITERATIONS = 10;
         const float BINARY_SEARCH_STEP = 0.02;
 
@@ -321,8 +323,7 @@ export const Ocean_Shader =
                 return vec4(0.0);
             }
 
-            vec3 walk_dir = direction_in_view_space * STEP; // this is how much we move in each step
-            vec3 current_position = position_in_view_space + walk_dir;
+            vec3 current_position = position_in_view_space + direction_in_view_space * SMALL_STEP;
 
             vec2 projectedCoords;
             float depth;
@@ -337,16 +338,27 @@ export const Ocean_Shader =
 
 
 
-                // current_point is in camera space, so get its depth in the same format, 0 to 1
-                float depth_of_ray = - (current_position.z - near_clip) / (far_clip - near_clip);
-            
+                float z = current_position.z; // Assuming current_position.z is negative
+                float A = (far_clip + near_clip) / (far_clip - near_clip);
+                float B = (2.0 * far_clip * near_clip) / (far_clip - near_clip);
+                float depth_of_ray = (A + B / z) / 2.0 + 0.5; // This should now be in the range [0, 1]
+
 
 
                 // vec3 other_point = generateViewSpacePositionFromDepth(projectedCoords, depth);
 
                 // if the depth is greater than the current depth, we have intersected the depth buffer
-                if (depth_of_ray > 0.0) {
+                if (depth_of_ray > depth) {
                     return vec4(projectedCoords, depth, 1.0);
+                }
+
+                
+                // current_position += walk_dir;
+
+                if (i < NUM_SMALL_STEPS) {
+                    current_position += direction_in_view_space * SMALL_STEP;
+                }else {
+                    current_position += direction_in_view_space * BIG_STEP;
                 }
 
             }
@@ -386,23 +398,13 @@ export const Ocean_Shader =
                 vec2 ssr_uv = ssr_result.xy;
                 float ssr_depth = ssr_result.z;
                 int ssr_valid = int(ssr_result.w);
+                vec4 ssr_color = texture2D(last_frame, ssr_uv);
 
+                int is_shade_of_blue = int(ssr_color.b > ssr_color.r && ssr_color.b > ssr_color.g && ssr_color.b > 0.6);
 
-                if (ssr_valid == 1) {
-                    vec4 ssr_color = texture2D(last_frame, ssr_uv);
-                    gl_FragColor = ssr_color;
-                }else{
-
-                    if (ssr_depth > 0.0) {
-                        gl_FragColor = vec4(0.0, 0.0, 1.0, 1.0);
-                    } else {
-                        gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
-                    } 
-                        
-                
+                if (ssr_valid == 1 && is_shade_of_blue == 0) {
+                    reflectColor = vec4(ssr_color.rgb, 1.0);
                 }
-
-                return;
             }
             
             waterColor = mix(waterColor, reflectColor, get_fernel_coeff(viewDir, norm) * sky_reflect);
