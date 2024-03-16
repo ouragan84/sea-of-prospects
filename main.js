@@ -73,7 +73,7 @@ export class Sea_Of_Prospects_Scene extends Component
 
     // Text obj for start screen
     this.gameover_obj = new Text(fog_param, "Game Over - Refresh to Restart");
-    this.start_screen_texture = new Texture("assets/textures/main_menu.jpg");
+    this.start_screen_texture = new Texture("assets/textures/menu_screen.jpg");
     this.start_obj = new Text(fog_param, 'START')
     this.start_weather_obj = new Text(fog_param, `Weather: ${this.preset}`);
     // this.change_obj = new Text(fog_param, "Change");
@@ -421,7 +421,7 @@ export class Sea_Of_Prospects_Scene extends Component
 
     // console.log('button matrix: ', start_text_transform)
 
-    this.start_obj.draw(caller, this.uniforms, start_text_transform)
+    // this.start_obj.draw(caller, this.uniforms, start_text_transform)
     this.start_weather_obj.draw(caller, this.uniforms, start_weather_transform)
     // this.change_obj.draw(caller, this.uniforms, change_text_transform)
 
@@ -433,8 +433,8 @@ export class Sea_Of_Prospects_Scene extends Component
     const weather_button_transform = Mat4.identity().times(Mat4.translation(0,-0.35,1)).times(Mat4.scale(0.48,.08,.035));
     
     // comment out below two to comment out the black bounding box
-    this.button_obj.draw(caller, this.uniforms, start_button_transform, { ...this.materials.plastic, color:  button_color})
-    this.weather_button_obj.draw(caller, this.uniforms, weather_button_transform, { ...this.materials.plastic, color:  button_color})
+    // this.button_obj.draw(caller, this.uniforms, start_button_transform, { ...this.materials.plastic, color:  button_color})
+    // this.weather_button_obj.draw(caller, this.uniforms, weather_button_transform, { ...this.materials.plastic, color:  button_color})
     
   }
 
