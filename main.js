@@ -72,10 +72,10 @@ export class Sea_Of_Prospects_Scene extends Component
     this.started = false
 
     // Text obj for start screen
-    this.start_obj = new Text(fog_param, "Start Game (Spacebar)");
+    this.gameover_obj = new Text(fog_param, "Game Over - Refresh to Restart");
     this.start_screen_texture = new Texture("assets/textures/main_menu.jpg");
     this.start_weather_obj = new Text(fog_param, `Weather: ${this.preset}`);
-    this.change_obj = new Text(fog_param, "Change");
+    // this.change_obj = new Text(fog_param, "Change");
 
     this.score = 0
     this.reset = 0
@@ -310,8 +310,8 @@ export class Sea_Of_Prospects_Scene extends Component
       this.shapes.quad.draw( caller, this.uniforms, trans, 
         { shader: this.phong, ambient: 1, diffusivity: 0, specularity: 0, color: color(1,0,0,.1)} )
 
-      this.start_obj.update_string("Game Over - Refresh to Restart")
-      this.start_obj.draw(caller, this.uniforms, Mat4.translation(-0.6,0,1).times(Mat4.scale(.03, .03, .03)))
+      this.gameover_obj.update_string("Game Over - Refresh to Restart")
+      this.gameover_obj.draw(caller, this.uniforms, Mat4.translation(-0.6,0,1).times(Mat4.scale(.03, .03, .03)))
     }
 
 
@@ -414,22 +414,22 @@ export class Sea_Of_Prospects_Scene extends Component
     this.shapes.quad.draw( caller, this.uniforms, start_screen_transform, 
       { shader: this.tex_phong, ambient: 1, diffusivity: 1, specularity: 1, color: color(.5,1,.5,1), texture: this.start_screen_texture} )
 
-    const start_text_transform = Mat4.identity().times(Mat4.translation(-0.4,-0.1,1)).times(Mat4.scale(.04, .04, .04));
-    const start_weather_transform = Mat4.identity().times(Mat4.translation(-0.4,-0.2,1)).times(Mat4.scale(0.025, 0.025, 0.025))
-    const change_text_transform = Mat4.identity().times(Mat4.translation(0.36,-0.2,1)).times(Mat4.scale(0.025, 0.025, 0.025))
+    // const start_text_transform = Mat4.identity().times(Mat4.translation(-0.4,-0.1,1)).times(Mat4.scale(.04, .04, .04));
+    const start_weather_transform = Mat4.identity().times(Mat4.translation(-0.38,-0.36,1)).times(Mat4.scale(0.032, 0.032, 0.022))
+    // const change_text_transform = Mat4.identity().times(Mat4.translation(0.36,-0.2,1)).times(Mat4.scale(0.025, 0.025, 0.025))
 
     // console.log('button matrix: ', start_text_transform)
 
-    this.start_obj.draw(caller, this.uniforms, start_text_transform)
+    // this.start_obj.draw(caller, this.uniforms, start_text_transform)
     this.start_weather_obj.draw(caller, this.uniforms, start_weather_transform)
-    this.change_obj.draw(caller, this.uniforms, change_text_transform)
+    // this.change_obj.draw(caller, this.uniforms, change_text_transform)
 
     const button_color = color( 0.2, 0.2, 0.2, 1 )
     this.materials = {}
     this.materials.plastic = { shader: this.phong, ambient: .2, diffusivity: 1, specularity: .5, color: color( .9,.5,.9,1 ) }
 
-    const start_button_transform = Mat4.identity().times(Mat4.translation(0.2,-0.1,1)).times(Mat4.scale(0.68, 0.04, 0.04));
-    const weather_button_transform = Mat4.identity().times(Mat4.translation(0.44,-0.2,1)).times(Mat4.scale(0.16,.035,.035));
+    const start_button_transform = Mat4.identity().times(Mat4.translation(0,0,1)).times(Mat4.scale(0.365, 0.11, 0.04));
+    const weather_button_transform = Mat4.identity().times(Mat4.translation(0,-0.35,1)).times(Mat4.scale(0.48,.08,.035));
     
     // comment out below two to comment out the black bounding box
     this.button_obj.draw(caller, this.uniforms, start_button_transform, { ...this.materials.plastic, color:  button_color})
@@ -567,7 +567,7 @@ export class Sea_Of_Prospects_Scene extends Component
 
     function getButtonPos(translateX, translateY, scaleX, scaleY)
     {
-      console.log(translateX, translateY, scaleX, scaleY)
+      // console.log(translateX, translateY, scaleX, scaleY)
       const centerX = canvas.width / 2;
       const centerY = canvas.height / 2;
   
@@ -618,12 +618,12 @@ export class Sea_Of_Prospects_Scene extends Component
       // console.log('click pos: ', clickX, clickY)
 
       // Check if the click was inside the square and react accordingly
-      // translateX, translateY, scaleX, scaleY
-      if (isClickInsideSquare(clickX, clickY, this.button_obj, 0.27, 0.1, 0.345, 0.04)) {
-        // console.log('hello');
-        this.started = true;
+      // translateX, translateY, scaleX, scaleY 0.27, 0.1, 0.345, 0.04
+      if (isClickInsideSquare(clickX, clickY, this.button_obj, 0.27, 0, 0.345, 0.04)) {
+        console.log('START');
+        // this.started = true;
 
-        canvas.requestPointerLock();
+        // canvas.requestPointerLock();
       }
 
       if (isClickInsideSquare(clickX, clickY, this.weather_button_obj, 0.26, 0.19, 0.078, 0.04)) {
