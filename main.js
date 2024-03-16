@@ -20,7 +20,7 @@ export class Sea_Of_Prospects_Scene extends Component
 {       
   init()
   {
-    this.preset = 'calm'; // 'calm', 'agitated', 'stormy'
+    this.preset = 'stormy'; // 'calm', 'agitated', 'stormy'
 
     // constructor(): Scenes begin by populating initial values like the Shapes and Materials they'll need.
     this.hover = this.swarm = false;

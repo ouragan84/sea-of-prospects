@@ -8,7 +8,7 @@ export const SharkSystem = class SharkSystem {
     constructor(ocean, fog_param){
         this.sharks = []
         this.ocean = ocean
-        this.number = 1
+        this.number = 3
 
         this.shark_material = {shader: new defs.Phong_Shader(1, fog_param), ambient: 0.5, diffusivity: 0.5, specularity: 0.5, color: color(0.5,0.5,0.5,1)}
 
@@ -16,12 +16,16 @@ export const SharkSystem = class SharkSystem {
 
         this.spawn_radius = 20;
 
+        this.circle_around_radius_range = [8, 15];
+
         for (let i = 0; i < this.number; i++){
             const angle = Math.random() * 2 * Math.PI;
             const x = Math.cos(angle) * this.spawn_radius;
             const z = Math.sin(angle) * this.spawn_radius;
 
-            let shark = new Shark(this.sharkshape, this.shark_material, this.ocean, x, z)
+            const circle_around_radius = Math.random() * (this.circle_around_radius_range[1] - this.circle_around_radius_range[0]) + this.circle_around_radius_range[0]
+
+            let shark = new Shark(this.sharkshape, this.shark_material, this.ocean, x, z, circle_around_radius, this)
             this.sharks.push(shark)
         }
     }
@@ -43,39 +47,60 @@ export const SharkSystem = class SharkSystem {
 
 export const Shark = class Shark {
 
-    constructor(shape, material, ocean, x, z){
+    constructor(shape, material, ocean, x, z, circle_around_radius, shark_system){
         this.shape = shape
         this.material = material
         this.ocean = ocean
 
         this.position = vec3(x, 0, z)
         this.y_rotation = 0
-        this.speed = 1;
-        this.rot_speed = 1; // rad/s
+        this.speed = 4;
+        this.rot_speed = 1.5; // rad/s
+
+        this.circle_around_radius = circle_around_radius;
+        this.shark_system = shark_system
     }
 
     update(t, dt, ship_pos){
         const height = this.ocean.gersrnerWave.solveForY(this.position[0], this.position[2], t, 4, 0.1, 10)
         this.position[1] = height
 
-        const player_direction = ship_pos.minus(this.position).normalized(); // shark --> player
-        const player_angle = Math.atan2(player_direction[0], player_direction[2])
-
         const player_dist = ship_pos.minus(this.position).norm()
 
+        const player_direction = ship_pos.minus(this.position).normalized(); // shark --> player
+        let player_angle = Math.atan2(player_direction[0], player_direction[2])
 
-        // move y_rotation towards player angle at this.rot_speed
-        const angle_diff = player_angle - this.y_rotation
-        if(angle_diff > 0.05)
-            this.y_rotation += Math.sign(angle_diff) * Math.min(this.rot_speed * dt, Math.abs(angle_diff))
+        // make sure player_angle is between -pi and pi
+        if (player_angle < -Math.PI)
+            player_angle += 2 * Math.PI
+        else if (player_angle > Math.PI)
+            player_angle -= 2 * Math.PI
 
-        // move towards player at this.speed
-        if(player_dist > 5){
-            this.position[0] += player_direction[0] * this.speed * dt
-            this.position[2] += player_direction[2] * this.speed * dt
+        if (player_dist > this.circle_around_radius){
+            // move y_rotation towards player angle at this.rot_speed
+            const angle_diff = player_angle - this.y_rotation
+            if(Math.abs(angle_diff) > 0.05)
+                this.y_rotation += Math.sign(angle_diff) * Math.min(this.rot_speed * dt, Math.abs(angle_diff))
+
+            this.position[0] += Math.sin(this.y_rotation) * this.speed * dt
+            this.position[2] += Math.cos(this.y_rotation) * this.speed * dt
+        } else {
+            let tangent_angle = player_angle + Math.PI/2;
+
+            if (tangent_angle > Math.PI)
+                tangent_angle -= 2 * Math.PI
+            else if (tangent_angle < -Math.PI)
+                tangent_angle += 2 * Math.PI
+
+            // move y_rotation towards tangent angle at this.rot_speed
+            const angle_diff = tangent_angle - this.y_rotation
+            if(Math.abs(angle_diff) > 0.05)
+                this.y_rotation += Math.sign(angle_diff) * Math.min(this.rot_speed * dt, Math.abs(angle_diff))
+
+            this.position[0] += Math.sin(this.y_rotation) * this.speed * dt
+            this.position[2] += Math.cos(this.y_rotation) * this.speed * dt
         }
 
-        console.log(this.position);
     }
 
     show(caller, uniforms){
