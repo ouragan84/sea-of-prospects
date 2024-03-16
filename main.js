@@ -12,6 +12,7 @@ import { ShaderMaterialPingPong } from './ShaderMaterialPingPong.js';
 import { PreviousFrameMaterial } from './PreviousFrameMaterial.js';
 import { Chest } from './Chest.js';
 import { ChestSpawner } from './ChestSpawner.js';
+import { SharkSystem } from './Shark.js';
 
 const { vec3, vec4, color, Mat4, Matrix, Shader, Texture, Component } = tiny;
 
@@ -169,6 +170,8 @@ export class Sea_Of_Prospects_Scene extends Component
 
     this.explosionTimer = 100;
 
+    this.shark_system = new SharkSystem(this.ocean, fog_param)
+
 
     this.prev_frame_material = new PreviousFrameMaterial();
   }
@@ -235,6 +238,8 @@ export class Sea_Of_Prospects_Scene extends Component
 
     this.islands.OnCollideEnter(this.ship, () => this.shipExplosion(this.ship))
 
+    this.shark_system.update(t, dt, this.ship.rb.position)
+
     if (this.preset == 'stormy')
       this.rainSystem.update(this.dt, this.ship.rb.position);
 
@@ -271,6 +276,8 @@ export class Sea_Of_Prospects_Scene extends Component
 
     this.shapes.axis.draw( caller, this.uniforms, Mat4.identity(), { shader: this.phong, ambient: .2, diffusivity: 1, specularity:  1, color: color( 1,1,1,1 ) } )
     this.ocean.show(this.shapes, caller, this.uniforms, this.camera_direction_xz, this.foam_material.get_texture());
+
+    this.shark_system.show(caller, this.uniforms)
 
     if(this.prev_frame_material.ready){
       // this.shapes.box.draw(caller, this.uniforms, Mat4.translation(0, 4, -5).times(Mat4.scale(2,2,2)), {shader: this.tex_phong, ambient: 1, diffusivity: 0, specularity:  0, color: color(1,1,1,1), texture: this.prev_frame_material.get_texture()})
