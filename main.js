@@ -637,13 +637,16 @@ export class Sea_Of_Prospects_Scene extends Component
       // Check if the click was inside the square and react accordingly
       // translateX, translateY, scaleX, scaleY 0.27, 0.1, 0.345, 0.04
       if (isClickInsideSquare(clickX, clickY, this.button_obj, 0.27, 0, 0.345, 0.04)) {
+        if(this.started) return;
+        
         console.log('START');
-        // this.started = true;
-
-        // canvas.requestPointerLock();
+        this.started = true;
+        canvas.requestPointerLock();
       }
 
       if (isClickInsideSquare(clickX, clickY, this.weather_button_obj, 0.26, 0.19, 0.078, 0.04)) {
+        if(this.started) return;
+
         // console.log('hello weather');
         this.preset = this.weather_states[++this.weather_index % 3]
         this.start_weather_obj.update_string(`Weather: ${this.preset}`)

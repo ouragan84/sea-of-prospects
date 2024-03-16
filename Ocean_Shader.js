@@ -53,7 +53,6 @@ export const Ocean_Shader =
         uniform float foam_size_terrain;
 
         varying vec3 view_pos;
-        varying vec3 clip_pos;
 
         vec3 random_normal(vec3 p) {
             return normalize(vec3(
@@ -171,6 +170,8 @@ export const Ocean_Shader =
             N = vec3(0.0, 1.0, 0.0);
 
             vertex_worldspace = ( model_transform * vec4( new_vertex_position, 1.0 ) ).xyz;
+
+            view_pos = (camera_inverse * vec4(vertex_worldspace, 1.0)).xyz;
         } `;
     }
 
@@ -234,10 +235,9 @@ export const Ocean_Shader =
             return tex_color;
         }
 
-
         float get_fernel_coeff(vec3 direction, vec3 norm) {
             return pow3(1.0 - dot(-direction, norm));
-        };
+        }
 
         vec3 phong_model_lights_water( vec3 N, vec3 vertex_worldspace ) {
             vec3 E = normalize( camera_center - vertex_worldspace );
@@ -280,8 +280,86 @@ export const Ocean_Shader =
         uniform float screen_height;
         uniform int is_ssr_texture_ready;
 
-        // vec3 view_pos (set in vertex shader)
-        // vec3 clip_pos (set in vertex shader)
+        // varying vec3 view_pos (set in vertex shader)
+        // varying vec3 vertex_worldspace (set in vertex shader)
+        // Everything else that's available in the fragment shader code as seen below 
+
+        // SSR specific uniforms and variables
+        const float step = 0.1;
+        const float minRayStep = 0.1;
+        const float maxSteps = 30.0;
+        const int numBinarySearchSteps = 5;
+        const float reflectionSpecularFalloffExponent = 3.0;
+
+        // Function prototypes
+        vec3 getPositionFromDepth(float depth, vec2 texCoords);
+        vec4 rayMarch(vec3 dir, vec3 hitCoord, float dDepth);
+        vec3 binarySearch(vec3 dir, vec3 hitCoord, float dDepth);
+        vec3 fresnelSchlick(float cosTheta, vec3 F0);
+        vec3 hash(vec3 a);
+
+        // Get position from depth using inverse projection
+        vec3 getPositionFromDepth(float depth, vec2 texCoords) {
+            float z = depth * 2.0 - 1.0; // Map depth to clip space
+            vec4 clipSpacePosition = vec4(texCoords * 2.0 - 1.0, z, 1.0);
+            vec4 viewSpacePosition = inv_proj_mat * clipSpacePosition; // Convert to view space
+            viewSpacePosition /= viewSpacePosition.w; // Perspective division
+            return viewSpacePosition.xyz;
+        }
+
+        // Ray march to find the intersection point
+        vec4 rayMarch(vec3 dir, vec3 hitCoord, float dDepth) {
+            dir *= step;
+            float depth;
+            vec4 projectedCoord;
+            for (int i = 0; i < int(maxSteps); i++) {
+                hitCoord += dir;
+                projectedCoord = projection_transform * vec4(hitCoord, 1.0);
+                projectedCoord.xy = projectedCoord.xy / projectedCoord.w * 0.5 + 0.5;
+                depth = texture2D(depth_texture, projectedCoord.xy).r;
+                if (depth > 1000.0) // Assuming a far depth value to continue
+                    continue;
+                dDepth = hitCoord.z - depth;
+                if (abs(dDepth) < step) { // Intersection found
+                    return vec4(binarySearch(dir, hitCoord, dDepth), 1.0);
+                }
+            }
+            return vec4(projectedCoord.xy, depth, 0.0);
+        }
+
+        // Binary search to refine the intersection point
+        vec3 binarySearch(vec3 dir, vec3 hitCoord, float dDepth) {
+            float depth;
+            vec4 projectedCoord;
+            for (int i = 0; i < numBinarySearchSteps; i++) {
+                dir *= 0.5;
+                hitCoord += dir * sign(dDepth);
+                projectedCoord = projection_transform * vec4(hitCoord, 1.0);
+                projectedCoord.xy = projectedCoord.xy / projectedCoord.w * 0.5 + 0.5;
+                depth = texture2D(depth_texture, projectedCoord.xy).r;
+                float newDdepth = hitCoord.z - depth;
+                if (abs(newDdepth) < abs(dDepth)) {
+                    dDepth = newDdepth;
+                } else {
+                    dir *= -1.0;
+                }
+            }
+            return vec3(projectedCoord.xy, depth);
+        }
+
+        // Fresnel effect to compute reflection strength based on view angle
+        vec3 fresnelSchlick(float cosTheta, vec3 F0) {
+            return F0 + (1.0 - F0) * pow(1.0 - cosTheta, 5.0);
+        }
+
+        // Hash function for procedural noise
+        vec3 hash(vec3 a) {
+            const vec3 scale = vec3(0.8, 0.8, 0.8);
+            const float K = 19.19;
+            a = fract(a * scale);
+            a += dot(a, a.yxz + K);
+            return fract((a.xxy + a.yxx) * a.zyx);
+        }
 
 
 
@@ -292,8 +370,7 @@ export const Ocean_Shader =
             vec3 p_sample = get_sample_position(original_position, time);
             vec3 norm = normalize(get_gersrner_wave_normal(p_sample, time));
 
-            vec3 view_norm = normalize(mat3(camera_transform) * norm);
-            vec3 clip_norm = normalize(mat3(inv_proj_mat) * view_norm);
+            vec3 view_norm = normalize(camera_inverse * vec4(norm, 0.0)).xyz;
 
             vec3 direction = normalize(vertex_worldspace - camera_center);
             vec3 reflection = reflect(direction, norm);
@@ -301,12 +378,27 @@ export const Ocean_Shader =
             // Calculate water color using existing lighting and sky reflections
             vec4 waterColor = vec4( shape_color.xyz * ambient, shape_color.w );
             waterColor.xyz += phong_model_lights_water(norm, vertex_worldspace);
-            waterColor = mix(waterColor, get_skycolor(reflection), get_fernel_coeff(direction, norm) * sky_reflect);
+
+            vec4 reflectColor = get_skycolor(reflection);
         
             // Apply SSR if texture is ready
             if (is_ssr_texture_ready == 1) {
+                // SSR implementation here
+                vec2 texCoords = gl_FragCoord.xy / vec2(screen_width, screen_height);
+                float depth = texture2D(depth_texture, texCoords).r;
+                vec3 viewPos = getPositionFromDepth(depth, texCoords);
+                vec3 reflectedDir = normalize(reflect(-viewPos, norm));
+        
+                float dDepth;
+                vec3 hitCoord = viewPos;
+                vec4 coords = rayMarch(reflectedDir, hitCoord, dDepth);
                 
+                if (coords.w > 0.0) {
+                    reflectColor = texture2D(last_frame, coords.xy);
+                }
             }
+
+            waterColor = mix(waterColor, reflectColor, get_fernel_coeff(direction, norm) * sky_reflect);
 
             // Add foam
             vec2 foam_uv = vec2(0.5 * (p_sample.x - offset_x) / foam_size_terrain + 0.5, 0.5 * (p_sample.z - offset_z) / foam_size_terrain + 0.5);
