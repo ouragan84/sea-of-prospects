@@ -12,6 +12,7 @@ import { ShaderMaterialPingPong } from './ShaderMaterialPingPong.js';
 import { PreviousFrameMaterial } from './PreviousFrameMaterial.js';
 import { Chest } from './Chest.js';
 import { ChestSpawner } from './ChestSpawner.js';
+import { SharkSystem } from './Shark.js';
 
 const { vec3, vec4, color, Mat4, Matrix, Shader, Texture, Component } = tiny;
 
@@ -95,7 +96,7 @@ export class Sea_Of_Prospects_Scene extends Component
           skybox_texture = new Texture("assets/textures/sunny_sky.jpg");
           break;
       case 'stormy':
-          skybox_texture = new Texture("assets/textures/stormy_sky.jpg");
+          skybox_texture = new Texture("assets/textures/stormy_sky3.jpg");
           break;
       default:
           skybox_texture = new Texture("assets/textures/sunny_sky.jpg");
@@ -176,6 +177,10 @@ export class Sea_Of_Prospects_Scene extends Component
 
     this.explosionTimer = 100;
 
+    this.shark_system = new SharkSystem(this.ocean, fog_param, () => this.shipExplosion(this.ship));
+
+    this.gameover = false;
+
     this.prev_frame_material = new PreviousFrameMaterial();
   }
 
@@ -243,6 +248,8 @@ export class Sea_Of_Prospects_Scene extends Component
 
     this.islands.OnCollideEnter(this.ship, () => this.shipExplosion(this.ship))
 
+    this.shark_system.update(t, dt, this.ship.rb.position)
+
     if (this.preset == 'stormy')
       this.rainSystem.update(this.dt, this.ship.rb.position);
 
@@ -280,6 +287,8 @@ export class Sea_Of_Prospects_Scene extends Component
     this.shapes.axis.draw( caller, this.uniforms, Mat4.identity(), { shader: this.phong, ambient: .2, diffusivity: 1, specularity:  1, color: color( 1,1,1,1 ) } )
     this.ocean.show(this.shapes, caller, this.uniforms, this.camera_direction_xz, this.foam_material.get_texture());
 
+    this.shark_system.show(caller, this.uniforms)
+
     if(this.prev_frame_material.ready){
       // this.shapes.box.draw(caller, this.uniforms, Mat4.translation(0, 4, -5).times(Mat4.scale(2,2,2)), {shader: this.tex_phong, ambient: 1, diffusivity: 0, specularity:  0, color: color(1,1,1,1), texture: this.prev_frame_material.get_texture()})
       // this.shapes.box.draw(caller, this.uniforms, Mat4.translation(0, 4, 5).times(Mat4.scale(2,2,2)), {shader: this.tex_phong, ambient: 1, diffusivity: 0, specularity:  0, color: color(1,1,1,1), texture: this.prev_frame_material.get_depth_texture()})
@@ -294,14 +303,31 @@ export class Sea_Of_Prospects_Scene extends Component
 
   draw_screen_ui(caller)
   {
+
+    if(this.gameover && this.explosionTimer > 5.0)
+    {
+      const trans = Mat4.translation(0,0,0.1).times(Mat4.scale(2,2,2))
+      this.shapes.quad.draw( caller, this.uniforms, trans, 
+        { shader: this.phong, ambient: 1, diffusivity: 0, specularity: 0, color: color(1,0,0,.1)} )
+
+      this.start_obj.update_string("Game Over - Refresh to Restart")
+      this.start_obj.draw(caller, this.uniforms, Mat4.translation(-0.6,0,1).times(Mat4.scale(.03, .03, .03)))
+    }
+
+
     this.score_text_obj.update_string(`Score: ${this.score} - FPS: ${Math.round(1000/this.uniforms.animation_delta_time)}`)
-    this.score_text_obj.draw(caller, this.uniforms, Mat4.translation(-0.95, .5, 0.1).times(Mat4.scale(.03, .03, .1)))
-    // console.log(this.preset)
+    this.score_text_obj.draw(caller, this.uniforms, Mat4.translation(-0.95, .5, 0.2).times(Mat4.scale(.03, .03, .1)))
+  
+    
   }
 
   shipExplosion(ship){
     ship.explode();
-    this.explosionTimer = 0;
+    if(this.gameover == false){
+      this.explosionTimer = 0;
+      this.gameover = true;
+      this.wind = vec3(0,.1,0);
+    }
   }
 
   update_foam(caller)

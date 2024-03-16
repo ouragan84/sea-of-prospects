@@ -9,7 +9,7 @@ class ChestSpawner {
     constructor(scoreIncreaseCallback, fog_param, ocean){
         this.chests = []
         for (let i = 0; i < chest_positions.length; i++){
-            this.chests.push(new Chest(vec3(chest_positions[i].x, 0.5, chest_positions[i].y), Math.random() * Math.PI, scoreIncreaseCallback, fog_param, ocean))
+            this.chests.push(new Chest(vec3(chest_positions[i].x, 0.45, chest_positions[i].y), Math.random() * Math.PI, scoreIncreaseCallback, fog_param, ocean))
         }
     }
 
@@ -18,7 +18,7 @@ class ChestSpawner {
             let chest_pos = this.chests[i].position;
             let distance = ship_pos.minus(chest_pos).norm(); // Calculate the distance between the ship and the chest
 
-            if (distance <= 5 && !this.chests[i].startChestOpen) {
+            if (distance <= 8 && !this.chests[i].startChestOpen) {
                 this.chests[i].openChest(); // Open the chest if the ship is within a distance of 5 or less
             }
 
