@@ -287,7 +287,7 @@ export const Ocean_Shader =
         const int NUM_SMALL_STEPS = 100;
         const int NUM_STEPS = 150;
         const float SMALL_STEP = 0.1;
-        const float BIG_STEP = 1.0;
+        const float BIG_STEP = 0.4;
         const int NUM_ITERATIONS = 10;
         const float BINARY_SEARCH_STEP = 0.02;
 
@@ -318,53 +318,61 @@ export const Ocean_Shader =
         // Iteratively walk from position_in_view_space in the direction of direction_in_view_space, 
         // and when the ray intersects the depth buffer, return the intersection point
         vec4 rayMarch(vec3 position_in_view_space, vec3 direction_in_view_space) {
-
             if (direction_in_view_space.z > 0.0) {
-                return vec4(0.0);
+                return vec4(0.0); // Early exit if direction is away from the camera
             }
 
-            vec3 current_position = position_in_view_space + direction_in_view_space * SMALL_STEP;
-
+            float z = position_in_view_space.z; // Assuming current_position.z is negative
+            float A = (far_clip + near_clip) / (far_clip - near_clip);
+            float B = (2.0 * far_clip * near_clip) / (far_clip - near_clip);
+            float depth_of_start = (A + B / z) / 2.0 + 0.5;
+        
+            vec3 current_position = position_in_view_space;
             vec2 projectedCoords;
-            float depth;
-
+            float depth, last_depth = 1.0;
+            vec3 last_position = current_position;
+        
+            // March the ray
             for (int i = 0; i < NUM_STEPS; ++i) {
-
+                current_position += direction_in_view_space * (i < NUM_SMALL_STEPS ? SMALL_STEP : BIG_STEP);
                 projectedCoords = generateProjectedPositionFromViewSpacePos(current_position);
                 depth = texture2D(depth_texture, projectedCoords).x;
-
-                //q: what is the range of depth values?
-                //a: 0 to 1. O is close to the camera, 1 is far from the camera
-
-
-
-                float z = current_position.z; // Assuming current_position.z is negative
-                float A = (far_clip + near_clip) / (far_clip - near_clip);
-                float B = (2.0 * far_clip * near_clip) / (far_clip - near_clip);
-                float depth_of_ray = (A + B / z) / 2.0 + 0.5; // This should now be in the range [0, 1]
-
-
-
-                // vec3 other_point = generateViewSpacePositionFromDepth(projectedCoords, depth);
-
-                // if the depth is greater than the current depth, we have intersected the depth buffer
+        
+                z = current_position.z; // Assuming current_position.z is negative
+                A = (far_clip + near_clip) / (far_clip - near_clip);
+                B = (2.0 * far_clip * near_clip) / (far_clip - near_clip);
+                float depth_of_ray = (A + B / z) / 2.0 + 0.5;
+        
                 if (depth_of_ray > depth) {
-                    return vec4(projectedCoords, depth, 1.0);
+                    // Binary search between last_position and current_position
+                    vec3 min_pos = last_position;
+                    vec3 max_pos = current_position;
+                    for (int j = 0; j < NUM_ITERATIONS; ++j) {
+                        vec3 mid_pos = (min_pos + max_pos) * 0.5;
+                        projectedCoords = generateProjectedPositionFromViewSpacePos(mid_pos);
+                        depth = texture2D(depth_texture, projectedCoords).x;
+        
+                        if ((A + B / mid_pos.z) / 2.0 + 0.5 > depth) {
+                            max_pos = mid_pos;
+                        } else {
+                            min_pos = mid_pos;
+                        }
+                    }
+
+                    if ( depth_of_start < depth ){
+                        return vec4(generateProjectedPositionFromViewSpacePos(min_pos), depth, 1.0);
+                    } else {
+                        return vec4(0.0);
+                    }
                 }
-
-                
-                // current_position += walk_dir;
-
-                if (i < NUM_SMALL_STEPS) {
-                    current_position += direction_in_view_space * SMALL_STEP;
-                }else {
-                    current_position += direction_in_view_space * BIG_STEP;
-                }
-
+        
+                last_depth = depth;
+                last_position = current_position;
             }
-
-            return vec4(projectedCoords.xy, depth, 0.0);
+        
+            return vec4(projectedCoords, last_depth, 0.0);
         }
+        
 
         
 
@@ -400,10 +408,15 @@ export const Ocean_Shader =
                 int ssr_valid = int(ssr_result.w);
                 vec4 ssr_color = texture2D(last_frame, ssr_uv);
 
-                int is_shade_of_blue = int(ssr_color.b > ssr_color.r && ssr_color.b > ssr_color.g && ssr_color.b > 0.6);
+                // color distance from shape_color
+                const vec3 bad_blue = vec3(0.5, 0.5, 0.8);
+                const vec3 bad_white = vec3(1.0, 1.0, 1.0);
 
-                if (ssr_valid == 1 && is_shade_of_blue == 0) {
+                if (ssr_valid == 1 && length(ssr_color.rgb - bad_white) > 0.34 && length(ssr_color.rgb - bad_blue) > 0.34) {
                     reflectColor = vec4(ssr_color.rgb, 1.0);
+
+                    // gl_FragColor = reflectColor;
+                    // return;
                 }
             }
             
