@@ -279,140 +279,173 @@ export const Ocean_Shader =
         uniform float screen_width;
         uniform float screen_height;
         uniform int is_ssr_texture_ready;
-
-        // varying vec3 view_pos (set in vertex shader)
-        // varying vec3 vertex_worldspace (set in vertex shader)
-        // Everything else that's available in the fragment shader code as seen below 
-
-        // SSR specific uniforms and variables
-        const float step = 0.1;
-        const float minRayStep = 0.1;
-        const float maxSteps = 30.0;
-        const int numBinarySearchSteps = 5;
-        const float reflectionSpecularFalloffExponent = 3.0;
-
+        
         // Function prototypes
-        vec3 getPositionFromDepth(float depth, vec2 texCoords);
-        vec4 rayMarch(vec3 dir, vec3 hitCoord, float dDepth);
-        vec3 binarySearch(vec3 dir, vec3 hitCoord, float dDepth);
+        vec3 PositionFromDepth(float depth);
+        vec3 BinarySearch(vec3 dir, vec3 hitCoord, float dDepth);
+        vec4 RayMarch(vec3 dir, vec3 hitCoord, float dDepth);
         vec3 fresnelSchlick(float cosTheta, vec3 F0);
         vec3 hash(vec3 a);
 
-        // Get position from depth using inverse projection
-        vec3 getPositionFromDepth(float depth, vec2 texCoords) {
-            float z = depth * 2.0 - 1.0; // Map depth to clip space
-            vec4 clipSpacePosition = vec4(texCoords * 2.0 - 1.0, z, 1.0);
-            vec4 viewSpacePosition = inv_proj_mat * clipSpacePosition; // Convert to view space
-            viewSpacePosition /= viewSpacePosition.w; // Perspective division
-            return viewSpacePosition.xyz;
-        }
-
-        // Ray march to find the intersection point
-        vec4 rayMarch(vec3 dir, vec3 hitCoord, float dDepth) {
-            dir *= step;
-            float depth;
-            vec4 projectedCoord;
-            for (int i = 0; i < int(maxSteps); i++) {
-                hitCoord += dir;
-                projectedCoord = projection_transform * vec4(hitCoord, 1.0);
-                projectedCoord.xy = projectedCoord.xy / projectedCoord.w * 0.5 + 0.5;
-                depth = texture2D(depth_texture, projectedCoord.xy).r;
-                if (depth > 1000.0) // Assuming a far depth value to continue
-                    continue;
-                dDepth = hitCoord.z - depth;
-                if (abs(dDepth) < step) { // Intersection found
-                    return vec4(binarySearch(dir, hitCoord, dDepth), 1.0);
-                }
-            }
-            return vec4(projectedCoord.xy, depth, 0.0);
-        }
-
-        // Binary search to refine the intersection point
-        vec3 binarySearch(vec3 dir, vec3 hitCoord, float dDepth) {
-            float depth;
-            vec4 projectedCoord;
-            for (int i = 0; i < numBinarySearchSteps; i++) {
-                dir *= 0.5;
-                hitCoord += dir * sign(dDepth);
-                projectedCoord = projection_transform * vec4(hitCoord, 1.0);
-                projectedCoord.xy = projectedCoord.xy / projectedCoord.w * 0.5 + 0.5;
-                depth = texture2D(depth_texture, projectedCoord.xy).r;
-                float newDdepth = hitCoord.z - depth;
-                if (abs(newDdepth) < abs(dDepth)) {
-                    dDepth = newDdepth;
-                } else {
-                    dir *= -1.0;
-                }
-            }
-            return vec3(projectedCoord.xy, depth);
-        }
-
-        // Fresnel effect to compute reflection strength based on view angle
-        vec3 fresnelSchlick(float cosTheta, vec3 F0) {
-            return F0 + (1.0 - F0) * pow(1.0 - cosTheta, 5.0);
-        }
-
-        // Hash function for procedural noise
-        vec3 hash(vec3 a) {
-            const vec3 scale = vec3(0.8, 0.8, 0.8);
-            const float K = 19.19;
-            a = fract(a * scale);
-            a += dot(a, a.yxz + K);
-            return fract((a.xxy + a.yxx) * a.zyx);
-        }
-
-
-
         void main() {
-            if(original_position.x < - 15.0)
+            if(original_position.x < -15.0)
                 discard;
-
+        
             vec3 p_sample = get_sample_position(original_position, time);
             vec3 norm = normalize(get_gersrner_wave_normal(p_sample, time));
-
-            vec3 view_norm = normalize(camera_inverse * vec4(norm, 0.0)).xyz;
-
+        
             vec3 direction = normalize(vertex_worldspace - camera_center);
             vec3 reflection = reflect(direction, norm);
         
-            // Calculate water color using existing lighting and sky reflections
-            vec4 waterColor = vec4( shape_color.xyz * ambient, shape_color.w );
+            vec4 waterColor = vec4(shape_color.xyz * ambient, shape_color.w);
             waterColor.xyz += phong_model_lights_water(norm, vertex_worldspace);
-
+        
             vec4 reflectColor = get_skycolor(reflection);
         
-            // Apply SSR if texture is ready
             if (is_ssr_texture_ready == 1) {
-                // SSR implementation here
-                vec2 texCoords = gl_FragCoord.xy / vec2(screen_width, screen_height);
-                float depth = texture2D(depth_texture, texCoords).r;
-                vec3 viewPos = getPositionFromDepth(depth, texCoords);
-                vec3 reflectedDir = normalize(reflect(-viewPos, norm));
-        
+                vec3 view_norm = normalize(camera_inverse * vec4(norm, 0.0)).xyz;
+                vec3 view_pos_ = (camera_inverse * vec4(vertex_worldspace, 1.0)).xyz;
+
+                // SSR implementation
+                vec3 hitCoord = view_pos;
                 float dDepth;
-                vec3 hitCoord = viewPos;
-                vec4 coords = rayMarch(reflectedDir, hitCoord, dDepth);
-                
-                if (coords.w > 0.0) {
-                    reflectColor = texture2D(last_frame, coords.xy);
+                vec3 view_reflection = reflect(view_pos_, view_norm);
+
+                // gl_FragColor = vec4(view_reflection, 1.0); 
+                // return;
+
+                vec4 ssrResult = RayMarch(view_reflection, hitCoord, dDepth);
+                if (ssrResult.w > 0.0) {
+                    vec2 ssrUV = ssrResult.xy;
+                    reflectColor = texture2D(last_frame, ssrUV);
+
+                    // gl_FragColor = vec4(ssrResult.xyz, 1.0);
+                    // return;
                 }
             }
-
+        
             waterColor = mix(waterColor, reflectColor, get_fernel_coeff(direction, norm) * sky_reflect);
-
-            // Add foam
+        
             vec2 foam_uv = vec2(0.5 * (p_sample.x - offset_x) / foam_size_terrain + 0.5, 0.5 * (p_sample.z - offset_z) / foam_size_terrain + 0.5);
             if (foam_uv.x >= 0.0 && foam_uv.x <= 1.0 && foam_uv.y >= 0.0 && foam_uv.y <= 1.0) {
                 vec4 foam_tex_sample = texture2D(foam_texture, foam_uv);
                 float foam_intensity = foam_tex_sample.r * foam_color.a;
                 waterColor = mix(waterColor, vec4(foam_color.rgb, 1.0), foam_intensity);
             }
-
-            // Apply fog
+        
             float distance = length(camera_center - vertex_worldspace);
             float fog_amount = smoothstep(fog_start_dist, fog_end_dist, distance);
             gl_FragColor = mix(waterColor, vec4(fog_color.rgb, 1.0), fog_amount);
-        }`;
+        }
+
+        const float step = 0.1;
+        const float minRayStep = 0.1;
+        const int maxSteps = 30;
+        const int numBinarySearchSteps = 5;
+        
+
+        vec3 PositionFromDepth(float depth) {
+            float z = depth * 2.0 - 1.0;
+
+            vec4 clipSpacePosition = vec4(gl_FragCoord.xy / vec2(screen_width, screen_height) * 2.0 - 1.0, z, 1.0);
+            vec4 viewSpacePosition = inv_proj_mat * clipSpacePosition;
+        
+            // Perspective division
+            viewSpacePosition /= viewSpacePosition.w;
+        
+            return viewSpacePosition.xyz;
+        }
+
+        vec3 BinarySearch( vec3 dir, vec3 hitCoord, float dDepth)
+        {
+            float depth;
+        
+            vec4 projectedCoord;
+         
+            for(int i = 0; i < numBinarySearchSteps; i++)
+            {
+        
+                projectedCoord = projection_transform * vec4(hitCoord, 1.0);
+                projectedCoord.xy /= projectedCoord.w;
+                projectedCoord.xy = projectedCoord.xy * 0.5 + 0.5;
+         
+                depth = texture2D(depth_texture, projectedCoord.xy).r;
+        
+         
+                dDepth = hitCoord.z - depth;
+        
+                dir *= 0.5;
+                if(dDepth > 0.0)
+                    hitCoord += dir;
+                else
+                    hitCoord -= dir;    
+            }
+        
+                projectedCoord = projection_transform * vec4(hitCoord, 1.0);
+                projectedCoord.xy /= projectedCoord.w;
+                projectedCoord.xy = projectedCoord.xy * 0.5 + 0.5;
+         
+            return vec3(projectedCoord.xy, depth);
+        }
+        
+        vec4 RayMarch(vec3 dir, vec3 hitCoord, float dDepth)
+        {
+            dir *= step;
+         
+            float depth;
+            int steps;
+            vec4 projectedCoord;
+         
+            for(int i = 0; i < maxSteps; i++)
+            {
+                hitCoord += dir;
+         
+                projectedCoord = projection_transform * vec4(hitCoord, 1.0);
+                projectedCoord.xy /= projectedCoord.w;
+                projectedCoord.xy = projectedCoord.xy * 0.5 + 0.5;
+         
+                depth = texture2D(depth_texture, projectedCoord.xy).r;
+                if(depth > 1000.0)
+                    continue;
+         
+                dDepth = hitCoord.z - depth;
+        
+                if((dir.z - dDepth) < 1.2)
+                {
+                    if(dDepth <= 0.0)
+                    {   
+                        vec4 Result;
+                        Result = vec4(BinarySearch(dir, hitCoord, dDepth), 1.0);
+        
+                        return Result;
+                    }
+                }
+                
+                steps++;
+            }
+         
+            
+            return vec4(projectedCoord.xy, depth, 0.0);
+        }
+        
+        vec3 fresnelSchlick(float cosTheta, vec3 F0)
+        {
+            return F0 + (1.0 - F0) * pow(1.0 - cosTheta, 5.0);
+        }
+        
+        
+        vec3 hash(vec3 a)
+        {
+            a = fract(a * vec3(.8, .8, .8));
+            a += dot(a, a.yxz + 19.19);
+            return fract((a.xxy + a.yxx)*a.zyx);
+        }
+
+        
+        
+        
+        
+        `;
     }
 
     flatten_vec_array (arr) {
