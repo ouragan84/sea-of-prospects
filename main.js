@@ -170,7 +170,7 @@ export class Sea_Of_Prospects_Scene extends Component
 
     this.explosionTimer = 100;
 
-    this.shark_system = new SharkSystem(this.ocean, fog_param)
+    this.shark_system = new SharkSystem(this.ocean, fog_param, () => this.shipExplosion(this.ship));
 
 
     this.prev_frame_material = new PreviousFrameMaterial();
