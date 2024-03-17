@@ -17,7 +17,11 @@ export
 const Ocean = defs.Part_one_hermite_base =
 class Ocean {
 
-    constructor(config) {
+    constructor() {
+        
+    }
+
+    setConfig(config){
         this.pos = config.initPos;
         this.density = config.density
         this.size = config.size

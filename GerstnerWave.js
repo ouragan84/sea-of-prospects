@@ -13,8 +13,8 @@ export class GerstnerWave{
                     0.2,            // starting_frequency
                     2.5,             // starting_speed
                     vec3(0,0,1),    // starting_dir
-                    0.0001,            // end_amplitude
-                    50,           // end_frequency
+                    0.00008,            // end_amplitude
+                    54,           // end_frequency
                     2.5,            // end_speed
                     "poor"          // seed_str
                 );
@@ -27,8 +27,8 @@ export class GerstnerWave{
                     .2,            // starting_frequency
                     5,             // starting_speed
                     vec3(0,0,1),    // starting_dir
-                    0.00015,            // end_amplitude
-                    50,           // end_frequency
+                    0.00008,            // end_amplitude
+                    54,           // end_frequency
                     5,            // end_speed
                     "poor"          // seed_str
                 );
@@ -41,8 +41,8 @@ export class GerstnerWave{
                     0.2,            // starting_frequency
                     7.5,             // starting_speed
                     vec3(0,0,1),    // starting_dir
-                    0.00015,            // end_amplitude
-                    50,           // end_frequency
+                    0.00010,            // end_amplitude
+                    54,           // end_frequency
                     10.5,            // end_speed
                     "poor"          // seed_str
                 );

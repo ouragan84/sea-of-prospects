@@ -35,10 +35,20 @@ class RigidBody {
     }
 
     addForce(force) {
+        if(isNaN(force[0]) || isNaN(force[1]) || isNaN(force[2])) {
+          console.log(`Force is NaN;`);
+          return;
+        }
+
         this.force.add_by(force);
     }
 
     addTorque(torque) {
+        if(isNaN(torque[0]) || isNaN(torque[1]) || isNaN(torque[2])) {
+          console.log(`Torque is NaN;`);
+          return;
+        }
+        
         this.torque.add_by(torque);
     }
 

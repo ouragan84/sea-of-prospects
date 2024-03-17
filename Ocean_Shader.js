@@ -485,7 +485,8 @@ export const Ocean_Shader =
 
         context.uniform1f(gpu_addresses.screen_width, uniforms.prev_frame_material.screen_width);
         context.uniform1f(gpu_addresses.screen_height, uniforms.prev_frame_material.screen_height);
-        context.uniform1i(gpu_addresses.is_ssr_texture_ready, uniforms.prev_frame_material.ready);
+        context.uniform1i(gpu_addresses.is_ssr_texture_ready, 
+            uniforms.prev_frame_material.ready && uniforms.ssr_enabled);
 
         // console.log(uniforms)
 

@@ -34,25 +34,8 @@ export class Sea_Of_Prospects_Scene extends Component
 
     const foam_size_terrain = 60; // sizezX of the foam texture in world space in either direction
 
-    let fog_param;
-
-    switch(this.preset){
-      case 'calm':
-          this.light_color = color(1,0.91,0.62,1)
-          fog_param = { color: color(1,1,1,1), start: this.render_distance-10, end: this.render_distance };
-          break;
-      case 'agitated':
-          this.light_color = color(1,0.91,0.62,1)
-          fog_param = { color: color(1,1,1,1), start: this.render_distance-10, end: this.render_distance };
-          break;
-      case 'stormy':
-          this.light_color = color(1,0.91,0.62,1)
-          fog_param = { color: color(.5,.5,.5,1), start: this.render_distance-20, end: this.render_distance };
-          break;
-      default:
-          this.light_color = color(1,0.91,0.62,1)
-    }
-
+    this.light_color = color(1,0.91,0.62,1)
+    const fog_param = { color: color(1,1,1,1), start: this.render_distance-15, end: this.render_distance };
 
     this.shapes = { 'box'  : new defs.Cube(),
       'ball' : new defs.Subdivision_Sphere( 4 ),
@@ -66,7 +49,9 @@ export class Sea_Of_Prospects_Scene extends Component
 
     this.start_audio = new Audio('assets/sounds/start_menu.mp3')
     this.game_audio = new Audio('assets/sounds/game_loop.mp3')
-    this.mute = true
+    this.mute = false
+
+    this.pickup_prospect_audio = new Audio('assets/sounds/pickup_prospect.mp3')
 
     // Keeps track of whether the game was started and was paused
     this.started = false
@@ -89,50 +74,12 @@ export class Sea_Of_Prospects_Scene extends Component
 
     let skybox_texture;
 
-    switch(this.preset){
-      case 'calm':
-          skybox_texture = new Texture("assets/textures/sunny_sky.jpg");
-          break;
-      case 'agitated':
-          skybox_texture = new Texture("assets/textures/sunny_sky.jpg");
-          break;
-      case 'stormy':
-          skybox_texture = new Texture("assets/textures/stormy_sky3.jpg");
-          break;
-      default:
-          skybox_texture = new Texture("assets/textures/sunny_sky.jpg");
-    }
+    this.skyBox_calm = new Texture("assets/textures/sunny_sky.jpg");
+    this.skyBox_stormy = new Texture("assets/textures/stormy_sky3.jpg");
 
-    this.base_water_color = color(0.27,0.46,0.95,1 );
+    this.skybox = new Skybox({default_color: fog_param.color, texture: this.skyBox_calm, fog_param: fog_param});
 
-    if(this.preset == 'agitated'){
-        const avg = (this.base_water_color[0] + this.base_water_color[1] + this.base_water_color[2]) / 3;
-        const f = 0.2;
-        this.base_water_color = this.base_water_color.plus((color(avg, avg, avg, 0).minus(this.base_water_color)).times(f));
-        this.base_water_color[3] = 1;
-    }
-
-    if(this.preset == 'stormy'){
-        const avg = (this.base_water_color[0] + this.base_water_color[1] + this.base_water_color[2]) / 3;
-        const f = .6;
-        this.base_water_color = this.base_water_color.plus((color(avg, avg, avg, 0).minus(this.base_water_color)).times(f));
-        this.base_water_color[3] = 1;
-
-    }
-
-    this.skybox = new Skybox({default_color: fog_param.color, texture: skybox_texture, fog_param: fog_param});
-
-    this.ocean = new Ocean({
-      ocean_color: this.base_water_color,
-      initPos : vec3(0,0,0),
-      density : 5,
-      size : this.render_distance * 2,
-      fog_param: fog_param,
-      skybox: this.skybox,
-      foam_size_terrain: foam_size_terrain,
-      foam_color: color(0.9,0.98,1,1),
-      preset: this.preset // 'calm', 'agitated', 'stormy'
-    });
+    this.ocean = new Ocean();
 
     this.ship = new Ship(fog_param)
 
@@ -159,22 +106,26 @@ export class Sea_Of_Prospects_Scene extends Component
     this.rainSystem = new RainSystem(200, fog_param)
 
     this.foam_shader = new Foam_Shader(
-      this.ocean.gersrnerWave, // gersrnerWave
+      this.ocean, // gersrnerWave
       foam_size_terrain, // foam_size_terrain
       this.ship.rb.position, // starting_center
       35, // frame_half_life
-      0.50, // jacobian_threshold_start
-      .15, // jacobian_threshold_end
+      0.65, // jacobian_threshold_start
+      .2, // jacobian_threshold_end
       0.8, // max_dist_from_boat
       0.15, // cutoff intensity
       0.5 // boat_dist_variation
     );
+
     this.foam_material = new ShaderMaterialPingPong(4096, this.foam_shader);
     this.foam_shader.shader_material = this.foam_material;
   
     this.tex_phong = new defs.Textured_Phong(1, fog_param);
 
-    this.chests = new ChestSpawner(() => this.score += 1, fog_param, this.ocean);
+    this.chests = new ChestSpawner(() => {
+      this.score += 1;
+      this.pickup_prospect_audio.play();
+    }, fog_param, this.ocean);
 
     this.explosionTimer = 100;
 
@@ -182,9 +133,62 @@ export class Sea_Of_Prospects_Scene extends Component
 
     this.gameover = false;
 
+    this.foam_size_terrain = foam_size_terrain;
+
     this.prev_frame_material = new PreviousFrameMaterial();
 
     this.prev_date_micro_sec = window.performance.now();
+
+    this.ssr_enabled = false;
+
+    this.fog_param = fog_param;
+
+    this.previous_ship_pos = vec3(0,0,0);
+  }
+
+
+  startGame(weather){
+    this.preset = weather
+    this.started = true
+
+    const fog_param = this.fog_param;
+    const foam_size_terrain =this.foam_size_terrain
+
+    if(this.preset == 'stormy'){
+      this.skybox.updateTexture(this.skyBox_stormy);
+    }    
+
+    this.base_water_color = color(0.27,0.46,0.95,1 );
+
+    if(this.preset == 'agitated'){
+        const avg = (this.base_water_color[0] + this.base_water_color[1] + this.base_water_color[2]) / 3;
+        const f = 0.2;
+        this.base_water_color = this.base_water_color.plus((color(avg, avg, avg, 0).minus(this.base_water_color)).times(f));
+        this.base_water_color[3] = 1;
+    }
+
+    if(this.preset == 'stormy'){
+        const avg = (this.base_water_color[0] + this.base_water_color[1] + this.base_water_color[2]) / 3;
+        const f = .6;
+        this.base_water_color = this.base_water_color.plus((color(avg, avg, avg, 0).minus(this.base_water_color)).times(f));
+        this.base_water_color[3] = 1;
+
+    }
+
+    this.ocean.setConfig(
+      {
+        ocean_color: this.base_water_color,
+        initPos : vec3(0,0,0),
+        density : 5,
+        size : this.render_distance * 2,
+        fog_param: fog_param,
+        skybox: this.skybox,
+        foam_size_terrain: foam_size_terrain,
+        foam_color: color(0.9,0.98,1,1),
+        preset: this.preset // 'calm', 'agitated', 'stormy'
+      }
+    )
+
   }
 
   
@@ -241,13 +245,19 @@ export class Sea_Of_Prospects_Scene extends Component
 
     this.update_wind()
 
+    // this.sanity_check();
+
     this.ocean.applyWaterForceOnRigidBody(this.ship.rb, t, dt, this.horizontal_input, this.vertical_input, this.wind, 
       (pos, size, color) => this.draw_debug_sphere(caller, pos, size, color),
       (pos, dir, length, width, color) => this.draw_debug_arrow(caller, pos, dir, length, width, color),
       (start, end, color) => this.draw_debug_line(caller, start, end, color)
     );
 
+    // this.sanity_check();
+
     this.ship.update(t, dt, this.wind)
+
+    
 
     this.islands.OnCollideEnter(this.ship, () => this.shipExplosion(this.ship))
 
@@ -256,6 +266,8 @@ export class Sea_Of_Prospects_Scene extends Component
 
     if (this.preset == 'stormy')
       this.rainSystem.update(this.dt, this.ship.rb.position);
+
+      // this.sanity_check();
 
     // --- Camera ---
 
@@ -272,6 +284,8 @@ export class Sea_Of_Prospects_Scene extends Component
     this.prev_frame_material.set_output_framebuffer(caller, this.uniforms);
     this.apply_camera(caller);
 
+    // this.sanity_check();
+
     // --- Draw the scene ---
     this.ship.show(caller, this.uniforms)
 
@@ -287,6 +301,7 @@ export class Sea_Of_Prospects_Scene extends Component
     this.ocean.show(this.shapes, caller, {...this.uniforms, 
       prev_frame_material: this.prev_frame_material,
       inv_proj_mat: this.projection_transform_inv,
+      ssr_enabled: this.ssr_enabled
     }, this.camera_direction_xz, this.foam_material.get_texture());
 
     this.shark_system.show(caller, this.uniforms)
@@ -343,6 +358,10 @@ export class Sea_Of_Prospects_Scene extends Component
     let intensity_from_boat = this.ship.rb.velocity.norm() / 8;
     if(front_of_boat[1] > sample_point_for_boat[1]){
       intensity_from_boat = -10;
+    }
+
+    if(this.gameover){
+      intensity_from_boat = 0;
     }
 
     this.foam_material.update(caller, {... this.uniforms, offset: this.cam_pos, sample_boat: sample_point_for_boat, boat_foam_intensity: intensity_from_boat});
@@ -479,93 +498,93 @@ export class Sea_Of_Prospects_Scene extends Component
     }
   }
 
-  handle_weather()
-  {
-      if(!this.started)
-      {
-          let fog_param;
-          this.preset = this.weather_states[++this.weather_index % 3]
-          this.start_weather_obj.update_string(`Weather: ${this.preset}`)
-          const foam_size_terrain = 60; // sizezX of the foam texture in world space in either direction
-          let skybox_texture;
+  // handle_weather()
+  // {
+  //     if(!this.started)
+  //     {
+  //         let fog_param;
+  //         this.preset = this.weather_states[++this.weather_index % 3]
+  //         this.start_weather_obj.update_string(`Weather: ${this.preset}`)
+  //         const foam_size_terrain = 60; // sizezX of the foam texture in world space in either direction
+  //         let skybox_texture;
 
-          switch(this.preset){
-            case 'calm':
-                this.light_color = color(1,0.91,0.62,1)
-                fog_param = { color: color(1,1,1,1), start: this.render_distance-10, end: this.render_distance };
-                break;
-            case 'agitated':
-                this.light_color = color(1,0.91,0.62,1)
-                fog_param = { color: color(1,1,1,1), start: this.render_distance-10, end: this.render_distance };
-                break;
-            case 'stormy':
-                this.light_color = color(1,0.91,0.62,1)
-                fog_param = { color: color(.5,.5,.5,1), start: this.render_distance-20, end: this.render_distance };
-                break;
-            default:
-                this.light_color = color(1,0.91,0.62,1)
-          }
+  //         switch(this.preset){
+  //           case 'calm':
+  //               this.light_color = color(1,0.91,0.62,1)
+  //               fog_param = { color: color(1,1,1,1), start: this.render_distance-10, end: this.render_distance };
+  //               break;
+  //           case 'agitated':
+  //               this.light_color = color(1,0.91,0.62,1)
+  //               fog_param = { color: color(1,1,1,1), start: this.render_distance-10, end: this.render_distance };
+  //               break;
+  //           case 'stormy':
+  //               this.light_color = color(1,0.91,0.62,1)
+  //               fog_param = { color: color(.5,.5,.5,1), start: this.render_distance-20, end: this.render_distance };
+  //               break;
+  //           default:
+  //               this.light_color = color(1,0.91,0.62,1)
+  //         }
       
-          this.phong = new defs.Phong_Shader(1, fog_param);
+  //         this.phong = new defs.Phong_Shader(1, fog_param);
       
-          switch(this.preset){
-            case 'calm':
-                skybox_texture = new Texture("assets/textures/sunny_sky.jpg");
-                break;
-            case 'agitated':
-                skybox_texture = new Texture("assets/textures/sunny_sky.jpg");
-                break;
-            case 'stormy':
-                skybox_texture = new Texture("assets/textures/stormy_sky.jpg");
-                break;
-            default:
-                skybox_texture = new Texture("assets/textures/sunny_sky.jpg");
-          }
+  //         switch(this.preset){
+  //           case 'calm':
+  //               skybox_texture = new Texture("assets/textures/sunny_sky.jpg");
+  //               break;
+  //           case 'agitated':
+  //               skybox_texture = new Texture("assets/textures/sunny_sky.jpg");
+  //               break;
+  //           case 'stormy':
+  //               skybox_texture = new Texture("assets/textures/stormy_sky.jpg");
+  //               break;
+  //           default:
+  //               skybox_texture = new Texture("assets/textures/sunny_sky.jpg");
+  //         }
       
-          this.base_water_color = color(0.27,0.46,0.95,1 );
+  //         this.base_water_color = color(0.27,0.46,0.95,1 );
       
-          if(this.preset == 'agitated'){
-              const avg = (this.base_water_color[0] + this.base_water_color[1] + this.base_water_color[2]) / 3;
-              const f = 0.2;
-              this.base_water_color = this.base_water_color.plus((color(avg, avg, avg, 0).minus(this.base_water_color)).times(f));
-              this.base_water_color[3] = 1;
-          }
+  //         if(this.preset == 'agitated'){
+  //             const avg = (this.base_water_color[0] + this.base_water_color[1] + this.base_water_color[2]) / 3;
+  //             const f = 0.2;
+  //             this.base_water_color = this.base_water_color.plus((color(avg, avg, avg, 0).minus(this.base_water_color)).times(f));
+  //             this.base_water_color[3] = 1;
+  //         }
       
-          if(this.preset == 'stormy'){
-              const avg = (this.base_water_color[0] + this.base_water_color[1] + this.base_water_color[2]) / 3;
-              const f = .6;
-              this.base_water_color = this.base_water_color.plus((color(avg, avg, avg, 0).minus(this.base_water_color)).times(f));
-              this.base_water_color[3] = 1;
+  //         if(this.preset == 'stormy'){
+  //             const avg = (this.base_water_color[0] + this.base_water_color[1] + this.base_water_color[2]) / 3;
+  //             const f = .6;
+  //             this.base_water_color = this.base_water_color.plus((color(avg, avg, avg, 0).minus(this.base_water_color)).times(f));
+  //             this.base_water_color[3] = 1;
       
-          }
+  //         }
       
-          this.skybox = new Skybox({default_color: fog_param.color, texture: skybox_texture, fog_param: fog_param});
+  //         this.skybox = new Skybox({default_color: fog_param.color, texture: skybox_texture, fog_param: fog_param});
       
-          // this.ocean = new Ocean({
-          //   ocean_color: this.base_water_color,
-          //   initPos : vec3(0,0,0),
-          //   density : 5,
-          //   size : this.render_distance * 2,
-          //   fog_param: fog_param,
-          //   skybox: this.skybox,
-          //   foam_size_terrain: foam_size_terrain,
-          //   foam_color: color(0.9,0.98,1,1),
-          //   preset: this.preset // 'calm', 'agitated', 'stormy'
-          // });
-      }
-      // disable weather change while game is going on
-  }
+  //         // this.ocean = new Ocean({
+  //         //   ocean_color: this.base_water_color,
+  //         //   initPos : vec3(0,0,0),
+  //         //   density : 5,
+  //         //   size : this.render_distance * 2,
+  //         //   fog_param: fog_param,
+  //         //   skybox: this.skybox,
+  //         //   foam_size_terrain: foam_size_terrain,
+  //         //   foam_color: color(0.9,0.98,1,1),
+  //         //   preset: this.preset // 'calm', 'agitated', 'stormy'
+  //         // });
+  //     }
+  //     // disable weather change while game is going on
+  // }
   
   render_controls () {
     this.control_panel.innerHTML += "Click and drag the scene to <br> spin your viewpoint around it.<br>";
-    this.key_triggered_button ("Start Game", [" "], () => {this.started = true});
-    this.key_triggered_button ("Reset", ["r"], () => this.handle_reset());
+    // this.key_triggered_button ("Start Game", [" "], () => {this.started = true});
+    this.key_triggered_button ("Toggle Experimental Reflections", ["r"], () => this.ssr_enabled = !this.ssr_enabled);
     //this.key_triggered_button ("Pause Game", [" "], () => this.start = 0);
     this.new_line();
     this.key_triggered_button ("Mute/Unmute", ["m"], () => this.mute=!this.mute);
-    this.key_triggered_button ("Increase Score", ["i"], () => {
-      this.chest.openChest()
-    });
+    // this.key_triggered_button ("Increase Score", ["i"], () => {
+    //   this.chest.openChest()
+    // });
     this.new_line();
     this.key_triggered_button ("Forward", ["w"], () => this.vertical_input = 1, undefined, () => this.vertical_input = 0);
     this.key_triggered_button ("Right", ["d"], () => this.horizontal_input = 1, undefined, () => this.horizontal_input = 0);
@@ -573,8 +592,8 @@ export class Sea_Of_Prospects_Scene extends Component
     this.key_triggered_button ("Bottom", ["s"], () => this.vertical_input = -1, undefined, () => this.vertical_input = 0);
     this.key_triggered_button ("Left", ["a"], () => this.horizontal_input = -1, undefined, () => this.horizontal_input = 0);
 
-    this.new_line();
-    this.key_triggered_button ("Change Weather", ['ArrowRight'], () => this.handle_weather());
+    // this.new_line();
+    // this.key_triggered_button ("Change Weather", ['ArrowRight'], () => this.handle_weather());
 
     const canvas = document.getElementsByTagName("canvas")[0];
 
@@ -642,9 +661,11 @@ export class Sea_Of_Prospects_Scene extends Component
       // translateX, translateY, scaleX, scaleY 0.27, 0.1, 0.345, 0.04
       if (isClickInsideSquare(clickX, clickY, this.button_obj, 0.09, 0.035, 0.18, 0.135)) {
         if(this.started) return;
+
+        this.startGame(this.preset)
         
-        console.log('START');
-        this.started = true;
+        // console.log('START');
+        // this.started = true;
         canvas.requestPointerLock();
       }
 

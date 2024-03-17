@@ -20,6 +20,10 @@ export const Skybox
         this.material = {shader: this.shader, skyTexture: this.texture };
     }
 
+    updateTexture(texture) {
+        this.material.skyTexture = texture;
+    }
+
     show(context, uniforms, camera_position, camera_distance) {
         const epsilon = 0.1;
         const model_transform = Mat4.translation(camera_position[0], camera_position[1], camera_position[2]).times(Mat4.scale(camera_distance-epsilon, camera_distance-epsilon, camera_distance-epsilon));

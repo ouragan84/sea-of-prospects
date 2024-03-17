@@ -5,9 +5,9 @@ const { vec3, vec4, color, Mat4, Shader, Texture, Component, Matrix } = tiny;
 
 export const Foam_Shader =
 class Foam_Shader extends Shader {
-    constructor (gersrnerWave, foam_size_terrain, starting_center, frame_half_life, jacobian_threshold_start, jacobian_threshold_end, max_dist_from_boat, cutoff_intensity, boat_dist_variation) {
+    constructor (ocean, foam_size_terrain, starting_center, frame_half_life, jacobian_threshold_start, jacobian_threshold_end, max_dist_from_boat, cutoff_intensity, boat_dist_variation) {
         super ();
-        this.gersrnerWave = gersrnerWave;
+        this.ocean = ocean;
         this.foam_size_terrain = foam_size_terrain;
         this.initialized_waves = false;
         this.last_offset = starting_center;
@@ -61,11 +61,11 @@ class Foam_Shader extends Shader {
 
         if (!this.initialized_waves) {
             context.uniform1f(gpu_addresses.foam_size_terrain, this.foam_size_terrain);
-            context.uniform1fv(gpu_addresses.amplitudes, this.gersrnerWave.amplitudes);
-            context.uniform1fv(gpu_addresses.frequencies, this.gersrnerWave.frequencies);
-            context.uniform1fv(gpu_addresses.speeds, this.gersrnerWave.speeds);
-            context.uniform1fv(gpu_addresses.phases, this.gersrnerWave.phases);
-            context.uniform3fv(gpu_addresses.directions, this.flatten_vec_array(this.gersrnerWave.directions));
+            context.uniform1fv(gpu_addresses.amplitudes, this.ocean.gersrnerWave.amplitudes);
+            context.uniform1fv(gpu_addresses.frequencies, this.ocean.gersrnerWave.frequencies);
+            context.uniform1fv(gpu_addresses.speeds, this.ocean.gersrnerWave.speeds);
+            context.uniform1fv(gpu_addresses.phases, this.ocean.gersrnerWave.phases);
+            context.uniform3fv(gpu_addresses.directions, this.flatten_vec_array(this.ocean.gersrnerWave.directions));
             context.uniform1f(gpu_addresses.decay_rate, this.decay_rate);
             context.uniform1f(gpu_addresses.jacobian_threshold_start, this.jacobian_threshold_start);
             context.uniform1f(gpu_addresses.jacobian_threshold_end, this.jacobian_threshold_end);
@@ -106,7 +106,7 @@ class Foam_Shader extends Shader {
 
         uniform float max_dist_from_boat;
 
-        const int num_waves = ${this.gersrnerWave.num_waves};
+        const int num_waves = ${this.ocean.gersrnerWave.num_waves};
 
         uniform float amplitudes[num_waves];
         uniform float frequencies[num_waves];
@@ -207,7 +207,7 @@ class Foam_Shader extends Shader {
             float dz = z - boat_z;
             float dist = sqrt(dx * dx + dz * dz) + rand(vec3(x, z, time)) * 2.0 * boat_dist_variation - boat_dist_variation;
             float intensity = boat_foam_intensity - dist / max_dist_from_boat;
-            if (intensity > 0.0){
+            if (boat_foam_intensity > 0.0 && intensity > 0.0){
                 gl_FragColor = mix(gl_FragColor, vec4(1.0, 1.0, 1.0, 1.0), intensity);
             }
             
