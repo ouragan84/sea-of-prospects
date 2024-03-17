@@ -9,7 +9,7 @@ export class GerstnerWave{
             case 'calm':
                 this.createWaves(
                     40,              // num_waves
-                    .2,              // starting_amplitude
+                    .25,              // starting_amplitude
                     0.2,            // starting_frequency
                     2.5,             // starting_speed
                     vec3(0,0,1),    // starting_dir

@@ -20,9 +20,9 @@ export class Sea_Of_Prospects_Scene extends Component
 {       
   init()
   {
-    this.preset = 'calm'; // 'calm', 'agitated', 'stormy'
+    this.preset = 'agitated'; // 'calm', 'agitated', 'stormy'
     this.weather_states = ['calm', 'agitated', 'stormy']
-    this.weather_index = 0 // default is calm
+    this.weather_index = 1 // default is agitated
 
     this.button_obj = new defs.Square()
     this.weather_button_obj = new defs.Square()
