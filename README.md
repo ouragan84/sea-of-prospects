@@ -62,3 +62,7 @@ The cloth is initialized with a density and size, which determine the number of 
 
 The simulate method updates the cloth's physics, applying forces like gravity and wind, and enforcing constraints to maintain segment lengths. This is achieved through a verlet integration approach, updating positions based on previous positions and velocities, and a relaxation process that iteratively corrects the distances between points to match the segment lengths.
 
+
+### Collision
+
+Collision detection between a rigidbody and islands is implemented using a distance-based approach. Each Island instance has a radius attribute, and the isRigidbodyInsideIsland method checks if any corner of the rigidbody is within this radius from the island's center. This method calculates the distance between the island's center and each corner of the rigidbody's bounding box. If the distance from the island's center to any corner is less than or equal to the island's radius, a collision is detected.

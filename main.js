@@ -198,7 +198,15 @@ export class Sea_Of_Prospects_Scene extends Component
   render_animation( caller )
   {                    
     const t = this.t = this.uniforms.animation_time/1000;
-    const dt = this.dt = 0.02;
+
+    let true_dt = this.uniforms.animation_delta_time/1000;
+
+    if(true_dt > 0.04)
+      true_dt = 0.04;
+    if(true_dt < 0.01)
+      true_dt = 0.01;
+    
+    const dt = this.dt = true_dt;
 
 
     if(this.started)   

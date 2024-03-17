@@ -18,6 +18,7 @@ To play, you can start the python server, or go to ship.edgarbaudry.dev
  - lerps and slerps for camera and propects
  - Chest open animation (animation curves)
  - Cloth Simulation for sail and flag
+ - Collision Detection
 
 ### Extra graphics algorithms:
  - Skybox
