@@ -1,4 +1,5 @@
 # SEA OF PROSPECTS
+by Edgar, Ani, Pranav
 
 ## Overview:
 
